@@ -1,0 +1,47 @@
+{
+  "name": "accounting-warehouse",
+  "version": "1.0.0",
+  "description": "برنامج المحاسبة والمستودعات",
+  "main": "main.js",
+  "author": "AMAhmoud",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.accounting.warehouse",
+    "productName": "AccountingWarehouse",
+    "copyright": "Copyright 2026",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "src/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "requestedExecutionLevel": "asInvoker",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "المحاسبة والمستودعات",
+      "runAfterFinish": false
+    }
+  },
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3"
+  }
+}

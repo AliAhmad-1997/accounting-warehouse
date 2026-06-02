@@ -1,0 +1,925 @@
+// ============================================================
+// نظام المحاسبة - v2
+// ============================================================
+const DB_KEY = 'accounting_v1';
+
+// المواد الافتراضية — لا تُحذف عند إعادة التعيين
+const DEFAULT_ITEMS = [
+  { id:'NUM-001', name:'إسمنت بورتلاندي عادي 42.5', type:'مواد بناء', unit:'كيس', unit2:'طن', factor:20, cost:2.33, price:2.67, minStock:10 },
+  { id:'NUM-002', name:'إسمنت أبيض', type:'مواد بناء', unit:'كيس', unit2:'طن', factor:20, cost:3.50, price:4.00, minStock:10 },
+  { id:'NUM-003', name:'حديد تسليح 10mm', type:'حديد وصلب', unit:'كيلو', unit2:'طن', factor:1000, cost:0.35, price:0.40, minStock:500 },
+  { id:'NUM-004', name:'حديد تسليح 12mm', type:'حديد وصلب', unit:'كيلو', unit2:'طن', factor:1000, cost:0.35, price:0.40, minStock:500 },
+  { id:'NUM-005', name:'حديد تسليح 16mm', type:'حديد وصلب', unit:'كيلو', unit2:'طن', factor:1000, cost:0.35, price:0.40, minStock:500 },
+  { id:'NUM-006', name:'رمل ناعم للبناء', type:'مواد بناء', unit:'م3', unit2:'طن', factor:1.5, cost:10.00, price:12.08, minStock:5 },
+  { id:'NUM-007', name:'رمل خشن للخرسانة', type:'مواد بناء', unit:'م3', unit2:'طن', factor:1.6, cost:8.33, price:10.42, minStock:5 },
+  { id:'NUM-008', name:'حجارة بازلت 20-40mm', type:'مواد بناء', unit:'م3', unit2:'طن', factor:1.7, cost:10.83, price:13.33, minStock:5 },
+  { id:'NUM-019', name:'أنابيب PVC 2 بوصة', type:'سباكة', unit:'متر', unit2:'طرد', factor:6, cost:1.00, price:1.25, minStock:20 },
+  { id:'NUM-020', name:'أنابيب PVC 4 بوصة', type:'سباكة', unit:'متر', unit2:'طرد', factor:6, cost:1.83, price:2.25, minStock:20 },
+  { id:'NUM-027', name:'كابل كهربائي 2.5mm²', type:'كهربائيات', unit:'متر', unit2:'لفة', factor:100, cost:0.71, price:0.88, minStock:50 },
+  { id:'NUM-028', name:'كابل كهربائي 4mm²', type:'كهربائيات', unit:'متر', unit2:'لفة', factor:100, cost:1.08, price:1.33, minStock:50 },
+  { id:'NUM-037', name:'دهان بلاستيك داخلي 17L', type:'دهانات', unit:'علبة', unit2:'كرتون', factor:4, cost:23.33, price:28.33, minStock:5 },
+  { id:'NUM-038', name:'دهان بلاستيك خارجي 17L', type:'دهانات', unit:'علبة', unit2:'كرتون', factor:4, cost:31.67, price:38.33, minStock:5 },
+  { id:'NUM-046', name:'سيراميك أرضيات 60×60', type:'مواد بناء', unit:'م2', unit2:'كرتون', factor:1.44, cost:10.00, price:12.33, minStock:20 },
+];
+
+const defaultData = {
+  company: { name:'شركتي', address:'', phone:'', email:'', slogan:'نشكر ثقتكم بنا' },
+  exchange: { usdToOld: 12000, note: '1 دولار = X ل.س قديمة | 1 ل.س جديدة = 100 ل.س قديمة' },
+  items: JSON.parse(JSON.stringify(DEFAULT_ITEMS)),
+  customers: [],
+  suppliers: [],
+  salesInvoices: [],
+  purchaseInvoices: [],
+  invoiceCounters: { sale:0, purchase:0, returnSale:0, returnPurchase:0 }
+};
+
+function loadData() {
+  try {
+    const saved = localStorage.getItem(DB_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return JSON.parse(JSON.stringify(defaultData));
+}
+
+function saveData(data) { localStorage.setItem(DB_KEY, JSON.stringify(data)); }
+
+let db = loadData();
+
+// ============================================================
+// حساب المخزون
+// ============================================================
+function calcInventory() {
+  const inv = {};
+  db.items.forEach(item => { inv[item.id] = 0; });
+  db.purchaseInvoices.forEach(inv_ => {
+    inv_.lines.forEach(l => { if(!inv[l.itemId]) inv[l.itemId]=0; inv[l.itemId] += parseFloat(l.qty)||0; });
+  });
+  db.salesInvoices.forEach(inv_ => {
+    inv_.lines.forEach(l => { if(!inv[l.itemId]) inv[l.itemId]=0; inv[l.itemId] -= parseFloat(l.qty)||0; });
+  });
+  return inv;
+}
+
+function getStats() {
+  const totalSales = db.salesInvoices.reduce((s,i)=>s+(i.total||0),0);
+  const totalPurchases = db.purchaseInvoices.reduce((s,i)=>s+(i.total||0),0);
+  const profit = totalSales - totalPurchases;
+  const inv = calcInventory();
+  const lowStock = db.items.filter(item => (inv[item.id]||0) < item.minStock);
+  const invValue = db.items.reduce((s,item)=>s+(inv[item.id]||0)*item.cost,0);
+  return { totalSales, totalPurchases, profit, lowStock, invValue,
+           salesCount: db.salesInvoices.length, purchasesCount: db.purchaseInvoices.length };
+}
+
+// ============================================================
+// نظام العملات
+// ============================================================
+function getRate() {
+  return db.exchange ? db.exchange.usdToOld : 12000;
+}
+// تحويل دولار → ل.س قديمة
+function usdToOld(usd) { return usd * getRate(); }
+// تحويل دولار → ل.س جديدة (حذف صفرين = قسمة 100)
+function usdToNew(usd) { return usd * getRate() / 100; }
+
+function fmtUSD(n) { return '$ ' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function fmtOld(n) { return new Intl.NumberFormat('ar-SY').format(Math.round(n)) + ' ل.س ق'; }
+function fmtNew(n) { return new Intl.NumberFormat('ar-SY').format(Math.round(n)) + ' ل.س ج'; }
+
+// عرض السعر الكامل بالعملات الـ3
+function fmtAll(usd) {
+  return fmtUSD(usd) + ' = ' + fmtOld(usdToOld(usd)) + ' = ' + fmtNew(usdToNew(usd));
+}
+// للتوافق مع الكود القديم
+function fmt(n) { return fmtOld(n); }
+
+// ============================================================
+// ROUTER
+// ============================================================
+const pages = ['dashboard','invoice-sale','invoice-purchase','items','customers','settings'];
+let currentPage = 'dashboard';
+
+function navigate(page) {
+  currentPage = page;
+  pages.forEach(p => {
+    document.getElementById('page-'+p)?.classList.add('hidden');
+    document.querySelector(`[data-page="${p}"]`)?.classList.remove('active');
+  });
+  document.getElementById('page-'+page)?.classList.remove('hidden');
+  document.querySelector(`[data-page="${page}"]`)?.classList.add('active');
+  render(page);
+}
+
+function render(page) {
+  switch(page) {
+    case 'dashboard': renderDashboard(); break;
+    case 'invoice-sale': renderSaleInvoice(); break;
+    case 'invoice-purchase': renderPurchaseInvoice(); break;
+    case 'items': renderItems(); break;
+    case 'customers': renderCustomers(); break;
+    case 'settings': renderSettings(); break;
+  }
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+function renderDashboard() {
+  const stats = getStats();
+  const inv = calcInventory();
+  // dash-sales removed from dashboard
+  // dash-purchases removed
+  // dash-profit removed
+  // dash-inv-value removed
+  // dash-sales-count removed
+  // dash-purchases-count removed
+  // removed
+
+  // تنبيهات المخزون محذوفة
+
+  const recent = [
+    ...db.salesInvoices.map(i=>({...i,type:'بيع'})),
+    ...db.purchaseInvoices.map(i=>({...i,type:'شراء'}))
+  ].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
+
+  const recentEl = document.getElementById('recent-invoices');
+  if (recent.length === 0) {
+    recentEl.innerHTML = '<div class="empty-state">لا توجد فواتير بعد</div>';
+  } else {
+    recentEl.innerHTML = recent.map(inv => `
+      <div class="invoice-row" onclick="openInvoiceDetail('${inv.number}')" style="cursor:pointer" title="انقر لعرض التفاصيل">
+        <span class="inv-num">${inv.number}</span>
+        <span class="inv-customer">${inv.customerName||inv.supplierName||'—'}</span>
+        <span class="inv-type ${inv.type==='بيع'?'type-sale':'type-purchase'}">${inv.type}</span>
+        <span class="inv-total">${fmt(inv.total)}</span>
+        <span class="inv-date">${inv.date}</span>
+        <span style="color:var(--text-muted);font-size:11px">✏️</span>
+      </div>`).join('');
+  }
+}
+
+// ============================================================
+// SALE INVOICE
+// ============================================================
+let saleLines = [{ itemId:'', qty:1, price:0, total:0 }];
+
+function renderSaleInvoice() {
+  const nextNum = 'INV-' + String(db.invoiceCounters.sale+1).padStart(3,'0');
+  document.getElementById('sale-inv-num').textContent = nextNum;
+  document.getElementById('sale-date').value = new Date().toISOString().split('T')[0];
+  renderSaleLines();
+  renderSaleTotal();
+  // Customer input - datalist
+  const datalist = document.getElementById('customers-datalist');
+  if(datalist) datalist.innerHTML = db.customers.filter(c=>c.name).map(c=>`<option value="${c.name}">`).join('');
+  // تحديث كروات الإحصائيات
+  renderSaleStats();
+  // تحديث آخر الفواتير في صفحة البيع
+  renderSaleRecentInvoices();
+}
+
+function renderSaleStats() {
+  const stats = getStats();
+  const el = document.getElementById('sale-kpi-sales');
+  if(el) el.textContent = fmtUSD(stats.totalSales);
+  const el4 = document.getElementById('sale-kpi-sales-count');
+  if(el4) el4.textContent = stats.salesCount + ' فاتورة';
+}
+
+function renderSaleRecentInvoices() {
+  const el = document.getElementById('sale-recent-invoices');
+  if(!el) return;
+  const recent = [
+    ...db.salesInvoices.map(i=>({...i,type:'بيع'})),
+    ...db.purchaseInvoices.map(i=>({...i,type:'شراء'}))
+  ].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
+  if(recent.length === 0) {
+    el.innerHTML = '<div class="empty-state">لا توجد فواتير بعد</div>';
+    return;
+  }
+  el.innerHTML = recent.map(inv => `
+    <div class="invoice-row" onclick="openInvoiceDetail('${inv.number}')" style="cursor:pointer">
+      <span class="inv-num">${inv.number}</span>
+      <span class="inv-customer">${inv.customerName||inv.supplierName||'—'}</span>
+      <span class="inv-type ${inv.type==='بيع'?'type-sale':'type-purchase'}">${inv.type}</span>
+      <span class="inv-total">${fmt(inv.total)}</span>
+      <span class="inv-date">${inv.date}</span>
+    </div>`).join('');
+}
+
+function renderSaleLines() {
+  const tbody = document.getElementById('sale-lines');
+  tbody.innerHTML = saleLines.map((line,i) => {
+    const item = db.items.find(it=>it.id===line.itemId);
+    // بناء dropdown الوحدة
+    let unitSelect = '';
+    if(item) {
+      const hasUnit2 = item.unit2 && item.unit2.trim();
+      if(hasUnit2) {
+        unitSelect = `<select onchange="onSaleUnitChange(${i},this.value)" class="input input-sm" style="width:90px">
+          <option value="unit" ${(line.unitType||'unit')==='unit'?'selected':''}>${item.unit}</option>
+          <option value="unit2" ${line.unitType==='unit2'?'selected':''}>${item.unit2}</option>
+        </select>`;
+      } else {
+        unitSelect = `<span class="text-muted">${item.unit||''}</span>`;
+      }
+    } else {
+      unitSelect = '<span class="text-muted">—</span>';
+    }
+    return `<tr>
+      <td>${i+1}</td>
+      <td>
+        <select onchange="onSaleItemChange(${i},this.value)" class="input input-sm">
+          <option value="">-- اختر --</option>
+          ${db.items.map(it=>`<option value="${it.id}" ${it.id===line.itemId?'selected':''}>${it.id} - ${it.name}</option>`).join('')}
+        </select>
+      </td>
+      <td>${unitSelect}</td>
+      <td><input type="number" class="input input-sm" value="${line.qty}" min="0.01" step="0.01" onchange="onSaleQtyChange(${i},this.value)" style="width:80px"></td>
+      <td><span class="price-display">${line.price?fmtUSD(line.price):'—'}</span></td>
+      <td><strong>${line.total?fmtUSD(line.total):'—'}</strong></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="removeSaleLine(${i})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function onSaleItemChange(i,itemId) {
+  const item = db.items.find(it=>it.id===itemId);
+  saleLines[i].itemId = itemId;
+  saleLines[i].unitType = 'unit'; // reset للوحدة الأساسية
+  saleLines[i].price = item ? item.price : 0;
+  saleLines[i].total = saleLines[i].price * saleLines[i].qty;
+  renderSaleLines(); renderSaleTotal();
+}
+
+function onSaleUnitChange(i, unitType) {
+  const item = db.items.find(it=>it.id===saleLines[i].itemId);
+  if(!item) return;
+  saleLines[i].unitType = unitType;
+  if(unitType === 'unit2') {
+    // سعر الوحدة الثانية = سعر الأساسية × عامل التحويل
+    saleLines[i].price = item.price * (item.factor || 1);
+  } else {
+    saleLines[i].price = item.price;
+  }
+  saleLines[i].total = saleLines[i].price * saleLines[i].qty;
+  renderSaleLines(); renderSaleTotal();
+}
+function onSaleQtyChange(i,qty) {
+  saleLines[i].qty = parseFloat(qty)||0;
+  saleLines[i].total = saleLines[i].price*saleLines[i].qty;
+  renderSaleLines(); renderSaleTotal();
+}
+function removeSaleLine(i) {
+  saleLines.splice(i,1);
+  if(saleLines.length===0) saleLines.push({itemId:'',qty:1,price:0,total:0});
+  renderSaleLines(); renderSaleTotal();
+}
+function addSaleLine() { saleLines.push({itemId:'',qty:1,price:0,total:0}); renderSaleLines(); }
+function renderSaleTotal() {
+  const subtotal = saleLines.reduce((s,l)=>s+l.total,0);
+  const discount = parseFloat(document.getElementById('sale-discount')?.value||0);
+  const total = subtotal*(1-discount/100);
+  document.getElementById('sale-subtotal').textContent = fmtUSD(subtotal);
+  document.getElementById('sale-total').textContent = fmtUSD(total);
+  // عرض المكافئ بالليرتين
+  const eqEl = document.getElementById('sale-total-equiv');
+  if(eqEl) eqEl.innerHTML =
+    '<span style="color:var(--text-muted);font-size:13px">' +
+    fmtOld(usdToOld(total)) + ' &nbsp;|&nbsp; ' + fmtNew(usdToNew(total)) +
+    '</span>';
+}
+
+function saveSaleInvoice() {
+  const lines = saleLines.filter(l=>l.itemId&&l.qty>0);
+  if(lines.length===0){showToast('أضف مادة واحدة على الأقل','error');return;}
+  const subtotal = lines.reduce((s,l)=>s+l.total,0);
+  const discount = parseFloat(document.getElementById('sale-discount').value||0);
+  const total = subtotal*(1-discount/100);
+  const customerName = document.getElementById('sale-customer-input').value.trim();
+
+  // ✅ إضافة الزبون تلقائياً إذا ما كان موجود
+  if(customerName && !db.customers.find(c=>c.name===customerName)) {
+    const newId = 'CUS-' + String(db.customers.length+1).padStart(3,'0');
+    db.customers.push({id:newId, name:customerName, phone:'', address:''});
+    showToast(`✅ تم إضافة الزبون "${customerName}" تلقائياً`,'success');
+  }
+
+  db.invoiceCounters.sale++;
+  const inv = {
+    number: 'INV-'+String(db.invoiceCounters.sale).padStart(3,'0'),
+    date: document.getElementById('sale-date').value,
+    customerName,
+    lines, subtotal, discount, total,
+    currency: 'USD',
+    usdToOld: getRate()
+  };
+  db.salesInvoices.push(inv);
+  saveData(db);
+  saleLines = [{itemId:'',qty:1,price:0,total:0}];
+  showToast('✅ تم حفظ الفاتورة '+inv.number,'success');
+  navigate('dashboard');
+}
+
+// ============================================================
+// PRINT / PDF
+// ============================================================
+function printInvoice(invNumber) {
+  const inv = db.salesInvoices.find(i=>i.number===invNumber) ||
+              db.purchaseInvoices.find(i=>i.number===invNumber);
+  if(!inv) return;
+  const type = db.salesInvoices.find(i=>i.number===invNumber) ? 'بيع' : 'شراء';
+  const party = inv.customerName || inv.supplierName || '—';
+
+  const linesHTML = inv.lines.map((l,i) => {
+    const item = db.items.find(it=>it.id===l.itemId);
+    return `<tr>
+      <td style="padding:8px;border:1px solid #ddd;text-align:center">${i+1}</td>
+      <td style="padding:8px;border:1px solid #ddd">${item?.name||l.itemId}</td>
+      <td style="padding:8px;border:1px solid #ddd;text-align:center">${item?.unit||''}</td>
+      <td style="padding:8px;border:1px solid #ddd;text-align:center">${l.qty}</td>
+      <td style="padding:8px;border:1px solid #ddd;text-align:center">${new Intl.NumberFormat('ar-SY').format(l.price)}</td>
+      <td style="padding:8px;border:1px solid #ddd;text-align:center;font-weight:bold">${new Intl.NumberFormat('ar-SY').format(l.total)}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>فاتورة ${inv.number}</title>
+<style>
+  body { font-family: 'Segoe UI','Tahoma','Arial',sans-serif; margin:0; padding:20px; color:#1a1a1a; }
+  .header { background:#1F3864; color:white; padding:20px; border-radius:8px; margin-bottom:20px; text-align:center; }
+  .header h1 { margin:0; font-size:24px; }
+  .header p { margin:4px 0; font-size:13px; opacity:0.85; }
+  .inv-title { background:#EBF3FB; padding:10px 16px; border-radius:6px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; }
+  .inv-title h2 { margin:0; font-size:16px; color:#1F3864; }
+  .inv-num { background:#1F3864; color:white; padding:4px 12px; border-radius:4px; font-weight:bold; }
+  .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px; }
+  .info-box { background:#f8f9fa; padding:12px; border-radius:6px; border-right:3px solid #2E75B6; }
+  .info-box label { font-size:11px; color:#666; display:block; margin-bottom:4px; }
+  .info-box span { font-size:14px; font-weight:600; color:#1a1a1a; }
+  table { width:100%; border-collapse:collapse; margin-bottom:16px; }
+  thead th { background:#1F3864; color:white; padding:10px 8px; text-align:center; font-size:13px; }
+  tbody tr:nth-child(even) { background:#f8f9fa; }
+  .totals { display:flex; justify-content:flex-end; }
+  .totals-box { background:#1F3864; color:white; padding:16px 24px; border-radius:8px; text-align:center; min-width:200px; }
+  .totals-box .label { font-size:12px; opacity:0.8; margin-bottom:4px; }
+  .totals-box .amount { font-size:22px; font-weight:bold; }
+  .footer { text-align:center; margin-top:30px; padding-top:16px; border-top:1px solid #eee; color:#888; font-size:12px; }
+  .sign-row { display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-top:40px; }
+  .sign-box { text-align:center; border-top:1px solid #ccc; padding-top:8px; font-size:12px; color:#666; }
+  @media print { body { padding:10px; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>${db.company.name}</h1>
+  <p>${db.company.address}${db.company.phone?' | ☎ '+db.company.phone:''}</p>
+</div>
+<div class="inv-title">
+  <h2>🧾 فاتورة ${type}</h2>
+  <span class="inv-num">${inv.number}</span>
+</div>
+<div class="info-grid">
+  <div class="info-box"><label>${type==='بيع'?'اسم الزبون':'المورد'}</label><span>${party}</span></div>
+  <div class="info-box"><label>التاريخ</label><span>${inv.date}</span></div>
+</div>
+<table>
+  <thead><tr>
+    <th style="width:40px">#</th>
+    <th>اسم المادة</th>
+    <th style="width:80px">الوحدة</th>
+    <th style="width:80px">الكمية</th>
+    <th style="width:120px">السعر</th>
+    <th style="width:130px">الإجمالي</th>
+  </tr></thead>
+  <tbody>${linesHTML}</tbody>
+</table>
+<div class="totals">
+  <div class="totals-box">
+    <div class="label">💰 الإجمالي النهائي</div>
+    <div class="amount">${new Intl.NumberFormat('ar-SY').format(inv.total)} ل.س</div>
+    ${inv.discount>0?`<div style="font-size:12px;opacity:0.8;margin-top:4px">خصم ${inv.discount}%</div>`:''}
+  </div>
+</div>
+<div class="sign-row">
+  <div class="sign-box">توقيع المستلم</div>
+  <div class="sign-box">ختم الشركة</div>
+</div>
+<div class="footer">${db.company.slogan}</div>
+<script>window.onload=()=>window.print();<\/script>
+</body></html>`;
+
+  const win = window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+}
+
+// ============================================================
+// PURCHASE INVOICE
+// ============================================================
+let purchaseLines = [{itemId:'',qty:1,price:0,total:0}];
+
+function renderPurchaseInvoice() {
+  const nextNum = 'PUR-'+String(db.invoiceCounters.purchase+1).padStart(3,'0');
+  document.getElementById('pur-inv-num').textContent = nextNum;
+  document.getElementById('pur-date').value = new Date().toISOString().split('T')[0];
+  renderPurchaseLines(); renderPurchaseTotal();
+  const datalist = document.getElementById('suppliers-datalist');
+  if(datalist) datalist.innerHTML = db.suppliers.filter(s=>s.name).map(s=>`<option value="${s.name}">`).join('');
+}
+
+function renderPurchaseLines() {
+  const tbody = document.getElementById('pur-lines');
+  tbody.innerHTML = purchaseLines.map((line,i) => {
+    const item = db.items.find(it=>it.id===line.itemId);
+    let unitSelect = '';
+    if(item) {
+      const hasUnit2 = item.unit2 && item.unit2.trim();
+      if(hasUnit2) {
+        unitSelect = `<select onchange="onPurUnitChange(${i},this.value)" class="input input-sm" style="width:90px">
+          <option value="unit" ${(line.unitType||'unit')==='unit'?'selected':''}>${item.unit}</option>
+          <option value="unit2" ${line.unitType==='unit2'?'selected':''}>${item.unit2}</option>
+        </select>`;
+      } else {
+        unitSelect = `<span class="text-muted">${item.unit||''}</span>`;
+      }
+    } else {
+      unitSelect = '<span class="text-muted">—</span>';
+    }
+    return `<tr>
+      <td>${i+1}</td>
+      <td>
+        <select onchange="onPurItemChange(${i},this.value)" class="input input-sm">
+          <option value="">-- اختر --</option>
+          ${db.items.map(it=>`<option value="${it.id}" ${it.id===line.itemId?'selected':''}>${it.id} - ${it.name}</option>`).join('')}
+        </select>
+      </td>
+      <td>${unitSelect}</td>
+      <td><input type="number" class="input input-sm" value="${line.qty}" min="0.01" step="0.01" onchange="onPurQtyChange(${i},this.value)" style="width:80px"></td>
+      <td><input type="number" class="input input-sm" value="${line.price}" min="0" onchange="onPurPriceChange(${i},this.value)" style="width:110px"></td>
+      <td><strong>${line.total?fmtUSD(line.total):'—'}</strong></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="removePurLine(${i})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function onPurItemChange(i,itemId) {
+  const item = db.items.find(it=>it.id===itemId);
+  purchaseLines[i].itemId = itemId;
+  purchaseLines[i].unitType = 'unit';
+  purchaseLines[i].price = item ? item.cost : 0;
+  purchaseLines[i].total = purchaseLines[i].price * purchaseLines[i].qty;
+  renderPurchaseLines(); renderPurchaseTotal();
+}
+
+function onPurUnitChange(i, unitType) {
+  const item = db.items.find(it=>it.id===purchaseLines[i].itemId);
+  if(!item) return;
+  purchaseLines[i].unitType = unitType;
+  if(unitType === 'unit2') {
+    purchaseLines[i].price = item.cost * (item.factor || 1);
+  } else {
+    purchaseLines[i].price = item.cost;
+  }
+  purchaseLines[i].total = purchaseLines[i].price * purchaseLines[i].qty;
+  renderPurchaseLines(); renderPurchaseTotal();
+}
+function onPurQtyChange(i,qty) {
+  purchaseLines[i].qty=parseFloat(qty)||0;
+  purchaseLines[i].total=purchaseLines[i].price*purchaseLines[i].qty;
+  renderPurchaseLines(); renderPurchaseTotal();
+}
+function onPurPriceChange(i,price) {
+  purchaseLines[i].price=parseFloat(price)||0;
+  purchaseLines[i].total=purchaseLines[i].price*purchaseLines[i].qty;
+  renderPurchaseLines(); renderPurchaseTotal();
+}
+function removePurLine(i) {
+  purchaseLines.splice(i,1);
+  if(purchaseLines.length===0) purchaseLines.push({itemId:'',qty:1,price:0,total:0});
+  renderPurchaseLines(); renderPurchaseTotal();
+}
+function addPurLine() { purchaseLines.push({itemId:'',qty:1,price:0,total:0}); renderPurchaseLines(); }
+function renderPurchaseTotal() {
+  const total = purchaseLines.reduce((s,l)=>s+l.total,0);
+  document.getElementById('pur-total').textContent = fmtUSD(total);
+  const eqEl = document.getElementById('pur-total-equiv');
+  if(eqEl) eqEl.innerHTML =
+    '<span style="color:var(--text-muted);font-size:13px">' +
+    fmtOld(usdToOld(total)) + ' &nbsp;|&nbsp; ' + fmtNew(usdToNew(total)) +
+    '</span>';
+}
+function savePurchaseInvoice() {
+  const lines = purchaseLines.filter(l=>l.itemId&&l.qty>0);
+  if(lines.length===0){showToast('أضف مادة واحدة على الأقل','error');return;}
+  const total = lines.reduce((s,l)=>s+l.total,0);
+  const supplierName = document.getElementById('pur-supplier-input').value.trim();
+
+  // إضافة المورد تلقائياً
+  if(supplierName && !db.suppliers.find(s=>s.name===supplierName)) {
+    const newId = 'SUP-'+String(db.suppliers.length+1).padStart(3,'0');
+    db.suppliers.push({id:newId, name:supplierName, phone:'', address:''});
+  }
+
+  db.invoiceCounters.purchase++;
+  const inv = {
+    number: 'PUR-'+String(db.invoiceCounters.purchase).padStart(3,'0'),
+    date: document.getElementById('pur-date').value,
+    supplierName, lines, total
+  };
+  db.purchaseInvoices.push(inv);
+  saveData(db);
+  purchaseLines = [{itemId:'',qty:1,price:0,total:0}];
+  showToast('✅ تم حفظ فاتورة الشراء '+inv.number,'success');
+  navigate('dashboard');
+}
+
+// ============================================================
+// ITEMS — مع حذف مادة
+// ============================================================
+function renderItems() {
+  const inv = calcInventory();
+  const search = document.getElementById('items-search')?.value?.toLowerCase()||'';
+  const filtered = db.items.filter(item =>
+    item.name.toLowerCase().includes(search)||item.id.toLowerCase().includes(search)||item.type.toLowerCase().includes(search)
+  );
+  const tbody = document.getElementById('items-tbody');
+  tbody.innerHTML = filtered.map(item => {
+    const stock = inv[item.id]||0;
+    const isLow = stock < item.minStock;
+    const isDefault = DEFAULT_ITEMS.find(d=>d.id===item.id);
+    return `<tr class="${isLow?'row-warning':''}">
+      <td><span class="item-id">${item.id}</span></td>
+      <td><strong>${item.name}</strong></td>
+      <td><span class="badge">${item.type}</span></td>
+      <td>${item.unit}</td>
+      <td>${fmtUSD(item.cost)}</td>
+      <td>${fmtUSD(item.price)}</td>
+      <td><span class="stock-num">${stock}</span></td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="editItem('${item.id}')">✏️</button>
+        <button class="btn btn-ghost btn-sm" onclick="deleteItem('${item.id}')" title="حذف" style="color:var(--red-600)">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+  document.getElementById('items-count').textContent = filtered.length + ' مادة';
+}
+
+// ✅ حذف مادة
+function deleteItem(id) {
+  const item = db.items.find(i=>i.id===id);
+  if(!item) return;
+  if(!confirm(`هل تريد حذف "${item.name}"؟\nلا يمكن التراجع عن هذا الإجراء.`)) return;
+  db.items = db.items.filter(i=>i.id!==id);
+  saveData(db);
+  renderItems();
+  showToast('🗑️ تم حذف المادة','success');
+}
+
+function editItem(id) {
+  const item = db.items.find(i=>i.id===id);
+  if(!item) return;
+  document.getElementById('modal-item-id').value = item.id;
+  document.getElementById('modal-item-name').value = item.name;
+  document.getElementById('modal-item-type').value = item.type;
+  // الوحدات
+  document.getElementById('modal-item-unit').value = item.unit || '';
+  document.getElementById('modal-item-unit2').value = item.unit2 || '';
+  document.getElementById('modal-item-factor').value = item.factor || 1;
+  // العملة والأسعار
+  const currency = item.priceCurrency || 'USD';
+  document.getElementById('modal-price-currency').value = currency;
+  // تحويل الأسعار للعملة المختارة للعرض
+  const rate = getRate();
+  let costDisplay = item.cost;
+  let priceDisplay = item.price;
+  if(currency === 'OLD') { costDisplay = item.cost * rate; priceDisplay = item.price * rate; }
+  else if(currency === 'NEW') { costDisplay = item.cost * rate / 100; priceDisplay = item.price * rate / 100; }
+  document.getElementById('modal-item-cost').value = Math.round(costDisplay * 100) / 100;
+  document.getElementById('modal-item-price').value = Math.round(priceDisplay * 100) / 100;
+  updateModalCurrencyLabel();
+  document.getElementById('item-modal').classList.remove('hidden');
+}
+
+function updateModalCurrencyLabel() {
+  const cur = document.getElementById('modal-price-currency').value;
+  const labels = { USD: '$', OLD: 'ل.س ق', NEW: 'ل.س ج' };
+  document.querySelectorAll('.modal-cur-label').forEach(el => el.textContent = labels[cur] || '$');
+}
+
+function saveItemModal() {
+  const id = document.getElementById('modal-item-id').value;
+  const item = db.items.find(i=>i.id===id);
+  if(!item) return;
+  item.name = document.getElementById('modal-item-name').value;
+  item.type = document.getElementById('modal-item-type').value;
+  item.unit = document.getElementById('modal-item-unit').value;
+  item.unit2 = document.getElementById('modal-item-unit2').value;
+  item.factor = parseFloat(document.getElementById('modal-item-factor').value) || 1;
+  // تحويل السعر المُدخل إلى دولار للتخزين
+  const currency = document.getElementById('modal-price-currency').value;
+  const rate = getRate();
+  let costInput = parseFloat(document.getElementById('modal-item-cost').value) || 0;
+  let priceInput = parseFloat(document.getElementById('modal-item-price').value) || 0;
+  if(currency === 'OLD') { costInput = costInput / rate; priceInput = priceInput / rate; }
+  else if(currency === 'NEW') { costInput = costInput / (rate/100); priceInput = priceInput / (rate/100); }
+  item.cost = Math.round(costInput * 10000) / 10000;
+  item.price = Math.round(priceInput * 10000) / 10000;
+  item.priceCurrency = currency;
+  // حذف minStock
+  item.minStock = 0;
+  saveData(db);
+  document.getElementById('item-modal').classList.add('hidden');
+  renderItems();
+  showToast('✅ تم تحديث المادة','success');
+}
+
+function addNewItem() {
+  const newId = 'NUM-'+ String(db.items.length+1).padStart(3,'0');
+  db.items.push({id:newId,name:'مادة جديدة',type:'مواد بناء',unit:'قطعة',unit2:'',factor:1,cost:0,price:0,minStock:0,priceCurrency:'USD'});
+  saveData(db);
+  renderItems();
+  editItem(newId);
+}
+
+// ============================================================
+// CUSTOMERS
+// ============================================================
+function renderCustomers() {
+  const tbody = document.getElementById('customers-tbody');
+  if(db.customers.length===0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">لا يوجد زبائن بعد — سيُضافون تلقائياً عند إنشاء فاتورة بيع</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = db.customers.map((c,i) => {
+    const sales = db.salesInvoices.filter(s=>s.customerName===c.name);
+    const total = sales.reduce((s,inv)=>s+inv.total,0);
+    const invoicesList = sales.length > 0
+      ? sales.map(s=>`<span class="inv-link" onclick="openInvoiceDetail('${s.number}')">${s.number}</span>`).join(' ')
+      : '—';
+    return `<tr>
+      <td><span class="item-id">${c.id}</span></td>
+      <td><input class="input input-sm" value="${c.name}" onchange="updateCustomer(${i},'name',this.value)" placeholder="اسم الزبون"></td>
+      <td><input class="input input-sm" value="${c.phone||''}" onchange="updateCustomer(${i},'phone',this.value)" placeholder="الهاتف"></td>
+      <td><input class="input input-sm" value="${c.address||''}" onchange="updateCustomer(${i},'address',this.value)" placeholder="العنوان"></td>
+      <td><strong>${c.name?new Intl.NumberFormat('ar-SY').format(total)+' ل.س':'—'}</strong></td>
+      <td>${invoicesList}</td>
+    </tr>`;
+  }).join('');
+}
+
+function updateCustomer(i,field,val) { db.customers[i][field]=val; saveData(db); }
+
+function addCustomer() {
+  const newId = 'CUS-'+String(db.customers.length+1).padStart(3,'0');
+  db.customers.push({id:newId,name:'',phone:'',address:''});
+  saveData(db); renderCustomers();
+}
+
+// ============================================================
+// SETTINGS
+// ============================================================
+function renderSettings() {
+  document.getElementById('set-name').value = db.company.name;
+  document.getElementById('set-address').value = db.company.address;
+  document.getElementById('set-phone').value = db.company.phone;
+  document.getElementById('set-email').value = db.company.email;
+  document.getElementById('set-slogan').value = db.company.slogan;
+  if(!db.exchange) db.exchange = { usdToOld: 12000 };
+  document.getElementById('set-usd-rate').value = db.exchange.usdToOld;
+}
+
+function saveSettings() {
+  db.company.name = document.getElementById('set-name').value;
+  db.company.address = document.getElementById('set-address').value;
+  db.company.phone = document.getElementById('set-phone').value;
+  db.company.email = document.getElementById('set-email').value;
+  db.company.slogan = document.getElementById('set-slogan').value;
+  if(!db.exchange) db.exchange = { usdToOld: 12000 };
+  db.exchange.usdToOld = parseFloat(document.getElementById('set-usd-rate').value) || 12000;
+  saveData(db);
+  document.getElementById('company-name-header').textContent = db.company.name;
+  updateRateWidget();
+  showToast('✅ تم حفظ الإعدادات — سعر الصرف: ' + db.exchange.usdToOld + ' ل.س ق/$','success');
+}
+
+// ويجت سعر الصرف في لوحة التحكم
+function updateRateWidget() {
+  if(!db.exchange) db.exchange = { usdToOld: 12000 };
+  const rate = db.exchange.usdToOld;
+  const el = document.getElementById('rate-widget-val');
+  if(el) el.textContent = new Intl.NumberFormat('ar-SY').format(rate);
+  const el2 = document.getElementById('rate-widget-new');
+  if(el2) el2.textContent = new Intl.NumberFormat('ar-SY').format(rate/100);
+  const inp = document.getElementById('rate-quick-input');
+  if(inp) inp.value = rate;
+}
+
+function saveQuickRate() {
+  const val = parseFloat(document.getElementById('rate-quick-input').value);
+  if(!val || val < 1) { showToast('سعر صرف غير صحيح','error'); return; }
+  if(!db.exchange) db.exchange = {};
+  db.exchange.usdToOld = val;
+  saveData(db);
+  updateRateWidget();
+  showToast('✅ تم تحديث سعر الصرف: ' + val + ' ل.س ق/$','success');
+}
+
+// ✅ إعادة التعيين — تحتفظ بالمواد
+function resetData() {
+  if(!confirm('هل أنت متأكد؟\nسيتم حذف الفواتير والزبائن والموردين.\nالمواد لن تُحذف.')) return;
+  db.salesInvoices = [];
+  db.purchaseInvoices = [];
+  db.customers = [];
+  db.suppliers = [];
+  db.invoiceCounters = {sale:0,purchase:0,returnSale:0,returnPurchase:0};
+  saveData(db);
+  showToast('✅ تم إعادة التعيين — المواد محفوظة','success');
+  navigate('dashboard');
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg,type='success') {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast toast-'+type+' show';
+  setTimeout(()=>toast.classList.remove('show'),3000);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('DOMContentLoaded',()=>{
+  if(!db.exchange) db.exchange = { usdToOld: 12000 };
+  document.getElementById('company-name-header').textContent = db.company.name;
+  updateRateWidget();
+  navigate('dashboard');
+});
+
+// طباعة الفاتورة الحالية المفتوحة
+function printCurrentInvoice() {
+  const num = document.getElementById('sale-inv-num')?.textContent;
+  // Get last saved invoice or build preview from current lines
+  const lines = saleLines.filter(l=>l.itemId&&l.qty>0);
+  if(lines.length===0){showToast('أضف مادة أولاً ثم احفظ الفاتورة للطباعة','error');return;}
+  const subtotal = lines.reduce((s,l)=>s+l.total,0);
+  const discount = parseFloat(document.getElementById('sale-discount')?.value||0);
+  const total = subtotal*(1-discount/100);
+  const customerName = document.getElementById('sale-customer-input')?.value||'';
+  const date = document.getElementById('sale-date')?.value||'';
+  const fakeInv = { number:num, date, customerName, lines, subtotal, discount, total };
+  // Temporarily add to salesInvoices for print
+  db.salesInvoices.push(fakeInv);
+  printInvoice(num);
+  db.salesInvoices.pop();
+}
+
+// ============================================================
+// عرض تفاصيل الفاتورة + تعديلها
+// ============================================================
+function openInvoiceDetail(number) {
+  const inv = db.salesInvoices.find(i=>i.number===number) ||
+              db.purchaseInvoices.find(i=>i.number===number);
+  if(!inv) return;
+  const isSale = !!db.salesInvoices.find(i=>i.number===number);
+
+  // Fill modal
+  document.getElementById('detail-inv-number').textContent = number;
+  document.getElementById('detail-inv-type').textContent = isSale ? '🧾 فاتورة بيع' : '🛒 فاتورة شراء';
+  document.getElementById('detail-inv-type').className = 'inv-type ' + (isSale ? 'type-sale' : 'type-purchase');
+  document.getElementById('detail-date').value = inv.date;
+  document.getElementById('detail-party-label').textContent = isSale ? 'اسم الزبون' : 'المورد';
+  document.getElementById('detail-party').value = inv.customerName || inv.supplierName || '';
+  document.getElementById('detail-discount-row').style.display = isSale ? '' : 'none';
+  document.getElementById('detail-discount').value = inv.discount || 0;
+
+  // Lines
+  renderDetailLines(inv, isSale);
+
+  // Store current invoice ref
+  document.getElementById('invoice-detail-modal').dataset.number = number;
+  document.getElementById('invoice-detail-modal').dataset.type = isSale ? 'sale' : 'purchase';
+  document.getElementById('invoice-detail-modal').classList.remove('hidden');
+}
+
+let detailLines = [];
+
+function renderDetailLines(inv, isSale) {
+  detailLines = inv.lines.map(l => ({...l}));
+  _renderDetailLinesTable(isSale);
+  _calcDetailTotal(isSale);
+}
+
+function _renderDetailLinesTable(isSale) {
+  const tbody = document.getElementById('detail-lines');
+  tbody.innerHTML = detailLines.map((line, i) => {
+    const item = db.items.find(it=>it.id===line.itemId);
+    return `<tr>
+      <td>${i+1}</td>
+      <td>
+        <select onchange="onDetailItemChange(${i},this.value)" class="input input-sm">
+          <option value="">-- اختر --</option>
+          ${db.items.map(it=>`<option value="${it.id}" ${it.id===line.itemId?'selected':''}>${it.id} - ${it.name}</option>`).join('')}
+        </select>
+      </td>
+      <td><span class="text-muted">${item?.unit||''}</span></td>
+      <td><input type="number" class="input input-sm" value="${line.qty}" min="0.01" step="0.01"
+           onchange="onDetailQtyChange(${i},this.value)" style="width:75px"></td>
+      ${isSale
+        ? `<td><span class="price-display">${line.price?new Intl.NumberFormat('ar-SY').format(line.price):'—'}</span></td>`
+        : `<td><input type="number" class="input input-sm" value="${line.price}" min="0"
+             onchange="onDetailPriceChange(${i},this.value)" style="width:100px"></td>`
+      }
+      <td><strong>${line.total?new Intl.NumberFormat('ar-SY').format(line.total):'—'}</strong></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="removeDetailLine(${i})" style="color:var(--red-600)">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function onDetailItemChange(i, itemId) {
+  const isSale = document.getElementById('invoice-detail-modal').dataset.type === 'sale';
+  const item = db.items.find(it=>it.id===itemId);
+  detailLines[i].itemId = itemId;
+  detailLines[i].price = item ? (isSale ? item.price : item.cost) : 0;
+  detailLines[i].total = detailLines[i].price * detailLines[i].qty;
+  _renderDetailLinesTable(isSale); _calcDetailTotal(isSale);
+}
+function onDetailQtyChange(i, qty) {
+  const isSale = document.getElementById('invoice-detail-modal').dataset.type === 'sale';
+  detailLines[i].qty = parseFloat(qty)||0;
+  detailLines[i].total = detailLines[i].price * detailLines[i].qty;
+  _renderDetailLinesTable(isSale); _calcDetailTotal(isSale);
+}
+function onDetailPriceChange(i, price) {
+  const isSale = document.getElementById('invoice-detail-modal').dataset.type === 'sale';
+  detailLines[i].price = parseFloat(price)||0;
+  detailLines[i].total = detailLines[i].price * detailLines[i].qty;
+  _renderDetailLinesTable(isSale); _calcDetailTotal(isSale);
+}
+function removeDetailLine(i) {
+  const isSale = document.getElementById('invoice-detail-modal').dataset.type === 'sale';
+  detailLines.splice(i,1);
+  if(detailLines.length===0) detailLines.push({itemId:'',qty:1,price:0,total:0});
+  _renderDetailLinesTable(isSale); _calcDetailTotal(isSale);
+}
+function addDetailLine() {
+  const isSale = document.getElementById('invoice-detail-modal').dataset.type === 'sale';
+  detailLines.push({itemId:'',qty:1,price:0,total:0});
+  _renderDetailLinesTable(isSale);
+}
+function _calcDetailTotal(isSale) {
+  const subtotal = detailLines.reduce((s,l)=>s+l.total,0);
+  const discount = isSale ? (parseFloat(document.getElementById('detail-discount').value)||0) : 0;
+  const total = subtotal * (1 - discount/100);
+  document.getElementById('detail-subtotal').textContent = new Intl.NumberFormat('ar-SY').format(subtotal);
+  document.getElementById('detail-total').textContent = new Intl.NumberFormat('ar-SY').format(total);
+}
+
+function saveInvoiceDetail() {
+  const modal = document.getElementById('invoice-detail-modal');
+  const number = modal.dataset.number;
+  const isSale = modal.dataset.type === 'sale';
+  const lines = detailLines.filter(l=>l.itemId&&l.qty>0);
+  if(lines.length===0){showToast('أضف مادة واحدة على الأقل','error');return;}
+
+  const subtotal = lines.reduce((s,l)=>s+l.total,0);
+  const discount = isSale ? (parseFloat(document.getElementById('detail-discount').value)||0) : 0;
+  const total = subtotal*(1-discount/100);
+  const party = document.getElementById('detail-party').value.trim();
+  const date = document.getElementById('detail-date').value;
+
+  if(isSale) {
+    const idx = db.salesInvoices.findIndex(i=>i.number===number);
+    if(idx>=0) {
+      db.salesInvoices[idx] = {...db.salesInvoices[idx], date, customerName:party, lines, subtotal, discount, total};
+      // Update customer if new name
+      if(party && !db.customers.find(c=>c.name===party)) {
+        db.customers.push({id:'CUS-'+String(db.customers.length+1).padStart(3,'0'),name:party,phone:'',address:''});
+      }
+    }
+  } else {
+    const idx = db.purchaseInvoices.findIndex(i=>i.number===number);
+    if(idx>=0) {
+      db.purchaseInvoices[idx] = {...db.purchaseInvoices[idx], date, supplierName:party, lines, total};
+    }
+  }
+
+  saveData(db);
+  modal.classList.add('hidden');
+  showToast('✅ تم تحديث الفاتورة '+number,'success');
+  render(currentPage);
+}
+
+function printDetailInvoice() {
+  const number = document.getElementById('invoice-detail-modal').dataset.number;
+  printInvoice(number);
+}
+
+function closeDetailModal() {
+  document.getElementById('invoice-detail-modal').classList.add('hidden');
+}
