@@ -96,7 +96,7 @@ function fmt(n) { return fmtOld(n); }
 // ============================================================
 // ROUTER
 // ============================================================
-const pages = ['dashboard','invoice-sale','invoice-purchase','items','customers','settings'];
+const pages = ['dashboard','invoice-sale','invoice-purchase','items','customers','suppliers','settings'];
 let currentPage = 'dashboard';
 
 function navigate(page) {
