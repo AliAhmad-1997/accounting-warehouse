@@ -285,7 +285,12 @@
     }
   }
 
-  // إذا سبق دخل بنفس الجلسة
+  // امسح الـ auth لما يغلق أو يخرج من البرنامج
+  window.addEventListener('beforeunload', function() {
+    sessionStorage.removeItem('auth');
+  });
+
+  // إذا سبق دخل بنفس الجلسة (نفس التبويب فقط)
   if (sessionStorage.getItem('auth') === '1') {
     document.getElementById('login-screen').style.display = 'none';
   }
