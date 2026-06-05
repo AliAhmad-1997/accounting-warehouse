@@ -48,11 +48,11 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "المحاسبة والمستودعات",
-      "runAfterFinish": false,
-      "compression": "maximum"
+      "runAfterFinish": false
     },
     "electronVersion": "28.3.3",
-    "asar": true
+    "asar": true,
+    "compression": "maximum"
   },
   "devDependencies": {
     "electron": "^28.3.3",
