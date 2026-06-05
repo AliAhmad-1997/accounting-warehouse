@@ -24,7 +24,11 @@
       "styles.css",
       "theme.js",
       "logo.png",
-      "src/**/*"
+      "!node_modules/**/*",
+      "!src/**/*",
+      "!dist/**/*",
+      "!*.md",
+      "!*.lock"
     ],
     "win": {
       "target": [
@@ -44,8 +48,11 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "المحاسبة والمستودعات",
-      "runAfterFinish": false
-    }
+      "runAfterFinish": false,
+      "compression": "maximum"
+    },
+    "electronVersion": "28.3.3",
+    "asar": true
   },
   "devDependencies": {
     "electron": "^28.3.3",
