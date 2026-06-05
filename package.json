@@ -19,13 +19,20 @@
     },
     "files": [
       "main.js",
+      "index.html",
+      "app.js",
+      "styles.css",
+      "theme.js",
+      "logo.png",
       "src/**/*"
     ],
     "win": {
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "requestedExecutionLevel": "asInvoker",
