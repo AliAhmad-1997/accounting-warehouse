@@ -1,5 +1,10 @@
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, session } = require('electron');
 const path = require('path');
+
+// ===== الحل الرئيسي: حدد مجلد البيانات في AppData للمستخدم =====
+// هذا يضمن إن البرنامج يكتب في مكان عند المستخدم صلاحيات عليه
+// بدل مجلد التثبيت (C:\Program Files) اللي محتاج Admin
+app.setPath('userData', path.join(app.getPath('appData'), 'AccountingWarehouse'));
 
 // منع تعدد النوافذ
 const gotTheLock = app.requestSingleInstanceLock();
@@ -15,10 +20,12 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      // السماح بـ localStorage و sessionStorage بشكل كامل
+      partition: 'persist:accounting',
     },
     // أيقونة البرنامج
     // icon: path.join(__dirname, 'assets/icon.ico'),
-    show: false, // نخفيها لحد ما تجهز
+    show: false,
   });
 
   // تحميل الصفحة
@@ -35,7 +42,15 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // السماح لجميع المستخدمين بالكتابة في session storage
+  session.fromPartition('persist:accounting').setPermissionRequestHandler(
+    (webContents, permission, callback) => {
+      callback(true);
+    }
+  );
+
   createWindow();
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
