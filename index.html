@@ -204,21 +204,34 @@
 
     <div style="margin-bottom:16px; text-align:right;">
       <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:6px;">كلمة السر</label>
-      <input
-        id="login-password"
-        type="password"
-        placeholder="••••••••"
-        onkeydown="if(event.key==='Enter') checkLogin()"
-        style="
-          width:100%; box-sizing:border-box;
-          padding:10px 14px; border:2px solid #e2e8f0;
-          border-radius:8px; font-size:14px;
-          outline:none; transition:border 0.2s;
-          font-family:inherit; direction:ltr; text-align:left;
-        "
-        onfocus="this.style.borderColor='#3b82f6'"
-        onblur="this.style.borderColor='#e2e8f0'"
-      >
+      <div style="position:relative;">
+        <input
+          id="login-password"
+          type="password"
+          placeholder="••••••••"
+          onkeydown="if(event.key==='Enter') checkLogin()"
+          style="
+            width:100%; box-sizing:border-box;
+            padding:10px 40px 10px 14px; border:2px solid #e2e8f0;
+            border-radius:8px; font-size:14px;
+            outline:none; transition:border 0.2s;
+            font-family:inherit; direction:ltr; text-align:left;
+          "
+          onfocus="this.style.borderColor='#3b82f6'"
+          onblur="this.style.borderColor='#e2e8f0'"
+        >
+        <button onclick="togglePass()" type="button" id="toggle-pass-btn" style="
+          position:absolute; left:10px; top:50%; transform:translateY(-50%);
+          background:none; border:none; cursor:pointer; font-size:18px;
+          color:#94a3b8; padding:0; line-height:1;
+        " title="إظهار/إخفاء كلمة السر">👁️</button>
+      </div>
+    </div>
+    <div style="margin-top:8px;text-align:right;">
+      <label style="font-size:12px;color:#64748b;cursor:pointer;user-select:none;display:inline-flex;align-items:center;gap:5px;">
+        <input type="checkbox" onchange="document.getElementById('login-password').type=this.checked?'text':'password'" style="cursor:pointer;width:14px;height:14px;">
+        إظهار كلمة السر 👁️
+      </label>
     </div>
 
     <div id="login-error" style="
@@ -246,6 +259,18 @@
 <script>
   // Hash بسيط لكلمة السر
   const PASS_HASH = btoa(unescape(encodeURIComponent('Ali#1997')));
+
+  function togglePass() {
+    const inp = document.getElementById('login-password');
+    const btn = document.getElementById('toggle-pass-btn');
+    if (inp.type === 'password') {
+      inp.type = 'text';
+      btn.textContent = '🙈';
+    } else {
+      inp.type = 'password';
+      btn.textContent = '👁️';
+    }
+  }
 
   function checkLogin() {
     const input = document.getElementById('login-password').value;
