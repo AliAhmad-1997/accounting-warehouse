@@ -117,6 +117,7 @@ function render(page) {
     case 'invoice-purchase': renderPurchaseInvoice(); break;
     case 'items': renderItems(); break;
     case 'customers': renderCustomers(); break;
+    case 'suppliers': renderSuppliers(); break;
     case 'settings': renderSettings(); break;
   }
 }
@@ -127,16 +128,44 @@ function render(page) {
 function renderDashboard() {
   const stats = getStats();
   const inv = calcInventory();
-  // dash-sales removed from dashboard
-  // dash-purchases removed
-  // dash-profit removed
-  // dash-inv-value removed
-  // dash-sales-count removed
-  // dash-purchases-count removed
-  // removed
 
-  // تنبيهات المخزون محذوفة
+  // KPI Cards
+  const salesEl = document.getElementById('kpi-total-sales');
+  if (salesEl) {
+    salesEl.textContent = fmtUSD(stats.totalSales);
+    document.getElementById('kpi-sales-count').textContent = stats.salesCount + ' فاتورة';
+    document.getElementById('kpi-total-purchases').textContent = fmtUSD(stats.totalPurchases);
+    document.getElementById('kpi-purchases-count').textContent = stats.purchasesCount + ' فاتورة';
+    const profit = stats.profit;
+    const profitEl = document.getElementById('kpi-net-profit');
+    profitEl.textContent = fmtUSD(profit);
+    profitEl.style.color = profit >= 0 ? 'var(--green-700)' : 'var(--red-600)';
+    const margin = stats.totalSales > 0 ? ((profit / stats.totalSales) * 100).toFixed(1) : 0;
+    document.getElementById('kpi-profit-margin').textContent = 'هامش: ' + margin + '%';
+    document.getElementById('kpi-customers-count').textContent = db.customers.length;
+    const suppCount = db.suppliers ? db.suppliers.length : 0;
+    document.getElementById('kpi-suppliers-count').textContent = suppCount + ' مورد';
+  }
 
+  // تنبيهات المخزون
+  const alertsEl = document.getElementById('stock-alerts');
+  if (alertsEl) {
+    if (stats.lowStock.length === 0) {
+      alertsEl.innerHTML = '<div class="empty-state">✅ كل المواد بمخزون كافٍ</div>';
+    } else {
+      alertsEl.innerHTML = stats.lowStock.slice(0, 6).map(item => {
+        const stock = inv[item.id] || 0;
+        const isZero = stock === 0;
+        return '<div class="alert-row">' +
+          '<span class="item-id">' + item.id + '</span>' +
+          '<span class="item-name">' + item.name + '</span>' +
+          '<span class="stock-badge ' + (isZero ? 'badge-error' : 'badge-warning') + '">' +
+          (isZero ? 'نفد' : stock + ' ' + item.unit) + '</span></div>';
+      }).join('');
+    }
+  }
+
+  // آخر الفواتير
   const recent = [
     ...db.salesInvoices.map(i=>({...i,type:'بيع'})),
     ...db.purchaseInvoices.map(i=>({...i,type:'شراء'}))
@@ -146,15 +175,15 @@ function renderDashboard() {
   if (recent.length === 0) {
     recentEl.innerHTML = '<div class="empty-state">لا توجد فواتير بعد</div>';
   } else {
-    recentEl.innerHTML = recent.map(inv => `
-      <div class="invoice-row" onclick="openInvoiceDetail('${inv.number}')" style="cursor:pointer" title="انقر لعرض التفاصيل">
-        <span class="inv-num">${inv.number}</span>
-        <span class="inv-customer">${inv.customerName||inv.supplierName||'—'}</span>
-        <span class="inv-type ${inv.type==='بيع'?'type-sale':'type-purchase'}">${inv.type}</span>
-        <span class="inv-total">${fmt(inv.total)}</span>
-        <span class="inv-date">${inv.date}</span>
-        <span style="color:var(--text-muted);font-size:11px">✏️</span>
-      </div>`).join('');
+    recentEl.innerHTML = recent.map(function(inv) {
+      return '<div class="invoice-row" onclick="openInvoiceDetail('' + inv.number + '')" style="cursor:pointer">' +
+        '<span class="inv-num">' + inv.number + '</span>' +
+        '<span class="inv-customer">' + (inv.customerName||inv.supplierName||'—') + '</span>' +
+        '<span class="inv-type ' + (inv.type==='بيع'?'type-sale':'type-purchase') + '">' + inv.type + '</span>' +
+        '<span class="inv-total">' + fmt(inv.total) + '</span>' +
+        '<span class="inv-date">' + inv.date + '</span>' +
+        '</div>';
+    }).join('');
   }
 }
 
@@ -670,6 +699,46 @@ function renderCustomers() {
     </tr>`;
   }).join('');
 }
+
+// ===== SUPPLIERS =====
+function renderSuppliers() {
+  const tbody = document.getElementById('suppliers-tbody');
+  if (!tbody) return;
+  const suppliers = db.suppliers || [];
+  if (suppliers.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">لا يوجد موردين بعد — سيُضافون تلقائياً عند إنشاء فاتورة شراء</td></tr>';
+    return;
+  }
+  tbody.innerHTML = suppliers.map(function(s, i) {
+    const purchases = db.purchaseInvoices.filter(function(p){ return p.supplierName === s.name; });
+    const total = purchases.reduce(function(sum,inv){ return sum + inv.total; }, 0);
+    const invLinks = purchases.length > 0
+      ? purchases.map(function(p){ return '<span class="inv-link" onclick="openInvoiceDetail('' + p.number + '')">' + p.number + '</span>'; }).join('')
+      : '<span style="color:var(--text-muted);font-size:12px">—</span>';
+    return '<tr>' +
+      '<td><span class="item-id">' + String(i+1).padStart(3,'0') + '</span></td>' +
+      '<td style="font-weight:600">' + s.name + '</td>' +
+      '<td>' + (s.phone||'—') + '</td>' +
+      '<td>' + (s.address||'—') + '</td>' +
+      '<td style="font-weight:700;color:var(--blue-link)">' + fmtUSD(total) + '</td>' +
+      '<td>' + invLinks + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+function addSupplier() {
+  const name = prompt('اسم المورد:');
+  if (!name || !name.trim()) return;
+  if (!db.suppliers) db.suppliers = [];
+  if (db.suppliers.find(function(s){ return s.name === name.trim(); })) {
+    showToast('المورد موجود مسبقاً', 'error'); return;
+  }
+  db.suppliers.push({ name: name.trim(), phone: '', address: '' });
+  saveData();
+  renderSuppliers();
+  showToast('✅ تم إضافة المورد');
+}
+
 
 function updateCustomer(i,field,val) { db.customers[i][field]=val; saveData(db); }
 
