@@ -184,6 +184,88 @@
   </style>
 </head>
 <body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" style="
+  position:fixed; inset:0; z-index:9999;
+  background:linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #1d4ed8 100%);
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Segoe UI','Tahoma','Arial',sans-serif;
+">
+  <div style="
+    background:white; border-radius:16px;
+    padding:40px; width:360px;
+    box-shadow:0 25px 60px rgba(0,0,0,0.3);
+    text-align:center;
+  ">
+    <div style="font-size:48px; margin-bottom:8px;">🔐</div>
+    <h2 style="margin:0 0 4px; font-size:20px; color:#1e3a8a;">برنامج المحاسبة والمستودعات</h2>
+    <p style="margin:0 0 24px; font-size:13px; color:#64748b;">أدخل كلمة السر للمتابعة</p>
+
+    <div style="margin-bottom:16px; text-align:right;">
+      <label style="font-size:12px; font-weight:600; color:#475569; display:block; margin-bottom:6px;">كلمة السر</label>
+      <input
+        id="login-password"
+        type="password"
+        placeholder="••••••••"
+        onkeydown="if(event.key==='Enter') checkLogin()"
+        style="
+          width:100%; box-sizing:border-box;
+          padding:10px 14px; border:2px solid #e2e8f0;
+          border-radius:8px; font-size:14px;
+          outline:none; transition:border 0.2s;
+          font-family:inherit; direction:ltr; text-align:left;
+        "
+        onfocus="this.style.borderColor='#3b82f6'"
+        onblur="this.style.borderColor='#e2e8f0'"
+      >
+    </div>
+
+    <div id="login-error" style="
+      display:none; color:#dc2626; font-size:12px;
+      margin-bottom:12px; background:#fef2f2;
+      padding:8px; border-radius:6px;
+    ">❌ كلمة السر غلط، حاول مرة ثانية</div>
+
+    <button onclick="checkLogin()" style="
+      width:100%; padding:12px;
+      background:linear-gradient(135deg,#1e40af,#3b82f6);
+      color:white; border:none; border-radius:8px;
+      font-size:15px; font-weight:600; cursor:pointer;
+      font-family:inherit; transition:opacity 0.2s;
+    " onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">
+      دخول ←
+    </button>
+
+    <p style="margin:16px 0 0; font-size:11px; color:#94a3b8;">
+      © برنامج المحاسبة والمستودعات
+    </p>
+  </div>
+</div>
+
+<script>
+  // Hash بسيط لكلمة السر
+  const PASS_HASH = btoa(unescape(encodeURIComponent('Ali#1997')));
+
+  function checkLogin() {
+    const input = document.getElementById('login-password').value;
+    const inputHash = btoa(unescape(encodeURIComponent(input)));
+    if (inputHash === PASS_HASH) {
+      document.getElementById('login-screen').style.display = 'none';
+      sessionStorage.setItem('auth', '1');
+    } else {
+      document.getElementById('login-error').style.display = 'block';
+      document.getElementById('login-password').value = '';
+      document.getElementById('login-password').focus();
+    }
+  }
+
+  // إذا سبق دخل بنفس الجلسة
+  if (sessionStorage.getItem('auth') === '1') {
+    document.getElementById('login-screen').style.display = 'none';
+  }
+</script>
+
 <div class="layout">
 
   <!-- SIDEBAR -->
