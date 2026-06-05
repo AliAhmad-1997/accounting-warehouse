@@ -22,7 +22,7 @@ function createWindow() {
   });
 
   // تحميل الصفحة
-  win.loadFile(path.join(__dirname, 'src/index.html'));
+  win.loadFile(path.join(__dirname, 'index.html'));
 
   // نعرضها بعد ما تجهز (بدون flash)
   win.once('ready-to-show', () => {
