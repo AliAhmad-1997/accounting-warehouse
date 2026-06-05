@@ -16,7 +16,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '18'
 
       - name: Install dependencies
         run: npm install
@@ -26,18 +26,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload to Artifacts
+      - name: Upload EXE
         uses: actions/upload-artifact@v4
         with:
-          name: AccountingWarehouse-Windows
+          name: AccountingWarehouse-Windows-Setup
           path: dist/*.exe
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ github.run_number }}
-          name: "برنامج المحاسبة والمستودعات - إصدار ${{ github.run_number }}"
-          body: "نزّل الملف .exe وشغّله مباشرة على Windows"
-          files: dist/*.exe
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          retention-days: 30
