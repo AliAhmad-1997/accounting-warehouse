@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -26,9 +29,19 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload EXE
+      - name: Upload EXE as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: AccountingWarehouse-Windows-Setup
           path: dist/*.exe
-          retention-days: 30
+          retention-days: 90
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: "برنامج المحاسبة - إصدار ${{ github.run_number }}"
+          body: "نزّل الملف .exe وشغّله مباشرة على Windows — ما في تثبيت معقد"
+          files: dist/*.exe
+          draft: false
+          prerelease: false
