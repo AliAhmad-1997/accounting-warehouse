@@ -782,7 +782,7 @@ function saveSettings() {
   db.exchange.usdToOld = parseFloat(document.getElementById('set-usd-rate').value) || 12000;
   saveData(db);
   const hdr = document.getElementById('company-name-header');
-  if (hdr) hdr.textContent = db.company.name;
+  if (hdr) hdr.value = db.company.name;
   updateRateWidget();
   showToast('✅ تم حفظ الإعدادات — سعر الصرف: ' + db.exchange.usdToOld + ' ل.س ق/$','success');
 }
@@ -838,7 +838,7 @@ function showToast(msg,type='success') {
 window.addEventListener('DOMContentLoaded',()=>{
   if(!db.exchange) db.exchange = { usdToOld: 12000 };
   const hdr = document.getElementById('company-name-header');
-  if (hdr) hdr.textContent = db.company.name;
+  if (hdr) hdr.value = db.company.name;
   updateRateWidget();
   navigate('dashboard');
 });
