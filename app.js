@@ -176,8 +176,9 @@ function renderDashboard() {
     recentEl.innerHTML = '<div class="empty-state">لا توجد فواتير بعد</div>';
   } else {
     recentEl.innerHTML = recent.map(function(inv) {
-      return '<div class="invoice-row" onclick="openInvoiceDetail('' + inv.number + '')" style="cursor:pointer">' +
-        '<span class="inv-num">' + inv.number + '</span>' +
+      var num = inv.number;
+      return '<div class="invoice-row" onclick="openInvoiceDetail(\'' + num + '\')" style="cursor:pointer">' +
+        '<span class="inv-num">' + num + '</span>' +
         '<span class="inv-customer">' + (inv.customerName||inv.supplierName||'—') + '</span>' +
         '<span class="inv-type ' + (inv.type==='بيع'?'type-sale':'type-purchase') + '">' + inv.type + '</span>' +
         '<span class="inv-total">' + fmt(inv.total) + '</span>' +
@@ -713,7 +714,7 @@ function renderSuppliers() {
     const purchases = db.purchaseInvoices.filter(function(p){ return p.supplierName === s.name; });
     const total = purchases.reduce(function(sum,inv){ return sum + inv.total; }, 0);
     const invLinks = purchases.length > 0
-      ? purchases.map(function(p){ return '<span class="inv-link" onclick="openInvoiceDetail('' + p.number + '')">' + p.number + '</span>'; }).join('')
+      ? purchases.map(function(p){ return '<span class="inv-link" onclick="openInvoiceDetail(\'' + p.number + '\')">' + p.number + '</span>'; }).join('')
       : '<span style="color:var(--text-muted);font-size:12px">—</span>';
     return '<tr>' +
       '<td><span class="item-id">' + String(i+1).padStart(3,'0') + '</span></td>' +
