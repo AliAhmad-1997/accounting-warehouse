@@ -77,27 +77,27 @@
   --orange-600: #f97316;
   --orange-800: #c2410c;
 
-  /* Semantic Tokens */
-  --surface-base: var(--neutral-200);
-  --surface-primary: var(--neutral-100);
-  --surface-secondary: var(--neutral-200);
-  --surface-elevated: var(--neutral-100);
-  --surface-hover: var(--darken-200);
-  --surface-active: var(--darken-300);
+  /* Semantic Tokens — Custom Theme */
+  --surface-base: #f0f4ff;
+  --surface-primary: #ffffff;
+  --surface-secondary: #f5f7ff;
+  --surface-elevated: #ffffff;
+  --surface-hover: rgba(99,102,241,0.06);
+  --surface-active: rgba(99,102,241,0.1);
 
-  --text-primary: var(--darken-1400);
-  --text-secondary: var(--darken-1100);
-  --text-tertiary: var(--darken-900);
-  --text-muted: var(--darken-800);
-  --text-inverse: var(--neutral-100);
+  --text-primary: #0f172a;
+  --text-secondary: #1e293b;
+  --text-tertiary: #475569;
+  --text-muted: #64748b;
+  --text-inverse: #ffffff;
 
-  --border-subtle: var(--darken-200);
-  --border-default: var(--darken-400);
-  --border-strong: var(--darken-600);
-  --border-focus: var(--blue-800);
+  --border-subtle: rgba(99,102,241,0.08);
+  --border-default: rgba(99,102,241,0.15);
+  --border-strong: rgba(99,102,241,0.3);
+  --border-focus: #6366f1;
 
-  --button-primary-bg: var(--neutral-1200);
-  --button-primary-fg: var(--neutral-100);
+  --button-primary-bg: #6366f1;
+  --button-primary-fg: #ffffff;
   --button-primary-hover: var(--neutral-1000);
 
   --state-success-bg: var(--green-100);
