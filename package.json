@@ -50,8 +50,6 @@
       "shortcutName": "المحاسبة والمستودعات",
       "runAfterFinish": false
     },
-    "electronVersion": "28.3.3",
-    "asar": true,
     "compression": "maximum"
   },
   "devDependencies": {
