@@ -427,7 +427,15 @@
       <div style="display:flex;align-items:center;gap:10px;">
         <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 4px 12px rgba(99,102,241,0.4);">🏢</div>
         <div>
-          <div class="company" id="company-name-header" style="font-size:14px;font-weight:700;color:#f8fafc;">شركتي</div>
+          <div id="company-name-header"
+  contenteditable="true"
+  spellcheck="false"
+  title="انقر لتعديل اسم الشركة"
+  onclick="this.focus()"
+  onblur="saveCompanyName(this.textContent.trim())"
+  onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+  style="font-size:14px;font-weight:700;color:#f8fafc;cursor:text;outline:none;min-width:60px;border-bottom:1px dashed rgba(255,255,255,0.3);padding-bottom:1px;"
+>شركتي</div>
           <div class="subtitle" style="font-size:11px;color:rgba(255,255,255,0.4);">نظام إدارة متكامل</div>
         </div>
       </div>
