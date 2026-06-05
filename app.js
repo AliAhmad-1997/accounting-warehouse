@@ -811,15 +811,32 @@ function saveQuickRate() {
 
 // ✅ إعادة التعيين — تحتفظ بالمواد
 function resetData() {
-  if(!confirm('هل أنت متأكد؟\nسيتم حذف الفواتير والزبائن والموردين.\nالمواد لن تُحذف.')) return;
-  db.salesInvoices = [];
-  db.purchaseInvoices = [];
-  db.customers = [];
-  db.suppliers = [];
-  db.invoiceCounters = {sale:0,purchase:0,returnSale:0,returnPurchase:0};
-  saveData(db);
-  showToast('✅ تم إعادة التعيين — المواد محفوظة','success');
-  navigate('dashboard');
+  // confirm() بيتعطل أحياناً في Electron — نستخدم modal بسيط بدله
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:inherit;';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:32px;width:360px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+      <div style="font-size:40px;margin-bottom:12px;">⚠️</div>
+      <h3 style="margin:0 0 8px;font-size:18px;color:#0f172a;">إعادة تعيين البيانات</h3>
+      <p style="margin:0 0 24px;font-size:14px;color:#64748b;">سيتم حذف الفواتير والزبائن والموردين.<br>المواد لن تُحذف.</p>
+      <div style="display:flex;gap:12px;justify-content:center;">
+        <button id="reset-cancel" style="padding:10px 24px;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc;font-size:14px;cursor:pointer;font-family:inherit;">إلغاء</button>
+        <button id="reset-confirm" style="padding:10px 24px;border-radius:8px;border:none;background:#ef4444;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">تأكيد الحذف</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('reset-cancel').onclick = () => document.body.removeChild(overlay);
+  document.getElementById('reset-confirm').onclick = () => {
+    document.body.removeChild(overlay);
+    db.salesInvoices = [];
+    db.purchaseInvoices = [];
+    db.customers = [];
+    db.suppliers = [];
+    db.invoiceCounters = {sale:0,purchase:0,returnSale:0,returnPurchase:0};
+    saveData(db);
+    showToast('✅ تم إعادة التعيين — المواد محفوظة', 'success');
+    navigate('dashboard');
+  };
 }
 
 // ============================================================
