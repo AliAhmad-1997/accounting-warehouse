@@ -762,6 +762,16 @@ function renderSettings() {
   document.getElementById('set-usd-rate').value = db.exchange.usdToOld;
 }
 
+function saveCompanyName(name) {
+  if (!name || name === db.company.name) return;
+  db.company.name = name;
+  saveData();
+  // حدّث حقل الإعدادات كمان
+  const setName = document.getElementById('set-name');
+  if (setName) setName.value = name;
+  showToast('✅ تم حفظ اسم الشركة');
+}
+
 function saveSettings() {
   db.company.name = document.getElementById('set-name').value;
   db.company.address = document.getElementById('set-address').value;
@@ -771,7 +781,8 @@ function saveSettings() {
   if(!db.exchange) db.exchange = { usdToOld: 12000 };
   db.exchange.usdToOld = parseFloat(document.getElementById('set-usd-rate').value) || 12000;
   saveData(db);
-  document.getElementById('company-name-header').textContent = db.company.name;
+  const hdr = document.getElementById('company-name-header');
+  if (hdr) hdr.textContent = db.company.name;
   updateRateWidget();
   showToast('✅ تم حفظ الإعدادات — سعر الصرف: ' + db.exchange.usdToOld + ' ل.س ق/$','success');
 }
@@ -826,7 +837,8 @@ function showToast(msg,type='success') {
 // ============================================================
 window.addEventListener('DOMContentLoaded',()=>{
   if(!db.exchange) db.exchange = { usdToOld: 12000 };
-  document.getElementById('company-name-header').textContent = db.company.name;
+  const hdr = document.getElementById('company-name-header');
+  if (hdr) hdr.textContent = db.company.name;
   updateRateWidget();
   navigate('dashboard');
 });
