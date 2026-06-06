@@ -162,6 +162,14 @@ function calcInventory() {
   db.salesInvoices.forEach(inv_ => {
     inv_.lines.forEach(l => { if(!inv[l.itemId]) inv[l.itemId]=0; inv[l.itemId] -= parseFloat(l.qty)||0; });
   });
+  // المرتجعات — رد البيع يزيد المخزون، رد الشراء ينقصه
+  (db.returns||[]).forEach(ret => {
+    ret.lines.forEach(l => {
+      if(!inv[l.itemId]) inv[l.itemId]=0;
+      if(ret.type==='sale') inv[l.itemId] += parseFloat(l.qty)||0;
+      else inv[l.itemId] -= parseFloat(l.qty)||0;
+    });
+  });
   return inv;
 }
 
@@ -201,7 +209,7 @@ function fmt(n) { return fmtOld(n); }
 // ============================================================
 // ROUTER
 // ============================================================
-const pages = ['dashboard','invoice-sale','invoice-purchase','items','customers','suppliers','settings','reports'];
+const pages = ['dashboard','invoice-sale','invoice-purchase','items','customers','suppliers','settings','reports','returns'];
 let currentPage = 'dashboard';
 
 function navigate(page) {
@@ -225,6 +233,7 @@ function render(page) {
     case 'suppliers': renderSuppliers(); break;
     case 'settings': renderSettings(); break;
     case 'reports': renderReports(); break;
+    case 'returns': renderReturns(); break;
   }
 }
 
@@ -1445,6 +1454,224 @@ function printSupplierAccount() {
 <h3>💵 الدفعات (${acc.payments.length})</h3>
 <table><thead><tr><th>التاريخ</th><th>ملاحظة</th><th>المبلغ</th></tr></thead>
 <tbody>${acc.payments.map(p => '<tr><td>' + p.date + '</td><td>' + (p.note||'—') + '</td><td>' + fmtUSD(p.amount) + '</td></tr>').join('')}</tbody></table>
+<script>window.onload=()=>window.print();<\/script>
+</body></html>`);
+  win.document.close();
+}
+
+
+// ============================================================
+// المرتجعات — رد بضاعة بيع / رد بضاعة شراء
+// ============================================================
+let returnLines = [{ itemId:'', qty:1, price:0, total:0 }];
+
+function renderReturns() {
+  renderReturnLines();
+  renderReturnTotal();
+  renderReturnsList();
+  // datalists
+  const cdl = document.getElementById('return-customers-datalist');
+  if(cdl) cdl.innerHTML = db.customers.filter(c=>c.name).map(c=>`<option value="${c.name}">`).join('');
+  const sdl = document.getElementById('return-suppliers-datalist');
+  if(sdl) sdl.innerHTML = (db.suppliers||[]).filter(s=>s.name).map(s=>`<option value="${s.name}">`).join('');
+  // set date
+  const dateEl = document.getElementById('return-date');
+  if(dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+  // set next number
+  const type = document.getElementById('return-type')?.value || 'sale';
+  updateReturnNumber(type);
+}
+
+function updateReturnNumber(type) {
+  const returns = (db.returns || []);
+  const saleCount = returns.filter(r=>r.type==='sale').length;
+  const purCount = returns.filter(r=>r.type==='purchase').length;
+  const numEl = document.getElementById('return-inv-num');
+  if(numEl) {
+    numEl.textContent = type === 'sale'
+      ? 'RET-S-' + String(saleCount+1).padStart(3,'0')
+      : 'RET-P-' + String(purCount+1).padStart(3,'0');
+  }
+  // show/hide party fields
+  document.getElementById('return-customer-row').style.display = type === 'sale' ? '' : 'none';
+  document.getElementById('return-supplier-row').style.display = type === 'purchase' ? '' : 'none';
+}
+
+function onReturnTypeChange() {
+  const type = document.getElementById('return-type').value;
+  updateReturnNumber(type);
+  returnLines = [{ itemId:'', qty:1, price:0, total:0 }];
+  renderReturnLines();
+  renderReturnTotal();
+}
+
+function renderReturnLines() {
+  const tbody = document.getElementById('return-lines');
+  if(!tbody) return;
+  const type = document.getElementById('return-type')?.value || 'sale';
+  tbody.innerHTML = returnLines.map((line, i) => {
+    const item = db.items.find(it=>it.id===line.itemId);
+    return `<tr>
+      <td>${i+1}</td>
+      <td>
+        <select onchange="onReturnItemChange(${i},this.value)" class="input input-sm">
+          <option value="">-- اختر --</option>
+          ${db.items.map(it=>`<option value="${it.id}" ${it.id===line.itemId?'selected':''}>${it.id} - ${it.name}</option>`).join('')}
+        </select>
+      </td>
+      <td><span class="text-muted">${item?.unit||'—'}</span></td>
+      <td><input type="number" class="input input-sm" value="${line.qty}" min="0.01" step="0.01"
+          onchange="onReturnQtyChange(${i},this.value)" style="width:80px"></td>
+      <td><input type="number" class="input input-sm" value="${line.price}" min="0"
+          onchange="onReturnPriceChange(${i},this.value)" style="width:110px"></td>
+      <td><strong>${line.total ? fmtUSD(line.total) : '—'}</strong></td>
+      <td><button class="btn btn-ghost btn-sm" onclick="removeReturnLine(${i})" style="color:var(--red-600)">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function onReturnItemChange(i, itemId) {
+  const type = document.getElementById('return-type')?.value || 'sale';
+  const item = db.items.find(it=>it.id===itemId);
+  returnLines[i].itemId = itemId;
+  returnLines[i].price = item ? (type === 'sale' ? item.price : item.cost) : 0;
+  returnLines[i].total = returnLines[i].price * returnLines[i].qty;
+  renderReturnLines(); renderReturnTotal();
+}
+function onReturnQtyChange(i, qty) {
+  returnLines[i].qty = parseFloat(qty)||0;
+  returnLines[i].total = returnLines[i].price * returnLines[i].qty;
+  renderReturnLines(); renderReturnTotal();
+}
+function onReturnPriceChange(i, price) {
+  returnLines[i].price = parseFloat(price)||0;
+  returnLines[i].total = returnLines[i].price * returnLines[i].qty;
+  renderReturnLines(); renderReturnTotal();
+}
+function removeReturnLine(i) {
+  returnLines.splice(i,1);
+  if(returnLines.length===0) returnLines.push({itemId:'',qty:1,price:0,total:0});
+  renderReturnLines(); renderReturnTotal();
+}
+function addReturnLine() {
+  returnLines.push({itemId:'',qty:1,price:0,total:0});
+  renderReturnLines();
+}
+function renderReturnTotal() {
+  const total = returnLines.reduce((s,l)=>s+l.total,0);
+  const el = document.getElementById('return-total');
+  if(el) el.textContent = fmtUSD(total);
+  const eqEl = document.getElementById('return-total-equiv');
+  if(eqEl) eqEl.innerHTML = '<span style="color:var(--text-muted);font-size:13px">' + fmtOld(usdToOld(total)) + ' | ' + fmtNew(usdToNew(total)) + '</span>';
+}
+
+function saveReturn() {
+  const lines = returnLines.filter(l=>l.itemId&&l.qty>0);
+  if(lines.length===0){ showToast('أضف مادة واحدة على الأقل','error'); return; }
+  const type = document.getElementById('return-type').value;
+  const total = lines.reduce((s,l)=>s+l.total,0);
+  const party = type === 'sale'
+    ? document.getElementById('return-customer-input').value.trim()
+    : document.getElementById('return-supplier-input').value.trim();
+  const date = document.getElementById('return-date').value;
+  const note = document.getElementById('return-note').value.trim();
+  const numEl = document.getElementById('return-inv-num');
+  const number = numEl ? numEl.textContent : ('RET-' + Date.now());
+
+  if(!db.returns) db.returns = [];
+  const ret = { number, type, date, party, lines, total, note };
+  db.returns.push(ret);
+
+  // إعادة المخزون — رد البيع يزيد المخزون، رد الشراء ينقصه
+  // (المخزون يحسب تلقائياً من calcInventory)
+
+  saveData(db);
+  returnLines = [{itemId:'',qty:1,price:0,total:0}];
+  showToast('✅ تم حفظ المرتجع ' + number, 'success');
+  renderReturns();
+}
+
+function renderReturnsList() {
+  const el = document.getElementById('returns-list');
+  if(!el) return;
+  const returns = (db.returns || []).slice().reverse();
+  const searchVal = (document.getElementById('returns-search')?.value||'').toLowerCase().trim();
+  const typeFilter = document.getElementById('returns-type-filter')?.value || 'all';
+  const filtered = returns.filter(r => {
+    const matchType = typeFilter === 'all' || r.type === typeFilter;
+    const matchSearch = !searchVal || (r.number||'').toLowerCase().includes(searchVal) || (r.party||'').toLowerCase().includes(searchVal);
+    return matchType && matchSearch;
+  });
+  const countEl = document.getElementById('returns-count');
+  if(countEl) countEl.textContent = filtered.length + ' مرتجع';
+  if(filtered.length === 0) {
+    el.innerHTML = '<div class="empty-state">لا توجد مرتجعات بعد</div>';
+    return;
+  }
+  el.innerHTML = filtered.map(r =>
+    '<div class="invoice-row" onclick="printReturnInvoice('' + r.number + '')" style="cursor:pointer" title="اضغط للطباعة">' +
+    '<span class="inv-num">' + r.number + '</span>' +
+    '<span class="inv-customer">' + (r.party||'—') + '</span>' +
+    '<span class="inv-type ' + (r.type==='sale'?'type-sale':'type-purchase') + '">' + (r.type==='sale'?'رد بيع':'رد شراء') + '</span>' +
+    '<span class="inv-total">' + fmtUSD(r.total) + '</span>' +
+    '<span class="inv-date">' + r.date + '</span>' +
+    '</div>'
+  ).join('');
+}
+
+function printReturnInvoice(number) {
+  const ret = (db.returns||[]).find(r=>r.number===number);
+  if(!ret) return;
+  const linesHTML = ret.lines.map((l,i) => {
+    const item = db.items.find(it=>it.id===l.itemId);
+    return `<tr>
+      <td style="padding:8px;border:1px solid #ddd;text-align:center">${i+1}</td>
+      <td style="padding:8px;border:1px solid #ddd">${item?.name||l.itemId}</td>
+      <td style="padding:8px;border:1px solid #ddd;text-align:center">${item?.unit||''}</td>
+      <td style="padding:8px;border:1px solid #ddd;text-align:center">${l.qty}</td>
+      <td style="padding:8px;border:1px solid #ddd;text-align:center">${fmtUSD(l.price)}</td>
+      <td style="padding:8px;border:1px solid #ddd;text-align:center;font-weight:bold">${fmtUSD(l.total)}</td>
+    </tr>`;
+  }).join('');
+  const win = window.open('','_blank');
+  win.document.write(`<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>مرتجع ${ret.number}</title>
+<style>
+  body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;margin:0;padding:20px;color:#1a1a1a;}
+  .header{background:#dc2626;color:white;padding:20px;border-radius:8px;margin-bottom:20px;text-align:center;}
+  .header h1{margin:0;font-size:22px;}
+  .header p{margin:4px 0;font-size:12px;opacity:0.85;}
+  .badge{background:#fef2f2;color:#dc2626;padding:6px 16px;border-radius:6px;font-weight:700;font-size:15px;display:inline-block;margin-bottom:16px;}
+  .info{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}
+  .info-box{background:#f8f9fa;padding:10px;border-radius:6px;border-right:3px solid #dc2626;}
+  .info-box label{font-size:11px;color:#666;display:block;}
+  .info-box span{font-size:14px;font-weight:600;}
+  table{width:100%;border-collapse:collapse;margin-bottom:16px;}
+  thead th{background:#dc2626;color:white;padding:8px;text-align:center;font-size:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .total-box{background:#dc2626;color:white;padding:14px 20px;border-radius:8px;text-align:center;display:inline-block;min-width:180px;}
+  .note{background:#fef2f2;padding:10px;border-radius:6px;font-size:13px;margin-top:12px;}
+  @media print{body{padding:10px;}}
+</style></head><body>
+<div class="header">
+  <h1>${db.company.name}</h1>
+  <p>${db.company.address}${db.company.phone?' | ☎ '+db.company.phone:''}</p>
+</div>
+<div style="text-align:center;margin-bottom:16px;">
+  <span class="badge">🔄 ${ret.type==='sale'?'مرتجع بيع':'مرتجع شراء'} — ${ret.number}</span>
+</div>
+<div class="info">
+  <div class="info-box"><label>${ret.type==='sale'?'الزبون':'المورد'}</label><span>${ret.party||'—'}</span></div>
+  <div class="info-box"><label>التاريخ</label><span>${ret.date}</span></div>
+</div>
+<table>
+  <thead><tr><th>#</th><th>المادة</th><th>الوحدة</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
+  <tbody>${linesHTML}</tbody>
+</table>
+<div style="text-align:left;margin-top:8px;">
+  <div class="total-box"><div style="font-size:11px;opacity:0.8;">الإجمالي</div><div style="font-size:20px;font-weight:700;">${fmtUSD(ret.total)}</div></div>
+</div>
+${ret.note?'<div class="note">📝 ملاحظة: '+ret.note+'</div>':''}
+<div style="text-align:center;margin-top:24px;font-size:11px;color:#94a3b8;border-top:1px solid #eee;padding-top:8px;">${db.company.slogan}</div>
 <script>window.onload=()=>window.print();<\/script>
 </body></html>`);
   win.document.close();

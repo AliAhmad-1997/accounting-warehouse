@@ -593,6 +593,12 @@
       </div>
 
       <div class="nav-label" style="color:rgba(255,255,255,0.3);font-size:10px;padding:12px 8px 4px;font-weight:700;letter-spacing:1px;">التقارير</div>
+      <div class="nav-item" data-page="returns" onclick="navigate('returns')">
+        <span class="icon" style="width:20px;display:flex;align-items:center;justify-content:center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+        </span>
+        المرتجعات
+      </div>
       <div class="nav-item" data-page="reports" onclick="navigate('reports')">
         <span class="icon" style="width:20px;display:flex;align-items:center;justify-content:center;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -1080,6 +1086,101 @@
             </table>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- RETURNS -->
+    <div id="page-returns" class="hidden">
+      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div class="page-title">🔄 المرتجعات</div>
+          <div class="page-subtitle">رد بضاعة بيع أو شراء</div>
+        </div>
+        <span class="inv-number-badge" id="return-inv-num" style="background:var(--red-100);color:var(--red-700);">RET-S-001</span>
+      </div>
+
+      <!-- هيدر المرتجع -->
+      <div class="invoice-header" style="grid-template-columns:1fr 1fr 1fr 1fr;">
+        <div class="form-group">
+          <label class="form-label">نوع المرتجع</label>
+          <select id="return-type" class="input" onchange="onReturnTypeChange()">
+            <option value="sale">🔄 رد بيع (من زبون)</option>
+            <option value="purchase">🔄 رد شراء (للمورد)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">التاريخ</label>
+          <input type="date" id="return-date" class="input">
+        </div>
+        <div class="form-group" id="return-customer-row">
+          <label class="form-label">اسم الزبون</label>
+          <input type="text" id="return-customer-input" class="input" placeholder="اسم الزبون..." list="return-customers-datalist" autocomplete="off">
+          <datalist id="return-customers-datalist"></datalist>
+        </div>
+        <div class="form-group" id="return-supplier-row" style="display:none;">
+          <label class="form-label">اسم المورد</label>
+          <input type="text" id="return-supplier-input" class="input" placeholder="اسم المورد..." list="return-suppliers-datalist" autocomplete="off">
+          <datalist id="return-suppliers-datalist"></datalist>
+        </div>
+      </div>
+
+      <!-- جدول المواد -->
+      <div class="invoice-table-wrap">
+        <table>
+          <thead><tr>
+            <th style="width:40px">#</th>
+            <th>المادة</th>
+            <th style="width:70px">الوحدة</th>
+            <th style="width:90px">الكمية</th>
+            <th style="width:130px">السعر</th>
+            <th style="width:130px">الإجمالي</th>
+            <th style="width:50px"></th>
+          </tr></thead>
+          <tbody id="return-lines"></tbody>
+        </table>
+      </div>
+      <div class="flex gap-3 mt-4" style="margin-bottom:var(--space-4)">
+        <button class="btn btn-secondary" onclick="addReturnLine()">+ إضافة سطر</button>
+      </div>
+
+      <!-- ملاحظة + إجمالي -->
+      <div class="invoice-totals">
+        <div>
+          <div class="form-group" style="margin-bottom:8px;">
+            <label class="form-label">ملاحظة (اختياري)</label>
+            <input type="text" id="return-note" class="input" placeholder="سبب الإرجاع..." style="max-width:320px;">
+          </div>
+          <div class="total-label">إجمالي المرتجع</div>
+          <div class="total-value"><span id="return-total">0.00 $</span></div>
+          <div id="return-total-equiv" style="margin-top:4px;"></div>
+        </div>
+        <button class="btn btn-danger btn-lg" onclick="saveReturn()">💾 حفظ المرتجع</button>
+      </div>
+
+      <!-- قائمة المرتجعات -->
+      <div class="card" style="margin-top:var(--space-5)">
+        <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            🔄 سجل المرتجعات
+            <span id="returns-count" style="font-size:11px;background:var(--surface-secondary);color:var(--text-muted);padding:2px 8px;border-radius:999px;font-weight:500;">0 مرتجع</span>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <select id="returns-type-filter" class="input input-sm" onchange="renderReturnsList()" style="width:130px;">
+              <option value="all">الكل</option>
+              <option value="sale">رد بيع</option>
+              <option value="purchase">رد شراء</option>
+            </select>
+            <input type="text" id="returns-search" class="input input-sm" placeholder="🔍 بحث..." oninput="renderReturnsList()" style="width:200px;">
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:6px 4px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border-subtle);margin-bottom:4px;">
+          <span style="min-width:90px;">رقم المرتجع</span>
+          <span style="flex:1;">الاسم</span>
+          <span style="min-width:70px;">النوع</span>
+          <span style="min-width:100px;">الإجمالي</span>
+          <span style="min-width:80px;">التاريخ</span>
+        </div>
+        <div id="returns-list" style="max-height:380px;overflow-y:auto;"><div class="empty-state">لا توجد مرتجعات بعد</div></div>
       </div>
     </div>
 
