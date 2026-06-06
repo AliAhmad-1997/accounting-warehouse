@@ -1198,7 +1198,6 @@
         <div class="flex gap-3">
           <button class="btn btn-success btn-lg" onclick="saveSettings()">💾 حفظ الإعدادات</button>
           <button class="btn btn-danger" onclick="resetData()">🔄 إعادة تعيين (يحتفظ بالمواد)</button>
-          <button class="btn btn-secondary btn-lg" onclick="resetBusinessType()" style="background:var(--violet-600,#7c3aed);color:#fff;border:none;">🏢 إعادة اختيار نوع النشاط</button>
         </div>
       </div>
 
@@ -1277,6 +1276,20 @@
           </div>
         </div>
       </div>
+
+      <!-- زر إعادة اختيار نوع النشاط - في أسفل الإعدادات -->
+      <div class="settings-card" style="margin-top:var(--space-5);border:2px solid #7c3aed20;background:linear-gradient(135deg,#f5f3ff,#ede9fe);">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+          <div>
+            <div style="font-size:16px;font-weight:700;color:#5b21b6;margin-bottom:4px;">🏢 نوع النشاط التجاري</div>
+            <div style="font-size:13px;color:#7c3aed;">تغيير نوع النشاط يتطلب كلمة سر المدير</div>
+          </div>
+          <button class="btn btn-lg" onclick="resetBusinessType()" style="background:#7c3aed;color:#fff;border:none;white-space:nowrap;">
+            🔄 إعادة اختيار النشاط
+          </button>
+        </div>
+      </div>
+
     </div>
 
   </main>

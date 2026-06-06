@@ -1734,13 +1734,16 @@ function changePassword() {
 // SETUP SCREEN — يظهر مرة واحدة فقط
 // ============================================================
 function resetBusinessType() {
+  const ADMIN_HASH = btoa(unescape(encodeURIComponent('AdminAli1997')));
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:inherit;';
   overlay.innerHTML = `
     <div style="background:#fff;border-radius:16px;padding:32px;width:380px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-      <div style="font-size:40px;margin-bottom:12px;">🏢</div>
+      <div style="font-size:40px;margin-bottom:12px;">🔐</div>
       <h3 style="margin:0 0 8px;font-size:18px;color:#0f172a;">إعادة اختيار نوع النشاط</h3>
-      <p style="margin:0 0 24px;font-size:14px;color:#64748b;">سيتم تغيير المواد الافتراضية حسب النشاط الجديد.<br>البيانات الحالية لن تُحذف.</p>
+      <p style="margin:0 0 16px;font-size:14px;color:#64748b;">أدخل كلمة سر المدير للمتابعة</p>
+      <input id="rbt-pass" type="password" placeholder="كلمة السر" style="width:100%;padding:10px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit;margin-bottom:8px;box-sizing:border-box;text-align:right;">
+      <div id="rbt-error" style="color:#ef4444;font-size:12px;margin-bottom:12px;display:none;">❌ كلمة السر غير صحيحة</div>
       <div style="display:flex;gap:12px;justify-content:center;">
         <button id="rbt-cancel" style="padding:10px 24px;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc;font-size:14px;cursor:pointer;font-family:inherit;">إلغاء</button>
         <button id="rbt-confirm" style="padding:10px 24px;border-radius:8px;border:none;background:#7c3aed;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">تأكيد</button>
@@ -1748,7 +1751,16 @@ function resetBusinessType() {
     </div>`;
   document.body.appendChild(overlay);
   document.getElementById('rbt-cancel').onclick = () => document.body.removeChild(overlay);
+  document.getElementById('rbt-pass').onkeydown = (e) => { if(e.key==='Enter') document.getElementById('rbt-confirm').click(); };
   document.getElementById('rbt-confirm').onclick = () => {
+    const input = document.getElementById('rbt-pass').value;
+    const inputHash = btoa(unescape(encodeURIComponent(input)));
+    if(inputHash !== ADMIN_HASH) {
+      document.getElementById('rbt-error').style.display = 'block';
+      document.getElementById('rbt-pass').value = '';
+      document.getElementById('rbt-pass').focus();
+      return;
+    }
     document.body.removeChild(overlay);
     localStorage.removeItem('business_type');
     showSetupScreen();
