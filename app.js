@@ -1759,23 +1759,53 @@ function selectBusiness(type) {
 // ============================================================
 // INIT
 // ============================================================
-// دالة تهيئة التطبيق — تُستدعى بعد نجاح اللوقين
+// ============================================================
+// LOGIN + INIT — كل منطق الدخول هنا بعد تحميل app.js
+// ============================================================
+const PASS_HASH = btoa(unescape(encodeURIComponent('Ali#1997')));
+
+function checkLogin() {
+  const input = document.getElementById('login-password').value;
+  const inputHash = btoa(unescape(encodeURIComponent(input)));
+  const storedHash = localStorage.getItem('app_password') || PASS_HASH;
+  const btn = document.getElementById('login-btn');
+  if (inputHash === storedHash) {
+    btn.style.background = 'linear-gradient(135deg,#10b981,#059669)';
+    btn.textContent = '✓ جاري الدخول...';
+    setTimeout(() => {
+      document.getElementById('login-screen').style.display = 'none';
+      sessionStorage.setItem('auth', '1');
+      initApp();
+    }, 400);
+  } else {
+    document.getElementById('login-error').style.display = 'block';
+    document.getElementById('login-password').value = '';
+    document.getElementById('login-password').focus();
+    const screen = document.getElementById('login-screen');
+    screen.style.animation = 'none';
+    document.querySelector('#login-screen > div:nth-child(3)').style.animation = 'shake 0.4s ease';
+    setTimeout(() => {
+      document.querySelector('#login-screen > div:nth-child(3)').style.animation = '';
+    }, 400);
+  }
+}
+
 function initApp() {
   if(!db.exchange) db.exchange = { usdToOld: 12000 };
   const hdr = document.getElementById('company-name-header');
   if (hdr) hdr.value = db.company.name;
   updateRateWidget();
   navigate('dashboard');
-  // تحقق من الإعداد الأولي (شاشة اختيار نوع النشاط)
   checkSetup();
 }
 
-window.addEventListener('DOMContentLoaded',()=>{
-  // إذا كان المستخدم مسجّل دخول من قبل، شغّل التطبيق مباشرة
+window.addEventListener('DOMContentLoaded', () => {
   if (sessionStorage.getItem('auth') === '1') {
+    // مسجّل دخول — أخفِ شاشة اللوقين وشغّل التطبيق
+    document.getElementById('login-screen').style.display = 'none';
     initApp();
   }
-  // إذا لم يكن مسجّلاً، initApp ستُشغَّل من checkLogin() بعد نجاح الدخول
+  // إذا لم يكن مسجّلاً، شاشة اللوقين ستبقى ظاهرة وcheckLogin تُشغَّل عند الضغط
 });
 
 // طباعة الفاتورة الحالية المفتوحة

@@ -467,8 +467,7 @@
 </style>
 
 <script>
-  const PASS_HASH = btoa(unescape(encodeURIComponent('Ali#1997')));
-
+  // دوال اللوقين — تعريف مبكر لأن الأزرار تستدعيها مباشرة
   function togglePass() {
     const inp = document.getElementById('login-password');
     const icon = document.getElementById('eye-icon');
@@ -480,38 +479,7 @@
       icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
     }
   }
-
-  function checkLogin() {
-    const input = document.getElementById('login-password').value;
-    const inputHash = btoa(unescape(encodeURIComponent(input)));
-    const btn = document.getElementById('login-btn');
-    if (inputHash === PASS_HASH) {
-      btn.style.background = 'linear-gradient(135deg,#10b981,#059669)';
-      btn.textContent = '✓ جاري الدخول...';
-      setTimeout(() => {
-        document.getElementById('login-screen').style.display = 'none';
-        sessionStorage.setItem('auth', '1');
-        if (typeof initApp === 'function') initApp();
-      }, 400);
-    } else {
-      document.getElementById('login-error').style.display = 'block';
-      document.getElementById('login-password').value = '';
-      document.getElementById('login-password').focus();
-      const screen = document.getElementById('login-screen');
-      screen.style.animation = 'none';
-      document.querySelector('#login-screen > div:nth-child(3)').style.animation = 'shake 0.4s ease';
-      setTimeout(() => {
-        document.querySelector('#login-screen > div:nth-child(3)').style.animation = '';
-      }, 400);
-    }
-  }
-
-  // auth محفوظ في sessionStorage طوال الجلسة
-
-  if (sessionStorage.getItem('auth') === '1') {
-    document.getElementById('login-screen').style.display = 'none';
-    // initApp ستُشغَّل من DOMContentLoaded في app.js
-  }
+  // checkLogin و initApp معرّفتان في app.js — يُستدعيان بعد تحميله
 </script>
 
 <div class="layout">
