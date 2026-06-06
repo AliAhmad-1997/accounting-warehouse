@@ -859,13 +859,17 @@ function renderCustomers() {
     const invoicesList = sales.length > 0
       ? sales.map(s=>`<span class="inv-link" onclick="openInvoiceDetail('${s.number}')">${s.number}</span>`).join(' ')
       : '—';
+    const acc = getCustomerAccount(c.name);
+    const remainingColor = acc.remaining > 0 ? 'var(--red-600)' : 'var(--green-700)';
     return `<tr>
       <td><span class="item-id">${c.id}</span></td>
       <td><input class="input input-sm" value="${c.name}" onchange="updateCustomer(${i},'name',this.value)" placeholder="اسم الزبون"></td>
       <td><input class="input input-sm" value="${c.phone||''}" onchange="updateCustomer(${i},'phone',this.value)" placeholder="الهاتف"></td>
       <td><input class="input input-sm" value="${c.address||''}" onchange="updateCustomer(${i},'address',this.value)" placeholder="العنوان"></td>
-      <td><strong>${c.name?new Intl.NumberFormat('ar-SY').format(total)+' ل.س':'—'}</strong></td>
-      <td>${invoicesList}</td>
+      <td><strong>${fmtUSD(acc.totalInvoices)}</strong></td>
+      <td><strong style="color:var(--green-700)">${fmtUSD(acc.totalPaid)}</strong></td>
+      <td><strong style="color:${remainingColor}">${fmtUSD(acc.remaining)}</strong></td>
+      <td><button class="btn btn-primary btn-sm" onclick="openCustomerAccount('${c.name}')">💳 الحساب</button></td>
     </tr>`;
   }).join('');
 }
@@ -1162,6 +1166,145 @@ function printReport() {
 <body>
 ${area.innerHTML}
 <div class="footer">تم إنشاء التقرير بواسطة برنامج المحاسبة والمستودعات — ${new Date().toLocaleDateString('ar-SY')}</div>
+<script>window.onload=()=>window.print();<\/script>
+</body></html>`);
+  win.document.close();
+}
+
+
+// ============================================================
+// حساب الزبون — دين / دفع / باقي
+// ============================================================
+
+function getCustomerAccount(customerName) {
+  const invoices = db.salesInvoices.filter(i => i.customerName === customerName);
+  const totalInvoices = invoices.reduce((s, i) => s + (i.total || 0), 0);
+  const payments = (db.customerPayments || []).filter(p => p.customerName === customerName);
+  const totalPaid = payments.reduce((s, p) => s + (p.amount || 0), 0);
+  const remaining = totalInvoices - totalPaid;
+  return { invoices, payments, totalInvoices, totalPaid, remaining };
+}
+
+function openCustomerAccount(customerName) {
+  const acc = getCustomerAccount(customerName);
+  const modal = document.getElementById('customer-account-modal');
+  if (!modal) return;
+
+  document.getElementById('ca-name').textContent = customerName;
+  document.getElementById('ca-total-invoices').textContent = fmtUSD(acc.totalInvoices);
+  document.getElementById('ca-total-paid').textContent = fmtUSD(acc.totalPaid);
+  const remEl = document.getElementById('ca-remaining');
+  remEl.textContent = fmtUSD(acc.remaining);
+  remEl.style.color = acc.remaining > 0 ? 'var(--red-600)' : 'var(--green-700)';
+  document.getElementById('ca-remaining-old').textContent = fmtOld(usdToOld(acc.remaining));
+
+  // جدول الفواتير
+  const invTbody = document.getElementById('ca-invoices-tbody');
+  invTbody.innerHTML = acc.invoices.length === 0
+    ? '<tr><td colspan="3" style="text-align:center;padding:12px;color:var(--text-muted)">لا توجد فواتير</td></tr>'
+    : acc.invoices.map(inv =>
+        '<tr onclick="openInvoiceDetail('' + inv.number + '')" style="cursor:pointer">' +
+        '<td><span class="inv-num">' + inv.number + '</span></td>' +
+        '<td>' + inv.date + '</td>' +
+        '<td><strong>' + fmtUSD(inv.total) + '</strong></td>' +
+        '</tr>'
+      ).join('');
+
+  // جدول الدفعات
+  const payTbody = document.getElementById('ca-payments-tbody');
+  payTbody.innerHTML = acc.payments.length === 0
+    ? '<tr><td colspan="3" style="text-align:center;padding:12px;color:var(--text-muted)">لا توجد دفعات مسجلة</td></tr>'
+    : acc.payments.map((p, i) =>
+        '<tr>' +
+        '<td>' + p.date + '</td>' +
+        '<td>' + (p.note || '—') + '</td>' +
+        '<td style="color:var(--green-700)"><strong>' + fmtUSD(p.amount) + '</strong></td>' +
+        '<td><button class="btn btn-ghost btn-sm" onclick="deleteCustomerPayment('' + customerName + '',' + i + ')" style="color:var(--red-600)">✕</button></td>' +
+        '</tr>'
+      ).join('');
+
+  // حقل إضافة دفعة
+  document.getElementById('ca-payment-name').value = customerName;
+  document.getElementById('ca-payment-amount').value = '';
+  document.getElementById('ca-payment-note').value = '';
+  document.getElementById('ca-payment-date').value = new Date().toISOString().split('T')[0];
+
+  modal.classList.remove('hidden');
+  modal.style.display = 'flex';
+}
+
+function addCustomerPayment() {
+  const customerName = document.getElementById('ca-payment-name').value;
+  const amount = parseFloat(document.getElementById('ca-payment-amount').value) || 0;
+  const note = document.getElementById('ca-payment-note').value.trim();
+  const date = document.getElementById('ca-payment-date').value;
+
+  if (!amount || amount <= 0) { showToast('أدخل مبلغ صحيح', 'error'); return; }
+  if (!db.customerPayments) db.customerPayments = [];
+
+  db.customerPayments.push({ customerName, amount, note, date });
+  saveData(db);
+  showToast('✅ تم تسجيل الدفعة: ' + fmtUSD(amount), 'success');
+  openCustomerAccount(customerName);
+}
+
+function deleteCustomerPayment(customerName, index) {
+  if (!confirm('هل تريد حذف هذه الدفعة؟')) return;
+  const payments = (db.customerPayments || []).filter(p => p.customerName === customerName);
+  const allPayments = db.customerPayments || [];
+  // find actual index in full array
+  let count = 0;
+  for (let i = 0; i < allPayments.length; i++) {
+    if (allPayments[i].customerName === customerName) {
+      if (count === index) { allPayments.splice(i, 1); break; }
+      count++;
+    }
+  }
+  db.customerPayments = allPayments;
+  saveData(db);
+  showToast('🗑️ تم حذف الدفعة', 'success');
+  openCustomerAccount(customerName);
+}
+
+function closeCustomerAccount() {
+  const modal = document.getElementById('customer-account-modal');
+  if (modal) { modal.classList.add('hidden'); modal.style.display = 'none'; }
+}
+
+function printCustomerAccount() {
+  const name = document.getElementById('ca-name').textContent;
+  const acc = getCustomerAccount(name);
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head><meta charset="UTF-8"><title>حساب ${name}</title>
+<style>
+  body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;margin:0;padding:20px;color:#1a1a1a;direction:rtl;}
+  .header{background:#1F3864;color:white;padding:16px 20px;border-radius:8px;margin-bottom:20px;}
+  .header h2{margin:0;font-size:18px;}
+  .header p{margin:4px 0 0;font-size:12px;opacity:0.8;}
+  .kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+  .kpi{background:#f0f4ff;border-radius:8px;padding:12px;text-align:center;}
+  .kpi label{font-size:11px;color:#64748b;display:block;margin-bottom:4px;}
+  .kpi span{font-size:16px;font-weight:700;color:#1F3864;}
+  table{width:100%;border-collapse:collapse;margin-bottom:16px;}
+  thead th{background:#1F3864;color:white;padding:8px;font-size:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  tbody td{padding:7px 8px;border-bottom:1px solid #e2e8f0;font-size:12px;}
+  h3{font-size:13px;color:#1F3864;margin:16px 0 8px;}
+  .remaining{font-size:20px;font-weight:700;color:${acc.remaining > 0 ? '#dc2626' : '#16a34a'};}
+</style></head><body>
+<div class="header"><h2>حساب الزبون: ${name}</h2><p>تاريخ الطباعة: ${new Date().toLocaleDateString('ar-SY')}</p></div>
+<div class="kpi-row">
+  <div class="kpi"><label>إجمالي الفواتير</label><span>${fmtUSD(acc.totalInvoices)}</span></div>
+  <div class="kpi"><label>إجمالي المدفوع</label><span>${fmtUSD(acc.totalPaid)}</span></div>
+  <div class="kpi"><label>المتبقي</label><span class="remaining">${fmtUSD(acc.remaining)}</span></div>
+</div>
+<h3>🧾 الفواتير (${acc.invoices.length})</h3>
+<table><thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>الإجمالي</th></tr></thead>
+<tbody>${acc.invoices.map(i => '<tr><td>' + i.number + '</td><td>' + i.date + '</td><td>' + fmtUSD(i.total) + '</td></tr>').join('')}</tbody></table>
+<h3>💵 الدفعات (${acc.payments.length})</h3>
+<table><thead><tr><th>التاريخ</th><th>ملاحظة</th><th>المبلغ</th></tr></thead>
+<tbody>${acc.payments.map(p => '<tr><td>' + p.date + '</td><td>' + (p.note||'—') + '</td><td>' + fmtUSD(p.amount) + '</td></tr>').join('')}</tbody></table>
 <script>window.onload=()=>window.print();<\/script>
 </body></html>`);
   win.document.close();
