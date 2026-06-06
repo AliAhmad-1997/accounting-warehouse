@@ -1677,6 +1677,48 @@ ${ret.note?'<div class="note">📝 ملاحظة: '+ret.note+'</div>':''}
   win.document.close();
 }
 
+
+// ============================================================
+// تعديل كلمة السر
+// ============================================================
+function changePassword() {
+  const currentPass = document.getElementById('pass-current').value;
+  const newPass = document.getElementById('pass-new').value;
+  const confirmPass = document.getElementById('pass-confirm').value;
+
+  // تحقق من الحقول
+  if (!currentPass || !newPass || !confirmPass) {
+    showToast('يرجى تعبئة جميع الحقول', 'error'); return;
+  }
+  if (newPass.length < 4) {
+    showToast('كلمة السر الجديدة يجب أن تكون 4 أحرف على الأقل', 'error'); return;
+  }
+  if (newPass !== confirmPass) {
+    showToast('كلمة السر الجديدة وتأكيدها غير متطابقتين', 'error'); return;
+  }
+
+  // تحقق من كلمة السر الحالية
+  const currentHash = btoa(unescape(encodeURIComponent(currentPass)));
+  const storedHash = localStorage.getItem('app_password') || btoa(unescape(encodeURIComponent('Ali#1997')));
+
+  if (currentHash !== storedHash) {
+    showToast('❌ كلمة السر الحالية غير صحيحة', 'error');
+    document.getElementById('pass-current').value = '';
+    return;
+  }
+
+  // حفظ كلمة السر الجديدة
+  const newHash = btoa(unescape(encodeURIComponent(newPass)));
+  localStorage.setItem('app_password', newHash);
+
+  // مسح الحقول
+  document.getElementById('pass-current').value = '';
+  document.getElementById('pass-new').value = '';
+  document.getElementById('pass-confirm').value = '';
+
+  showToast('✅ تم تغيير كلمة السر بنجاح', 'success');
+}
+
 // ============================================================
 // SETUP SCREEN — يظهر مرة واحدة فقط
 // ============================================================
