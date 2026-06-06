@@ -1079,3 +1079,64 @@ function printDetailInvoice() {
 function closeDetailModal() {
   document.getElementById('invoice-detail-modal').classList.add('hidden');
 }
+
+
+// ============================================================
+// النسخ الاحتياطية
+// ============================================================
+
+// استقبال طلب النسخة التلقائية من main process
+if (window.electronAPI) {
+  window.electronAPI.onRequestBackupData(() => {
+    const jsonStr = JSON.stringify(db);
+    window.electronAPI.sendBackupData(jsonStr);
+  });
+}
+
+// تصدير يدوي
+async function exportBackupManual() {
+  if (!window.electronAPI) { showToast('هذه الميزة تعمل فقط داخل البرنامج', 'error'); return; }
+  const jsonStr = JSON.stringify(db, null, 2);
+  const result = await window.electronAPI.exportBackup(jsonStr);
+  if (result.success) {
+    showToast('✅ تم حفظ النسخة الاحتياطية', 'success');
+  } else {
+    showToast('تم الإلغاء', 'error');
+  }
+}
+
+// استيراد نسخة احتياطية
+async function importBackupManual() {
+  if (!window.electronAPI) { showToast('هذه الميزة تعمل فقط داخل البرنامج', 'error'); return; }
+  if (!confirm('⚠️ سيتم استبدال البيانات الحالية بالنسخة المستوردة. هل أنت متأكد؟')) return;
+  const result = await window.electronAPI.importBackup();
+  if (result.success) {
+    try {
+      const imported = JSON.parse(result.data);
+      db = imported;
+      saveData(db);
+      showToast('✅ تم استيراد البيانات بنجاح', 'success');
+      navigate('dashboard');
+    } catch(e) {
+      showToast('❌ الملف غير صالح', 'error');
+    }
+  }
+}
+
+// عرض قائمة النسخ المحفوظة
+async function showBackupsList() {
+  if (!window.electronAPI) { showToast('هذه الميزة تعمل فقط داخل البرنامج', 'error'); return; }
+  const result = await window.electronAPI.listBackups();
+  const el = document.getElementById('backups-list');
+  if (!el) return;
+  if (!result.success || result.files.length === 0) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:8px 0;">لا توجد نسخ احتياطية بعد</div>';
+    return;
+  }
+  el.innerHTML = '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">📁 ' + result.dir + '</div>' +
+    result.files.map(f =>
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border-subtle);font-size:13px;">' +
+      '<span>📄 ' + f + '</span>' +
+      '</div>'
+    ).join('');
+}

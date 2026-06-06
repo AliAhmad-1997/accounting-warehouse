@@ -20,6 +20,7 @@
     "files": [
       "main.js",
       "index.html",
+      "preload.js",
       "app.js",
       "styles.css",
       "theme.js",

@@ -879,6 +879,47 @@
           <button class="btn btn-danger" onclick="resetData()">🔄 إعادة تعيين (يحتفظ بالمواد)</button>
         </div>
       </div>
+
+      <!-- قسم النسخ الاحتياطية -->
+      <div class="settings-card" style="margin-top:var(--space-5)">
+        <div style="font-size:16px;font-weight:700;margin-bottom:var(--space-5);display:flex;align-items:center;gap:8px;">
+          💾 النسخ الاحتياطية
+        </div>
+
+        <!-- Auto backup info -->
+        <div style="background:var(--state-success-bg);border:1px solid var(--state-success-border);border-radius:var(--radius-md);padding:var(--space-4);margin-bottom:var(--space-5);display:flex;align-items:flex-start;gap:12px;">
+          <span style="font-size:20px;">✅</span>
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--state-success-fg);">النسخ التلقائية مفعّلة</div>
+            <div style="font-size:12px;color:var(--state-success-fg);margin-top:3px;opacity:0.85;">
+              البرنامج يحفظ نسخة تلقائياً كل يوم عند الفتح في:<br>
+              <strong>Documents / AccountingBackups /</strong><br>
+              يحتفظ بآخر 30 نسخة تلقائياً
+            </div>
+          </div>
+        </div>
+
+        <!-- أزرار يدوية -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);margin-bottom:var(--space-5)">
+          <button class="btn btn-primary btn-lg" onclick="exportBackupManual()" style="justify-content:center;">
+            📤 تصدير نسخة الآن
+          </button>
+          <button class="btn btn-secondary btn-lg" onclick="importBackupManual()" style="justify-content:center;">
+            📥 استيراد نسخة
+          </button>
+        </div>
+
+        <!-- قائمة النسخ -->
+        <div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:var(--space-3);display:flex;align-items:center;justify-content:space-between;">
+            <span>📋 النسخ المحفوظة</span>
+            <button class="btn btn-ghost btn-sm" onclick="showBackupsList()">🔄 تحديث</button>
+          </div>
+          <div id="backups-list" style="background:var(--surface-secondary);border-radius:var(--radius-md);padding:var(--space-3);min-height:60px;">
+            <div style="color:var(--text-muted);font-size:13px;padding:8px 0;">اضغط "تحديث" لعرض النسخ المحفوظة</div>
+          </div>
+        </div>
+      </div>
     </div>
 
   </main>
