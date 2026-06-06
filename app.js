@@ -246,22 +246,26 @@ function renderSaleStats() {
 function renderSaleRecentInvoices() {
   const el = document.getElementById('sale-recent-invoices');
   if(!el) return;
-  const recent = [
-    ...db.salesInvoices.map(i=>({...i,type:'بيع'})),
-    ...db.purchaseInvoices.map(i=>({...i,type:'شراء'}))
-  ].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
-  if(recent.length === 0) {
-    el.innerHTML = '<div class="empty-state">لا توجد فواتير بعد</div>';
+  const searchVal = (document.getElementById('sale-invoices-search') ? document.getElementById('sale-invoices-search').value : '').toLowerCase().trim();
+  const all = db.salesInvoices.slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const filtered = searchVal
+    ? all.filter(inv => (inv.number||'').toLowerCase().includes(searchVal) || (inv.customerName||'').toLowerCase().includes(searchVal))
+    : all;
+  const countEl = document.getElementById('sale-invoices-count');
+  if(countEl) countEl.textContent = filtered.length + ' فاتورة';
+  if(filtered.length === 0) {
+    el.innerHTML = searchVal ? '<div class="empty-state">🔍 لا توجد نتائج لـ "' + searchVal + '"</div>' : '<div class="empty-state">لا توجد فواتير بيع بعد</div>';
     return;
   }
-  el.innerHTML = recent.map(inv => `
-    <div class="invoice-row" onclick="openInvoiceDetail('${inv.number}')" style="cursor:pointer">
-      <span class="inv-num">${inv.number}</span>
-      <span class="inv-customer">${inv.customerName||inv.supplierName||'—'}</span>
-      <span class="inv-type ${inv.type==='بيع'?'type-sale':'type-purchase'}">${inv.type}</span>
-      <span class="inv-total">${fmt(inv.total)}</span>
-      <span class="inv-date">${inv.date}</span>
-    </div>`).join('');
+  el.innerHTML = filtered.map(inv =>
+    '<div class="invoice-row" onclick="openInvoiceDetail(\'' + inv.number + '\')" style="cursor:pointer">' +
+    '<span class="inv-num">' + inv.number + '</span>' +
+    '<span class="inv-customer">' + (inv.customerName||'—') + '</span>' +
+    '<span class="inv-type type-sale">بيع</span>' +
+    '<span class="inv-total">' + fmtUSD(inv.total) + '</span>' +
+    '<span class="inv-date">' + inv.date + '</span>' +
+    '</div>'
+  ).join('');
 }
 
 function renderSaleLines() {
@@ -486,6 +490,7 @@ function renderPurchaseInvoice() {
   renderPurchaseLines(); renderPurchaseTotal();
   const datalist = document.getElementById('suppliers-datalist');
   if(datalist) datalist.innerHTML = db.suppliers.filter(s=>s.name).map(s=>`<option value="${s.name}">`).join('');
+  renderPurchaseRecentInvoices();
 }
 
 function renderPurchaseLines() {
@@ -569,6 +574,31 @@ function renderPurchaseTotal() {
     fmtOld(usdToOld(total)) + ' &nbsp;|&nbsp; ' + fmtNew(usdToNew(total)) +
     '</span>';
 }
+function renderPurchaseRecentInvoices() {
+  const el = document.getElementById('pur-recent-invoices');
+  if(!el) return;
+  const searchVal = (document.getElementById('pur-invoices-search') ? document.getElementById('pur-invoices-search').value : '').toLowerCase().trim();
+  const all = db.purchaseInvoices.slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const filtered = searchVal
+    ? all.filter(inv => (inv.number||'').toLowerCase().includes(searchVal) || (inv.supplierName||'').toLowerCase().includes(searchVal))
+    : all;
+  const countEl = document.getElementById('pur-invoices-count');
+  if(countEl) countEl.textContent = filtered.length + ' فاتورة';
+  if(filtered.length === 0) {
+    el.innerHTML = searchVal ? '<div class="empty-state">🔍 لا توجد نتائج لـ "' + searchVal + '"</div>' : '<div class="empty-state">لا توجد فواتير شراء بعد</div>';
+    return;
+  }
+  el.innerHTML = filtered.map(inv =>
+    '<div class="invoice-row" onclick="openInvoiceDetail(\'' + inv.number + '\')" style="cursor:pointer">' +
+    '<span class="inv-num">' + inv.number + '</span>' +
+    '<span class="inv-customer">' + (inv.supplierName||'—') + '</span>' +
+    '<span class="inv-type type-purchase">شراء</span>' +
+    '<span class="inv-total">' + fmtUSD(inv.total) + '</span>' +
+    '<span class="inv-date">' + inv.date + '</span>' +
+    '</div>'
+  ).join('');
+}
+
 function savePurchaseInvoice() {
   const lines = purchaseLines.filter(l=>l.itemId&&l.qty>0);
   if(lines.length===0){showToast('أضف مادة واحدة على الأقل','error');return;}
