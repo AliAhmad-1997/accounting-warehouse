@@ -889,13 +889,17 @@ function renderSuppliers() {
     const invLinks = purchases.length > 0
       ? purchases.map(function(p){ return '<span class="inv-link" onclick="openInvoiceDetail(\'' + p.number + '\')">' + p.number + '</span>'; }).join('')
       : '<span style="color:var(--text-muted);font-size:12px">—</span>';
+    const sAcc = getSupplierAccount(s.name);
+    const sRemColor = sAcc.remaining > 0 ? 'var(--red-600)' : 'var(--green-700)';
     return '<tr>' +
       '<td><span class="item-id">' + String(i+1).padStart(3,'0') + '</span></td>' +
       '<td style="font-weight:600">' + s.name + '</td>' +
       '<td>' + (s.phone||'—') + '</td>' +
       '<td>' + (s.address||'—') + '</td>' +
-      '<td style="font-weight:700;color:var(--blue-link)">' + fmtUSD(total) + '</td>' +
-      '<td>' + invLinks + '</td>' +
+      '<td style="font-weight:700;color:var(--blue-link)">' + fmtUSD(sAcc.totalInvoices) + '</td>' +
+      '<td style="font-weight:700;color:var(--green-700)">' + fmtUSD(sAcc.totalPaid) + '</td>' +
+      '<td style="font-weight:700;color:' + sRemColor + '">' + fmtUSD(sAcc.remaining) + '</td>' +
+      '<td><button class="btn btn-primary btn-sm" onclick="openSupplierAccount('' + s.name + '')">💳 الحساب</button></td>' +
       '</tr>';
   }).join('');
 }
@@ -1300,6 +1304,142 @@ function printCustomerAccount() {
   <div class="kpi"><label>المتبقي</label><span class="remaining">${fmtUSD(acc.remaining)}</span></div>
 </div>
 <h3>🧾 الفواتير (${acc.invoices.length})</h3>
+<table><thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>الإجمالي</th></tr></thead>
+<tbody>${acc.invoices.map(i => '<tr><td>' + i.number + '</td><td>' + i.date + '</td><td>' + fmtUSD(i.total) + '</td></tr>').join('')}</tbody></table>
+<h3>💵 الدفعات (${acc.payments.length})</h3>
+<table><thead><tr><th>التاريخ</th><th>ملاحظة</th><th>المبلغ</th></tr></thead>
+<tbody>${acc.payments.map(p => '<tr><td>' + p.date + '</td><td>' + (p.note||'—') + '</td><td>' + fmtUSD(p.amount) + '</td></tr>').join('')}</tbody></table>
+<script>window.onload=()=>window.print();<\/script>
+</body></html>`);
+  win.document.close();
+}
+
+
+// ============================================================
+// حساب المورد — مشتريات / مدفوع / باقي
+// ============================================================
+
+function getSupplierAccount(supplierName) {
+  const invoices = db.purchaseInvoices.filter(i => i.supplierName === supplierName);
+  const totalInvoices = invoices.reduce((s, i) => s + (i.total || 0), 0);
+  const payments = (db.supplierPayments || []).filter(p => p.supplierName === supplierName);
+  const totalPaid = payments.reduce((s, p) => s + (p.amount || 0), 0);
+  const remaining = totalInvoices - totalPaid;
+  return { invoices, payments, totalInvoices, totalPaid, remaining };
+}
+
+function openSupplierAccount(supplierName) {
+  const acc = getSupplierAccount(supplierName);
+  const modal = document.getElementById('supplier-account-modal');
+  if (!modal) return;
+
+  document.getElementById('sa-name').textContent = supplierName;
+  document.getElementById('sa-total-invoices').textContent = fmtUSD(acc.totalInvoices);
+  document.getElementById('sa-total-paid').textContent = fmtUSD(acc.totalPaid);
+  const remEl = document.getElementById('sa-remaining');
+  remEl.textContent = fmtUSD(acc.remaining);
+  remEl.style.color = acc.remaining > 0 ? 'var(--red-600)' : 'var(--green-700)';
+  document.getElementById('sa-remaining-old').textContent = fmtOld(usdToOld(acc.remaining));
+
+  // جدول الفواتير
+  const invTbody = document.getElementById('sa-invoices-tbody');
+  invTbody.innerHTML = acc.invoices.length === 0
+    ? '<tr><td colspan="3" style="text-align:center;padding:12px;color:var(--text-muted)">لا توجد فواتير</td></tr>'
+    : acc.invoices.map(inv =>
+        '<tr onclick="openInvoiceDetail('' + inv.number + '')" style="cursor:pointer">' +
+        '<td><span class="inv-num">' + inv.number + '</span></td>' +
+        '<td>' + inv.date + '</td>' +
+        '<td><strong>' + fmtUSD(inv.total) + '</strong></td>' +
+        '</tr>'
+      ).join('');
+
+  // جدول الدفعات
+  const payTbody = document.getElementById('sa-payments-tbody');
+  payTbody.innerHTML = acc.payments.length === 0
+    ? '<tr><td colspan="4" style="text-align:center;padding:12px;color:var(--text-muted)">لا توجد دفعات مسجلة</td></tr>'
+    : acc.payments.map((p, i) =>
+        '<tr>' +
+        '<td>' + p.date + '</td>' +
+        '<td>' + (p.note || '—') + '</td>' +
+        '<td style="color:var(--green-700)"><strong>' + fmtUSD(p.amount) + '</strong></td>' +
+        '<td><button class="btn btn-ghost btn-sm" onclick="deleteSupplierPayment('' + supplierName + '',' + i + ')" style="color:var(--red-600)">✕</button></td>' +
+        '</tr>'
+      ).join('');
+
+  document.getElementById('sa-payment-name').value = supplierName;
+  document.getElementById('sa-payment-amount').value = '';
+  document.getElementById('sa-payment-note').value = '';
+  document.getElementById('sa-payment-date').value = new Date().toISOString().split('T')[0];
+
+  modal.classList.remove('hidden');
+  modal.style.display = 'flex';
+}
+
+function addSupplierPayment() {
+  const supplierName = document.getElementById('sa-payment-name').value;
+  const amount = parseFloat(document.getElementById('sa-payment-amount').value) || 0;
+  const note = document.getElementById('sa-payment-note').value.trim();
+  const date = document.getElementById('sa-payment-date').value;
+
+  if (!amount || amount <= 0) { showToast('أدخل مبلغ صحيح', 'error'); return; }
+  if (!db.supplierPayments) db.supplierPayments = [];
+
+  db.supplierPayments.push({ supplierName, amount, note, date });
+  saveData(db);
+  showToast('✅ تم تسجيل الدفعة: ' + fmtUSD(amount), 'success');
+  openSupplierAccount(supplierName);
+}
+
+function deleteSupplierPayment(supplierName, index) {
+  if (!confirm('هل تريد حذف هذه الدفعة؟')) return;
+  const allPayments = db.supplierPayments || [];
+  let count = 0;
+  for (let i = 0; i < allPayments.length; i++) {
+    if (allPayments[i].supplierName === supplierName) {
+      if (count === index) { allPayments.splice(i, 1); break; }
+      count++;
+    }
+  }
+  db.supplierPayments = allPayments;
+  saveData(db);
+  showToast('🗑️ تم حذف الدفعة', 'success');
+  openSupplierAccount(supplierName);
+}
+
+function closeSupplierAccount() {
+  const modal = document.getElementById('supplier-account-modal');
+  if (modal) { modal.classList.add('hidden'); modal.style.display = 'none'; }
+}
+
+function printSupplierAccount() {
+  const name = document.getElementById('sa-name').textContent;
+  const acc = getSupplierAccount(name);
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head><meta charset="UTF-8"><title>حساب ${name}</title>
+<style>
+  body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;margin:0;padding:20px;color:#1a1a1a;direction:rtl;}
+  .header{background:#15803d;color:white;padding:16px 20px;border-radius:8px;margin-bottom:20px;}
+  .header h2{margin:0;font-size:18px;}
+  .header p{margin:4px 0 0;font-size:12px;opacity:0.8;}
+  .kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+  .kpi{background:#f0fdf4;border-radius:8px;padding:12px;text-align:center;}
+  .kpi label{font-size:11px;color:#64748b;display:block;margin-bottom:4px;}
+  .kpi span{font-size:16px;font-weight:700;color:#15803d;}
+  table{width:100%;border-collapse:collapse;margin-bottom:16px;}
+  thead th{background:#15803d;color:white;padding:8px;font-size:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  tbody td{padding:7px 8px;border-bottom:1px solid #e2e8f0;font-size:12px;}
+  h3{font-size:13px;color:#15803d;margin:16px 0 8px;}
+  .remaining{font-size:20px;font-weight:700;color:${acc.remaining > 0 ? '#dc2626' : '#16a34a'};}
+</style></head><body>
+<div class="header"><h2>حساب المورد: ${name}</h2><p>تاريخ الطباعة: ${new Date().toLocaleDateString('ar-SY')}</p></div>
+<div class="kpi-row">
+  <div class="kpi"><label>إجمالي المشتريات</label><span>${fmtUSD(acc.totalInvoices)}</span></div>
+  <div class="kpi"><label>إجمالي المدفوع</label><span>${fmtUSD(acc.totalPaid)}</span></div>
+  <div class="kpi"><label>المتبقي</label><span class="remaining">${fmtUSD(acc.remaining)}</span></div>
+</div>
+<h3>🛒 فواتير الشراء (${acc.invoices.length})</h3>
 <table><thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>الإجمالي</th></tr></thead>
 <tbody>${acc.invoices.map(i => '<tr><td>' + i.number + '</td><td>' + i.date + '</td><td>' + fmtUSD(i.total) + '</td></tr>').join('')}</tbody></table>
 <h3>💵 الدفعات (${acc.payments.length})</h3>

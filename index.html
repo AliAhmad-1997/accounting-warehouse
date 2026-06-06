@@ -956,12 +956,14 @@
         <table>
           <thead>
             <tr>
-              <th style="width:80px">الرقم</th>
+              <th style="width:70px">الرقم</th>
               <th>اسم المورد</th>
               <th>الهاتف</th>
               <th>العنوان</th>
-              <th>إجمالي المشتريات</th>
-              <th>الفواتير</th>
+              <th>إجمالي الفواتير</th>
+              <th>المدفوع</th>
+              <th>المتبقي</th>
+              <th style="width:90px">الحساب</th>
             </tr>
           </thead>
           <tbody id="suppliers-tbody"></tbody>
@@ -1395,6 +1397,85 @@
         <table>
           <thead><tr><th>التاريخ</th><th>ملاحظة</th><th>المبلغ</th><th style="width:40px"></th></tr></thead>
           <tbody id="ca-payments-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SUPPLIER ACCOUNT MODAL -->
+<div class="modal-overlay hidden" id="supplier-account-modal" style="align-items:center;justify-content:center;">
+  <div class="detail-modal" style="width:680px;">
+    <div class="detail-header">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span style="font-size:20px;">🚚</span>
+        <div>
+          <div style="font-size:16px;font-weight:700;" id="sa-name">—</div>
+          <div style="font-size:12px;color:var(--text-muted);">حساب المورد</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary btn-sm" onclick="printSupplierAccount()">🖨️ طباعة</button>
+        <button class="btn btn-ghost btn-sm" onclick="closeSupplierAccount()">✕</button>
+      </div>
+    </div>
+
+    <!-- KPI -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:var(--space-4);">
+      <div style="background:var(--green-100);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">إجمالي المشتريات</div>
+        <div style="font-size:16px;font-weight:700;color:var(--green-700);" id="sa-total-invoices">0 $</div>
+      </div>
+      <div style="background:var(--blue-100);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">إجمالي المدفوع</div>
+        <div style="font-size:16px;font-weight:700;color:var(--blue-link);" id="sa-total-paid">0 $</div>
+      </div>
+      <div style="background:var(--red-100);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">المتبقي (المستحق)</div>
+        <div style="font-size:16px;font-weight:700;" id="sa-remaining">0 $</div>
+        <div style="font-size:11px;color:var(--text-muted);" id="sa-remaining-old"></div>
+      </div>
+    </div>
+
+    <!-- إضافة دفعة -->
+    <div style="background:var(--surface-secondary);border-radius:var(--radius-md);padding:var(--space-3);margin-bottom:var(--space-4);">
+      <div style="font-size:12px;font-weight:600;margin-bottom:var(--space-2);">💵 تسجيل دفعة للمورد</div>
+      <input type="hidden" id="sa-payment-name">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end;">
+        <div class="form-group">
+          <label class="form-label">المبلغ ($)</label>
+          <input type="number" id="sa-payment-amount" class="input input-sm" placeholder="0.00" min="0" step="0.01">
+        </div>
+        <div class="form-group">
+          <label class="form-label">التاريخ</label>
+          <input type="date" id="sa-payment-date" class="input input-sm">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ملاحظة</label>
+          <input type="text" id="sa-payment-note" class="input input-sm" placeholder="اختياري...">
+        </div>
+        <button class="btn btn-success" onclick="addSupplierPayment()">✅ حفظ</button>
+      </div>
+    </div>
+
+    <!-- جدول الفواتير -->
+    <div style="margin-bottom:var(--space-3);">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;">🛒 فواتير الشراء</div>
+      <div class="invoice-table-wrap" style="max-height:180px;overflow-y:auto;">
+        <table>
+          <thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>الإجمالي</th></tr></thead>
+          <tbody id="sa-invoices-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- جدول الدفعات -->
+    <div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;">💵 الدفعات المسجلة</div>
+      <div class="invoice-table-wrap" style="max-height:160px;overflow-y:auto;">
+        <table>
+          <thead><tr><th>التاريخ</th><th>ملاحظة</th><th>المبلغ</th><th style="width:40px"></th></tr></thead>
+          <tbody id="sa-payments-tbody"></tbody>
         </table>
       </div>
     </div>
