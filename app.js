@@ -201,7 +201,7 @@ function fmt(n) { return fmtOld(n); }
 // ============================================================
 // ROUTER
 // ============================================================
-const pages = ['dashboard','invoice-sale','invoice-purchase','items','customers','suppliers','settings'];
+const pages = ['dashboard','invoice-sale','invoice-purchase','items','customers','suppliers','settings','reports'];
 let currentPage = 'dashboard';
 
 function navigate(page) {
@@ -224,6 +224,7 @@ function render(page) {
     case 'customers': renderCustomers(); break;
     case 'suppliers': renderSuppliers(); break;
     case 'settings': renderSettings(); break;
+    case 'reports': renderReports(); break;
   }
 }
 
@@ -1017,6 +1018,154 @@ function showToast(msg,type='success') {
   setTimeout(()=>toast.classList.remove('show'),3000);
 }
 
+
+
+// ============================================================
+// التقارير
+// ============================================================
+
+function renderReports() {
+  const filterType = document.getElementById('report-filter-type')?.value || 'monthly';
+  const filterMonth = document.getElementById('report-filter-month')?.value || '';
+  const filterYear = document.getElementById('report-filter-year')?.value || new Date().getFullYear();
+
+  // فلترة الفواتير حسب الفترة
+  function matchPeriod(inv) {
+    const d = new Date(inv.date);
+    if (filterType === 'daily') {
+      const today = document.getElementById('report-filter-date')?.value || new Date().toISOString().split('T')[0];
+      return inv.date === today;
+    } else if (filterType === 'monthly') {
+      return d.getMonth() + 1 === parseInt(filterMonth) && d.getFullYear() === parseInt(filterYear);
+    } else if (filterType === 'yearly') {
+      return d.getFullYear() === parseInt(filterYear);
+    } else if (filterType === 'custom') {
+      const from = document.getElementById('report-from')?.value;
+      const to = document.getElementById('report-to')?.value;
+      if (from && to) return inv.date >= from && inv.date <= to;
+      return true;
+    }
+    return true;
+  }
+
+  const sales = db.salesInvoices.filter(matchPeriod);
+  const purchases = db.purchaseInvoices.filter(matchPeriod);
+
+  const totalSales = sales.reduce((s, i) => s + (i.total || 0), 0);
+  const totalPurchases = purchases.reduce((s, i) => s + (i.total || 0), 0);
+  const profit = totalSales - totalPurchases;
+  const margin = totalSales > 0 ? ((profit / totalSales) * 100).toFixed(1) : 0;
+
+  // KPI
+  document.getElementById('rep-total-sales').textContent = fmtUSD(totalSales);
+  document.getElementById('rep-sales-sub').textContent = sales.length + ' فاتورة';
+  document.getElementById('rep-total-purchases').textContent = fmtUSD(totalPurchases);
+  document.getElementById('rep-purchases-sub').textContent = purchases.length + ' فاتورة';
+  const profitEl = document.getElementById('rep-profit');
+  profitEl.textContent = fmtUSD(profit);
+  profitEl.style.color = profit >= 0 ? 'var(--green-700)' : 'var(--red-600)';
+  document.getElementById('rep-margin').textContent = 'هامش: ' + margin + '%';
+  document.getElementById('rep-sales-count').textContent = fmtOld(usdToOld(totalSales));
+  document.getElementById('rep-purchases-count').textContent = fmtOld(usdToOld(totalPurchases));
+  document.getElementById('rep-profit-old').textContent = fmtOld(usdToOld(profit));
+
+  // جدول المبيعات
+  const salesTbody = document.getElementById('rep-sales-tbody');
+  if (sales.length === 0) {
+    salesTbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--text-muted)">لا توجد فواتير في هذه الفترة</td></tr>';
+  } else {
+    salesTbody.innerHTML = sales.map(inv =>
+      '<tr onclick="openInvoiceDetail('' + inv.number + '')" style="cursor:pointer">' +
+      '<td><span class="inv-num">' + inv.number + '</span></td>' +
+      '<td>' + (inv.customerName || '—') + '</td>' +
+      '<td>' + inv.date + '</td>' +
+      '<td>' + (inv.discount > 0 ? inv.discount + '%' : '—') + '</td>' +
+      '<td><strong>' + fmtUSD(inv.total) + '</strong></td>' +
+      '</tr>'
+    ).join('');
+  }
+
+  // جدول المشتريات
+  const purTbody = document.getElementById('rep-purchases-tbody');
+  if (purchases.length === 0) {
+    purTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--text-muted)">لا توجد فواتير في هذه الفترة</td></tr>';
+  } else {
+    purTbody.innerHTML = purchases.map(inv =>
+      '<tr onclick="openInvoiceDetail('' + inv.number + '')" style="cursor:pointer">' +
+      '<td><span class="inv-num">' + inv.number + '</span></td>' +
+      '<td>' + (inv.supplierName || '—') + '</td>' +
+      '<td>' + inv.date + '</td>' +
+      '<td><strong>' + fmtUSD(inv.total) + '</strong></td>' +
+      '</tr>'
+    ).join('');
+  }
+
+  // تحديث عنوان التقرير
+  updateReportTitle(filterType, filterMonth, filterYear);
+}
+
+function updateReportTitle(type, month, year) {
+  const months = ['','يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  let title = 'تقرير ';
+  if (type === 'daily') {
+    const d = document.getElementById('report-filter-date')?.value || new Date().toISOString().split('T')[0];
+    title += 'يومي — ' + d;
+  } else if (type === 'monthly') {
+    title += 'شهري — ' + (months[parseInt(month)] || '') + ' ' + year;
+  } else if (type === 'yearly') {
+    title += 'سنوي — ' + year;
+  } else {
+    const from = document.getElementById('report-from')?.value || '';
+    const to = document.getElementById('report-to')?.value || '';
+    title += 'مخصص — ' + from + ' إلى ' + to;
+  }
+  const el = document.getElementById('report-title');
+  if (el) el.textContent = title;
+}
+
+function onReportFilterChange() {
+  const type = document.getElementById('report-filter-type')?.value;
+  document.getElementById('report-daily-row').style.display = type === 'daily' ? '' : 'none';
+  document.getElementById('report-monthly-row').style.display = type === 'monthly' ? '' : 'none';
+  document.getElementById('report-yearly-row').style.display = type === 'yearly' ? '' : 'none';
+  document.getElementById('report-custom-row').style.display = type === 'custom' ? '' : 'none';
+  renderReports();
+}
+
+function printReport() {
+  const area = document.getElementById('report-print-area');
+  if (!area) return;
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>تقرير</title>
+<style>
+  body { font-family:'Segoe UI',Tahoma,Arial,sans-serif; margin:0; padding:20px; color:#1a1a1a; direction:rtl; }
+  h1 { font-size:20px; color:#1F3864; margin-bottom:4px; }
+  .sub { font-size:12px; color:#64748b; margin-bottom:20px; }
+  .kpi-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:24px; }
+  .kpi { background:#f0f4ff; border-radius:8px; padding:12px; text-align:center; }
+  .kpi-label { font-size:11px; color:#64748b; margin-bottom:4px; }
+  .kpi-value { font-size:18px; font-weight:700; color:#1F3864; }
+  .kpi-sub { font-size:11px; color:#64748b; }
+  table { width:100%; border-collapse:collapse; margin-bottom:20px; }
+  thead th { background:#1F3864; color:white; padding:8px; font-size:12px; text-align:right; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  tbody td { padding:7px 8px; border-bottom:1px solid #e2e8f0; font-size:12px; }
+  tbody tr:nth-child(even) { background:#f8fafc; }
+  h3 { font-size:14px; color:#1F3864; margin:16px 0 8px; }
+  .footer { text-align:center; font-size:11px; color:#94a3b8; margin-top:24px; border-top:1px solid #e2e8f0; padding-top:8px; }
+  @media print { body { padding:10px; } }
+</style>
+</head>
+<body>
+${area.innerHTML}
+<div class="footer">تم إنشاء التقرير بواسطة برنامج المحاسبة والمستودعات — ${new Date().toLocaleDateString('ar-SY')}</div>
+<script>window.onload=()=>window.print();<\/script>
+</body></html>`);
+  win.document.close();
+}
 
 // ============================================================
 // SETUP SCREEN — يظهر مرة واحدة فقط

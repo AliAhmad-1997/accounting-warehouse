@@ -592,6 +592,14 @@
         الموردين
       </div>
 
+      <div class="nav-label" style="color:rgba(255,255,255,0.3);font-size:10px;padding:12px 8px 4px;font-weight:700;letter-spacing:1px;">التقارير</div>
+      <div class="nav-item" data-page="reports" onclick="navigate('reports')">
+        <span class="icon" style="width:20px;display:flex;align-items:center;justify-content:center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        </span>
+        التقارير
+      </div>
+
       <div class="nav-label" style="color:rgba(255,255,255,0.3);font-size:10px;padding:12px 8px 4px;font-weight:700;letter-spacing:1px;">النظام</div>
       <div class="nav-item" data-page="settings" onclick="navigate('settings')">
         <span class="icon" style="width:20px;display:flex;align-items:center;justify-content:center;">
@@ -956,6 +964,118 @@
           </thead>
           <tbody id="suppliers-tbody"></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- REPORTS -->
+    <div id="page-reports" class="hidden">
+      <div id="report-print-area">
+        <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+          <div>
+            <div class="page-title">📊 التقارير</div>
+            <div class="page-subtitle" id="report-title">تقرير شهري</div>
+          </div>
+          <button class="btn btn-primary btn-lg" onclick="printReport()">🖨️ طباعة التقرير</button>
+        </div>
+
+        <!-- فلاتر -->
+        <div class="card" style="margin-bottom:var(--space-5)">
+          <div style="display:flex;align-items:center;gap:var(--space-4);flex-wrap:wrap;">
+            <div class="form-group">
+              <label class="form-label">نوع التقرير</label>
+              <select id="report-filter-type" class="input input-sm" onchange="onReportFilterChange()" style="width:140px">
+                <option value="daily">يومي</option>
+                <option value="monthly" selected>شهري</option>
+                <option value="yearly">سنوي</option>
+                <option value="custom">مخصص</option>
+              </select>
+            </div>
+            <div id="report-daily-row" class="form-group" style="display:none">
+              <label class="form-label">التاريخ</label>
+              <input type="date" id="report-filter-date" class="input input-sm" onchange="renderReports()">
+            </div>
+            <div id="report-monthly-row" class="form-group" style="display:flex;gap:8px;">
+              <div>
+                <label class="form-label">الشهر</label>
+                <select id="report-filter-month" class="input input-sm" onchange="renderReports()" style="width:110px">
+                  <option value="1">يناير</option><option value="2">فبراير</option><option value="3">مارس</option>
+                  <option value="4">أبريل</option><option value="5">مايو</option><option value="6" selected>يونيو</option>
+                  <option value="7">يوليو</option><option value="8">أغسطس</option><option value="9">سبتمبر</option>
+                  <option value="10">أكتوبر</option><option value="11">نوفمبر</option><option value="12">ديسمبر</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label">السنة</label>
+                <input type="number" id="report-filter-year" class="input input-sm" value="2026" style="width:80px" onchange="renderReports()">
+              </div>
+            </div>
+            <div id="report-yearly-row" class="form-group" style="display:none">
+              <label class="form-label">السنة</label>
+              <input type="number" id="report-filter-year2" class="input input-sm" value="2026" style="width:80px" onchange="renderReports()">
+            </div>
+            <div id="report-custom-row" class="form-group" style="display:none;gap:8px;display:none">
+              <div>
+                <label class="form-label">من</label>
+                <input type="date" id="report-from" class="input input-sm" onchange="renderReports()">
+              </div>
+              <div>
+                <label class="form-label">إلى</label>
+                <input type="date" id="report-to" class="input input-sm" onchange="renderReports()">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPI -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-4);margin-bottom:var(--space-5);">
+          <div class="kpi-card blue">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-label">إجمالي المبيعات</div>
+            <div class="kpi-value" id="rep-total-sales">0 $</div>
+            <div class="kpi-sub" id="rep-sales-sub">0 فاتورة</div>
+            <div class="kpi-sub" id="rep-sales-count" style="margin-top:2px;font-size:11px;"></div>
+          </div>
+          <div class="kpi-card orange">
+            <div class="kpi-icon">🛒</div>
+            <div class="kpi-label">إجمالي المشتريات</div>
+            <div class="kpi-value" id="rep-total-purchases">0 $</div>
+            <div class="kpi-sub" id="rep-purchases-sub">0 فاتورة</div>
+            <div class="kpi-sub" id="rep-purchases-count" style="margin-top:2px;font-size:11px;"></div>
+          </div>
+          <div class="kpi-card green">
+            <div class="kpi-icon">📈</div>
+            <div class="kpi-label">صافي الربح</div>
+            <div class="kpi-value" id="rep-profit">0 $</div>
+            <div class="kpi-sub" id="rep-margin">هامش: 0%</div>
+            <div class="kpi-sub" id="rep-profit-old" style="margin-top:2px;font-size:11px;"></div>
+          </div>
+        </div>
+
+        <!-- جدول المبيعات -->
+        <div class="card" style="margin-bottom:var(--space-4)">
+          <div class="card-title">🧾 فواتير البيع</div>
+          <div class="invoice-table-wrap">
+            <table>
+              <thead><tr>
+                <th>رقم الفاتورة</th><th>الزبون</th><th>التاريخ</th><th>الخصم</th><th>الإجمالي</th>
+              </tr></thead>
+              <tbody id="rep-sales-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- جدول المشتريات -->
+        <div class="card">
+          <div class="card-title">🛒 فواتير الشراء</div>
+          <div class="invoice-table-wrap">
+            <table>
+              <thead><tr>
+                <th>رقم الفاتورة</th><th>المورد</th><th>التاريخ</th><th>الإجمالي</th>
+              </tr></thead>
+              <tbody id="rep-purchases-tbody"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
 
