@@ -1681,6 +1681,17 @@ ${ret.note?'<div class="note">📝 ملاحظة: '+ret.note+'</div>':''}
 // ============================================================
 // تعديل كلمة السر
 // ============================================================
+function togglePassField(fieldId, btn) {
+  const inp = document.getElementById(fieldId);
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    inp.type = 'password';
+    btn.textContent = '👁️';
+  }
+}
+
 function changePassword() {
   const currentPass = document.getElementById('pass-current').value;
   const newPass = document.getElementById('pass-new').value;
