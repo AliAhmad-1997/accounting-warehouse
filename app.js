@@ -134,14 +134,13 @@ function renderDashboard() {
   if (salesEl) {
     salesEl.textContent = fmtUSD(stats.totalSales);
     document.getElementById('kpi-sales-count').textContent = stats.salesCount + ' فاتورة';
-    document.getElementById('kpi-total-purchases').textContent = fmtUSD(stats.totalPurchases);
-    document.getElementById('kpi-purchases-count').textContent = stats.purchasesCount + ' فاتورة';
+    document.getElementById('kpi-total-purchases') && (document.getElementById('kpi-total-purchases').textContent = fmtUSD(stats.totalPurchases));
+    document.getElementById('kpi-purchases-count') && (document.getElementById('kpi-purchases-count').textContent = stats.purchasesCount + ' فاتورة');
     const profit = stats.profit;
     const profitEl = document.getElementById('kpi-net-profit');
-    profitEl.textContent = fmtUSD(profit);
-    profitEl.style.color = profit >= 0 ? 'var(--green-700)' : 'var(--red-600)';
+    if(profitEl) { profitEl.textContent = fmtUSD(profit); profitEl.style.color = profit >= 0 ? 'var(--green-700)' : 'var(--red-600)'; }
     const margin = stats.totalSales > 0 ? ((profit / stats.totalSales) * 100).toFixed(1) : 0;
-    document.getElementById('kpi-profit-margin').textContent = 'هامش: ' + margin + '%';
+    document.getElementById('kpi-profit-margin') && (document.getElementById('kpi-profit-margin').textContent = 'هامش: ' + margin + '%');
     document.getElementById('kpi-customers-count').textContent = db.customers.length;
     const suppCount = db.suppliers ? db.suppliers.length : 0;
     document.getElementById('kpi-suppliers-count').textContent = suppCount + ' مورد';
@@ -165,27 +164,55 @@ function renderDashboard() {
     }
   }
 
-  // آخر الفواتير
-  const recent = [
-    ...db.salesInvoices.map(i=>({...i,type:'بيع'})),
-    ...db.purchaseInvoices.map(i=>({...i,type:'شراء'}))
-  ].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
+  // عرض كل الفواتير مع البحث
+  renderAllInvoices();
+}
+
+// ============================================================
+// عرض كل الفواتير مع البحث
+// ============================================================
+function renderAllInvoices() {
+  const searchVal = (document.getElementById('invoices-search') ? document.getElementById('invoices-search').value : '').toLowerCase().trim();
+
+  const all = [
+    ...db.salesInvoices.map(i=>({...i, type:'بيع'})),
+    ...db.purchaseInvoices.map(i=>({...i, type:'شراء'}))
+  ].sort((a,b) => new Date(b.date) - new Date(a.date));
+
+  const filtered = searchVal
+    ? all.filter(inv =>
+        (inv.number || '').toLowerCase().includes(searchVal) ||
+        (inv.customerName || '').toLowerCase().includes(searchVal) ||
+        (inv.supplierName || '').toLowerCase().includes(searchVal)
+      )
+    : all;
 
   const recentEl = document.getElementById('recent-invoices');
-  if (recent.length === 0) {
-    recentEl.innerHTML = '<div class="empty-state">لا توجد فواتير بعد</div>';
-  } else {
-    recentEl.innerHTML = recent.map(function(inv) {
-      var num = inv.number;
-      return '<div class="invoice-row" onclick="openInvoiceDetail(\'' + num + '\')" style="cursor:pointer">' +
-        '<span class="inv-num">' + num + '</span>' +
-        '<span class="inv-customer">' + (inv.customerName||inv.supplierName||'—') + '</span>' +
-        '<span class="inv-type ' + (inv.type==='بيع'?'type-sale':'type-purchase') + '">' + inv.type + '</span>' +
-        '<span class="inv-total">' + fmt(inv.total) + '</span>' +
-        '<span class="inv-date">' + inv.date + '</span>' +
-        '</div>';
-    }).join('');
+  if (!recentEl) return;
+
+  // عداد النتائج
+  const countEl = document.getElementById('invoices-count');
+  if (countEl) countEl.textContent = filtered.length + ' فاتورة';
+
+  if (filtered.length === 0) {
+    recentEl.innerHTML = searchVal
+      ? '<div class="empty-state">🔍 لا توجد نتائج لـ "' + searchVal + '"</div>'
+      : '<div class="empty-state">لا توجد فواتير بعد</div>';
+    return;
   }
+
+  recentEl.innerHTML = filtered.map(function(inv) {
+    const num = inv.number;
+    const party = inv.customerName || inv.supplierName || '—';
+    const isSale = inv.type === 'بيع';
+    return '<div class="invoice-row" onclick="openInvoiceDetail(\'' + num + '\')" style="cursor:pointer">' +
+      '<span class="inv-num">' + num + '</span>' +
+      '<span class="inv-customer">' + party + '</span>' +
+      '<span class="inv-type ' + (isSale ? 'type-sale' : 'type-purchase') + '">' + inv.type + '</span>' +
+      '<span class="inv-total">' + fmtUSD(inv.total) + '</span>' +
+      '<span class="inv-date">' + inv.date + '</span>' +
+      '</div>';
+  }).join('');
 }
 
 // ============================================================
