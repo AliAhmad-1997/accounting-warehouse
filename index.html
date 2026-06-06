@@ -607,6 +607,24 @@
           <div class="kpi-sub" id="sale-kpi-sales-count">0 فاتورة</div>
         </div>
       </div>
+      <!-- شريط مسح الباركود -->
+      <div style="background:var(--blue-100);border:1px solid var(--blue-300);border-radius:var(--radius-lg);padding:var(--space-3) var(--space-4);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-3);">
+        <span style="font-size:20px;">📊</span>
+        <div style="flex:1;">
+          <div style="font-size:12px;font-weight:600;color:var(--blue-link);margin-bottom:4px;">مسح باركود المادة</div>
+          <input
+            id="sale-barcode-input"
+            type="text"
+            class="input input-sm"
+            placeholder="امسح الباركود أو اكتبه واضغط Enter..."
+            style="width:100%;max-width:380px;font-family:monospace;letter-spacing:1px;"
+            onkeydown="if(event.key==='Enter'){ handleBarcodeScan('sale', this.value); }"
+            autocomplete="off"
+          >
+        </div>
+        <span style="font-size:11px;color:var(--blue-link);opacity:0.7;">اضغط Enter بعد الكتابة</span>
+      </div>
+
       <div class="invoice-header">
         <div class="form-group">
           <label class="form-label">التاريخ</label>
@@ -686,6 +704,24 @@
         </div>
         <span class="inv-number-badge" style="background:var(--green-100);color:var(--green-800)" id="pur-inv-num">PUR-001</span>
       </div>
+      <!-- شريط مسح الباركود -->
+      <div style="background:var(--green-100);border:1px solid var(--green-500);border-radius:var(--radius-lg);padding:var(--space-3) var(--space-4);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-3);">
+        <span style="font-size:20px;">📊</span>
+        <div style="flex:1;">
+          <div style="font-size:12px;font-weight:600;color:var(--green-700);margin-bottom:4px;">مسح باركود المادة</div>
+          <input
+            id="purchase-barcode-input"
+            type="text"
+            class="input input-sm"
+            placeholder="امسح الباركود أو اكتبه واضغط Enter..."
+            style="width:100%;max-width:380px;font-family:monospace;letter-spacing:1px;"
+            onkeydown="if(event.key==='Enter'){ handleBarcodeScan('purchase', this.value); }"
+            autocomplete="off"
+          >
+        </div>
+        <span style="font-size:11px;color:var(--green-700);opacity:0.7;">اضغط Enter بعد الكتابة</span>
+      </div>
+
       <div class="invoice-header">
         <div class="form-group">
           <label class="form-label">التاريخ</label>
@@ -770,6 +806,7 @@
               <th>سعر التكلفة ($)</th>
               <th>سعر البيع ($)</th>
               <th>المخزون</th>
+              <th style="width:50px;text-align:center">📊</th>
               <th style="width:80px">إجراءات</th>
             </tr>
           </thead>
@@ -941,6 +978,18 @@
         <label class="form-label">الصنف</label>
         <input id="modal-item-type" class="input" type="text">
       </div>
+    </div>
+
+    <!-- الباركود -->
+    <div style="background:var(--surface-secondary);border-radius:var(--radius-md);padding:var(--space-3);margin-bottom:var(--space-3)">
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:var(--space-2)">📊 الباركود <span style="font-weight:400;color:var(--text-muted)">(اختياري)</span></div>
+      <div style="display:flex;align-items:center;gap:var(--space-2)">
+        <input id="modal-item-barcode" class="input input-sm" type="text"
+          placeholder="امسح الباركود أو اكتبه يدوياً..."
+          style="flex:1;font-family:monospace;letter-spacing:1px;">
+        <span style="font-size:18px;" title="يمكنك استخدام جهاز باركود أو الكتابة اليدوية">🔍</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">ضع المؤشر في الحقل واستخدم جهاز الباركود مباشرة</div>
     </div>
 
     <!-- الوحدات -->

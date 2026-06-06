@@ -638,6 +638,9 @@ function renderItems() {
     const stock = inv[item.id]||0;
     const isLow = stock < item.minStock;
     const isDefault = DEFAULT_ITEMS.find(d=>d.id===item.id);
+    const barcodeIcon = item.barcode
+      ? `<span title="${item.barcode}" style="cursor:default;font-size:14px;">📊</span>`
+      : `<span style="color:var(--text-muted);font-size:11px;">—</span>`;
     return `<tr class="${isLow?'row-warning':''}">
       <td><span class="item-id">${item.id}</span></td>
       <td><strong>${item.name}</strong></td>
@@ -646,6 +649,7 @@ function renderItems() {
       <td>${fmtUSD(item.cost)}</td>
       <td>${fmtUSD(item.price)}</td>
       <td><span class="stock-num">${stock}</span></td>
+      <td style="text-align:center">${barcodeIcon}</td>
       <td>
         <button class="btn btn-ghost btn-sm" onclick="editItem('${item.id}')">✏️</button>
         <button class="btn btn-ghost btn-sm" onclick="deleteItem('${item.id}')" title="حذف" style="color:var(--red-600)">🗑️</button>
@@ -676,6 +680,7 @@ function editItem(id) {
   document.getElementById('modal-item-unit').value = item.unit || '';
   document.getElementById('modal-item-unit2').value = item.unit2 || '';
   document.getElementById('modal-item-factor').value = item.factor || 1;
+  document.getElementById('modal-item-barcode').value = item.barcode || '';
   // العملة والأسعار
   const currency = item.priceCurrency || 'USD';
   document.getElementById('modal-price-currency').value = currency;
@@ -706,6 +711,7 @@ function saveItemModal() {
   item.unit = document.getElementById('modal-item-unit').value;
   item.unit2 = document.getElementById('modal-item-unit2').value;
   item.factor = parseFloat(document.getElementById('modal-item-factor').value) || 1;
+  item.barcode = document.getElementById('modal-item-barcode').value.trim();
   // تحويل السعر المُدخل إلى دولار للتخزين
   const currency = document.getElementById('modal-price-currency').value;
   const rate = getRate();
@@ -1080,6 +1086,50 @@ function closeDetailModal() {
   document.getElementById('invoice-detail-modal').classList.add('hidden');
 }
 
+
+// ============================================================
+// BARCODE SCAN — يضيف مادة تلقائياً عند مسح الباركود
+// ============================================================
+function handleBarcodeScan(page, value) {
+  const code = value.trim();
+  if (!code) return;
+  const item = db.items.find(it => it.barcode && it.barcode === code);
+  if (!item) {
+    showToast('❌ لا توجد مادة بهذا الباركود: ' + code, 'error');
+    // مسح الحقل
+    const el = document.getElementById(page + '-barcode-input');
+    if (el) el.value = '';
+    return;
+  }
+  if (page === 'sale') {
+    // ابحث عن سطر فارغ أو أضف سطر جديد
+    const emptyIdx = saleLines.findIndex(l => !l.itemId);
+    if (emptyIdx >= 0) {
+      saleLines[emptyIdx].itemId = item.id;
+      saleLines[emptyIdx].price = item.price;
+      saleLines[emptyIdx].total = item.price * saleLines[emptyIdx].qty;
+    } else {
+      saleLines.push({ itemId: item.id, qty: 1, price: item.price, total: item.price, unitType: 'unit' });
+    }
+    renderSaleLines();
+    renderSaleTotal();
+  } else if (page === 'purchase') {
+    const emptyIdx = purchaseLines.findIndex(l => !l.itemId);
+    if (emptyIdx >= 0) {
+      purchaseLines[emptyIdx].itemId = item.id;
+      purchaseLines[emptyIdx].price = item.cost;
+      purchaseLines[emptyIdx].total = item.cost * purchaseLines[emptyIdx].qty;
+    } else {
+      purchaseLines.push({ itemId: item.id, qty: 1, price: item.cost, total: item.cost, unitType: 'unit' });
+    }
+    renderPurchaseLines();
+    renderPurchaseTotal();
+  }
+  showToast('✅ تمت إضافة: ' + item.name, 'success');
+  // مسح الحقل بعد الإضافة
+  const el = document.getElementById(page + '-barcode-input');
+  if (el) el.value = '';
+}
 
 // ============================================================
 // النسخ الاحتياطية
