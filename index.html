@@ -491,6 +491,7 @@
       setTimeout(() => {
         document.getElementById('login-screen').style.display = 'none';
         sessionStorage.setItem('auth', '1');
+        if (typeof initApp === 'function') initApp();
       }, 400);
     } else {
       document.getElementById('login-error').style.display = 'block';
@@ -505,12 +506,11 @@
     }
   }
 
-  window.addEventListener('beforeunload', function() {
-    sessionStorage.removeItem('auth');
-  });
+  // auth محفوظ في sessionStorage طوال الجلسة
 
   if (sessionStorage.getItem('auth') === '1') {
     document.getElementById('login-screen').style.display = 'none';
+    // initApp ستُشغَّل من DOMContentLoaded في app.js
   }
 </script>
 

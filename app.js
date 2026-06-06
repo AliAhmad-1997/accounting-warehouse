@@ -1759,14 +1759,23 @@ function selectBusiness(type) {
 // ============================================================
 // INIT
 // ============================================================
-window.addEventListener('DOMContentLoaded',()=>{
+// دالة تهيئة التطبيق — تُستدعى بعد نجاح اللوقين
+function initApp() {
   if(!db.exchange) db.exchange = { usdToOld: 12000 };
   const hdr = document.getElementById('company-name-header');
   if (hdr) hdr.value = db.company.name;
   updateRateWidget();
   navigate('dashboard');
-  // تحقق من الإعداد الأولي
+  // تحقق من الإعداد الأولي (شاشة اختيار نوع النشاط)
   checkSetup();
+}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  // إذا كان المستخدم مسجّل دخول من قبل، شغّل التطبيق مباشرة
+  if (sessionStorage.getItem('auth') === '1') {
+    initApp();
+  }
+  // إذا لم يكن مسجّلاً، initApp ستُشغَّل من checkLogin() بعد نجاح الدخول
 });
 
 // طباعة الفاتورة الحالية المفتوحة
