@@ -467,7 +467,7 @@
 </style>
 
 <script>
-  // دوال اللوقين — تعريف مبكر لأن الأزرار تستدعيها مباشرة
+  // togglePass فقط — checkLogin و initApp معرّفتان في app.js
   function togglePass() {
     const inp = document.getElementById('login-password');
     const icon = document.getElementById('eye-icon');
@@ -479,7 +479,6 @@
       icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
     }
   }
-  // checkLogin و initApp معرّفتان في app.js — يُستدعيان بعد تحميله
 </script>
 
 <div class="layout">

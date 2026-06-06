@@ -908,7 +908,7 @@ function renderSuppliers() {
       '<td style="font-weight:700;color:var(--blue-link)">' + fmtUSD(sAcc.totalInvoices) + '</td>' +
       '<td style="font-weight:700;color:var(--green-700)">' + fmtUSD(sAcc.totalPaid) + '</td>' +
       '<td style="font-weight:700;color:' + sRemColor + '">' + fmtUSD(sAcc.remaining) + '</td>' +
-      '<td><button class="btn btn-primary btn-sm" onclick="openSupplierAccount('' + s.name + '')">💳 الحساب</button></td>' +
+      '<td><button class="btn btn-primary btn-sm" onclick="openSupplierAccount(\'' + s.name + '\')">' + '💳 الحساب</button></td>' +
       '</tr>';
   }).join('');
 }
@@ -1092,7 +1092,7 @@ function renderReports() {
     salesTbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--text-muted)">لا توجد فواتير في هذه الفترة</td></tr>';
   } else {
     salesTbody.innerHTML = sales.map(inv =>
-      '<tr onclick="openInvoiceDetail('' + inv.number + '')" style="cursor:pointer">' +
+      '<tr onclick="openInvoiceDetail(\'' + inv.number + '\')" style="cursor:pointer">' +
       '<td><span class="inv-num">' + inv.number + '</span></td>' +
       '<td>' + (inv.customerName || '—') + '</td>' +
       '<td>' + inv.date + '</td>' +
@@ -1108,7 +1108,7 @@ function renderReports() {
     purTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--text-muted)">لا توجد فواتير في هذه الفترة</td></tr>';
   } else {
     purTbody.innerHTML = purchases.map(inv =>
-      '<tr onclick="openInvoiceDetail('' + inv.number + '')" style="cursor:pointer">' +
+      '<tr onclick="openInvoiceDetail(\'' + inv.number + '\')" style="cursor:pointer">' +
       '<td><span class="inv-num">' + inv.number + '</span></td>' +
       '<td>' + (inv.supplierName || '—') + '</td>' +
       '<td>' + inv.date + '</td>' +
@@ -1216,7 +1216,7 @@ function openCustomerAccount(customerName) {
   invTbody.innerHTML = acc.invoices.length === 0
     ? '<tr><td colspan="3" style="text-align:center;padding:12px;color:var(--text-muted)">لا توجد فواتير</td></tr>'
     : acc.invoices.map(inv =>
-        '<tr onclick="openInvoiceDetail('' + inv.number + '')" style="cursor:pointer">' +
+        '<tr onclick="openInvoiceDetail(\'' + inv.number + '\')" style="cursor:pointer">' +
         '<td><span class="inv-num">' + inv.number + '</span></td>' +
         '<td>' + inv.date + '</td>' +
         '<td><strong>' + fmtUSD(inv.total) + '</strong></td>' +
@@ -1232,7 +1232,7 @@ function openCustomerAccount(customerName) {
         '<td>' + p.date + '</td>' +
         '<td>' + (p.note || '—') + '</td>' +
         '<td style="color:var(--green-700)"><strong>' + fmtUSD(p.amount) + '</strong></td>' +
-        '<td><button class="btn btn-ghost btn-sm" onclick="deleteCustomerPayment('' + customerName + '',' + i + ')" style="color:var(--red-600)">✕</button></td>' +
+        '<td><button class="btn btn-ghost btn-sm" onclick="deleteCustomerPayment(\'' + customerName + '\',' + i + ')" style="color:var(--red-600)">✕</button></td>' +
         '</tr>'
       ).join('');
 
@@ -1355,7 +1355,7 @@ function openSupplierAccount(supplierName) {
   invTbody.innerHTML = acc.invoices.length === 0
     ? '<tr><td colspan="3" style="text-align:center;padding:12px;color:var(--text-muted)">لا توجد فواتير</td></tr>'
     : acc.invoices.map(inv =>
-        '<tr onclick="openInvoiceDetail('' + inv.number + '')" style="cursor:pointer">' +
+        '<tr onclick="openInvoiceDetail(\'' + inv.number + '\')" style="cursor:pointer">' +
         '<td><span class="inv-num">' + inv.number + '</span></td>' +
         '<td>' + inv.date + '</td>' +
         '<td><strong>' + fmtUSD(inv.total) + '</strong></td>' +
@@ -1371,7 +1371,7 @@ function openSupplierAccount(supplierName) {
         '<td>' + p.date + '</td>' +
         '<td>' + (p.note || '—') + '</td>' +
         '<td style="color:var(--green-700)"><strong>' + fmtUSD(p.amount) + '</strong></td>' +
-        '<td><button class="btn btn-ghost btn-sm" onclick="deleteSupplierPayment('' + supplierName + '',' + i + ')" style="color:var(--red-600)">✕</button></td>' +
+        '<td><button class="btn btn-ghost btn-sm" onclick="deleteSupplierPayment(\'' + supplierName + '\',' + i + ')" style="color:var(--red-600)">✕</button></td>' +
         '</tr>'
       ).join('');
 
@@ -1609,7 +1609,7 @@ function renderReturnsList() {
     return;
   }
   el.innerHTML = filtered.map(r =>
-    '<div class="invoice-row" onclick="printReturnInvoice('' + r.number + '')" style="cursor:pointer" title="اضغط للطباعة">' +
+    '<div class="invoice-row" onclick="printReturnInvoice(\'' + r.number + '\')" style="cursor:pointer" title="اضغط للطباعة">' +
     '<span class="inv-num">' + r.number + '</span>' +
     '<span class="inv-customer">' + (r.party||'—') + '</span>' +
     '<span class="inv-type ' + (r.type==='sale'?'type-sale':'type-purchase') + '">' + (r.type==='sale'?'رد بيع':'رد شراء') + '</span>' +
@@ -1760,7 +1760,7 @@ function selectBusiness(type) {
 // INIT
 // ============================================================
 // ============================================================
-// LOGIN + INIT — كل منطق الدخول هنا بعد تحميل app.js
+// LOGIN + INIT
 // ============================================================
 const PASS_HASH = btoa(unescape(encodeURIComponent('Ali#1997')));
 
@@ -1801,11 +1801,9 @@ function initApp() {
 
 window.addEventListener('DOMContentLoaded', () => {
   if (sessionStorage.getItem('auth') === '1') {
-    // مسجّل دخول — أخفِ شاشة اللوقين وشغّل التطبيق
     document.getElementById('login-screen').style.display = 'none';
     initApp();
   }
-  // إذا لم يكن مسجّلاً، شاشة اللوقين ستبقى ظاهرة وcheckLogin تُشغَّل عند الضغط
 });
 
 // طباعة الفاتورة الحالية المفتوحة
