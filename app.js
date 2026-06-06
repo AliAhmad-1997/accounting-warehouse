@@ -1733,6 +1733,29 @@ function changePassword() {
 // ============================================================
 // SETUP SCREEN — يظهر مرة واحدة فقط
 // ============================================================
+function resetBusinessType() {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:inherit;';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:32px;width:380px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+      <div style="font-size:40px;margin-bottom:12px;">🏢</div>
+      <h3 style="margin:0 0 8px;font-size:18px;color:#0f172a;">إعادة اختيار نوع النشاط</h3>
+      <p style="margin:0 0 24px;font-size:14px;color:#64748b;">سيتم تغيير المواد الافتراضية حسب النشاط الجديد.<br>البيانات الحالية لن تُحذف.</p>
+      <div style="display:flex;gap:12px;justify-content:center;">
+        <button id="rbt-cancel" style="padding:10px 24px;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc;font-size:14px;cursor:pointer;font-family:inherit;">إلغاء</button>
+        <button id="rbt-confirm" style="padding:10px 24px;border-radius:8px;border:none;background:#7c3aed;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;">تأكيد</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('rbt-cancel').onclick = () => document.body.removeChild(overlay);
+  document.getElementById('rbt-confirm').onclick = () => {
+    document.body.removeChild(overlay);
+    localStorage.removeItem('business_type');
+    showSetupScreen();
+    showToast('اختر نوع النشاط الجديد', 'success');
+  };
+}
+
 function checkSetup() {
   const chosen = localStorage.getItem('business_type');
   if (chosen) return; // سبق وتم الاختيار
