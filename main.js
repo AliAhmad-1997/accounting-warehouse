@@ -1,15 +1,33 @@
+// ============================================================
+// main.js — محدَّث لدعم SQLite
+// التغييرات: إضافة db.js + 3 IPC handlers جديدة
+// كل الكود القديم محفوظ كما هو
+// ============================================================
+
 const { app, BrowserWindow, Menu, session, ipcMain } = require('electron');
 const path = require('path');
-const fs = require('fs');
+const fs   = require('fs');
 
-// ===== الحل الرئيسي: حدد مجلد البيانات في AppData للمستخدم =====
-// هذا يضمن إن البرنامج يكتب في مكان عند المستخدم صلاحيات عليه
-// بدل مجلد التثبيت (C:\Program Files) اللي محتاج Admin
+// ===== مسار userData =====
 app.setPath('userData', path.join(app.getPath('appData'), 'AccountingWarehouse'));
 
 // منع تعدد النوافذ
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) { app.quit(); }
+
+// ===== تهيئة SQLite مبكراً =====
+const dbModule = require('./db');
+let dbReady = false;
+
+function initDatabase() {
+  try {
+    const dbPath = dbModule.openDatabase(app.getPath('userData'));
+    dbReady = true;
+    console.log('✅ SQLite ready:', dbPath);
+  } catch (e) {
+    console.error('❌ SQLite init error:', e);
+  }
+}
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -24,28 +42,65 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       partition: 'persist:accounting',
     },
-    // أيقونة البرنامج
-    // icon: path.join(__dirname, 'assets/icon.ico'),
     show: false,
   });
 
-  // تحميل الصفحة
   win.loadFile(path.join(__dirname, 'index.html'));
 
-  // نعرضها بعد ما تجهز (بدون flash)
   win.once('ready-to-show', () => {
     win.show();
     win.focus();
-    // تشغيل النسخة الاحتياطية اليومية بعد 3 ثواني من الفتح
     setTimeout(() => runDailyBackup(win), 3000);
   });
 
-  // إخفاء قائمة التطبيق الافتراضية
   Menu.setApplicationMenu(null);
 }
 
 // ============================================================
-// BACKUP HELPERS
+// IPC — SQLite (جديد)
+// ============================================================
+
+// تحميل البيانات
+ipcMain.handle('db-load', () => {
+  if (!dbReady) return null;
+  try {
+    return dbModule.loadAll();
+  } catch (e) {
+    console.error('db-load error:', e);
+    return null;
+  }
+});
+
+// حفظ البيانات
+ipcMain.handle('db-save', (event, data) => {
+  if (!dbReady) return { success: false, error: 'DB not ready' };
+  try {
+    dbModule.saveAll(data);
+    return { success: true };
+  } catch (e) {
+    console.error('db-save error:', e);
+    return { success: false, error: e.message };
+  }
+});
+
+// ترحيل بيانات localStorage القديمة
+ipcMain.handle('db-migrate', (event, jsonData) => {
+  if (!dbReady) return { success: false, error: 'DB not ready' };
+  // لو في بيانات موجودة بالفعل في SQLite ما نكتب فوقها
+  if (dbModule.hasData()) {
+    return { success: true, skipped: true };
+  }
+  return dbModule.migrateFromJSON(jsonData);
+});
+
+// التحقق هل في بيانات في SQLite
+ipcMain.handle('db-has-data', () => {
+  if (!dbReady) return false;
+  return dbModule.hasData();
+});
+
+// ============================================================
+// BACKUP HELPERS (محفوظة كما هي)
 // ============================================================
 function getBackupDir() {
   const docs = app.getPath('documents');
@@ -57,11 +112,9 @@ function getBackupDir() {
 function runDailyBackup(win) {
   try {
     const dir = getBackupDir();
-    const today = new Date().toISOString().split('T')[0]; // 2026-06-05
+    const today = new Date().toISOString().split('T')[0];
     const filePath = path.join(dir, `backup-${today}.json`);
-    // لو النسخة موجودة اليوم ما نكررها
     if (fs.existsSync(filePath)) return;
-    // اطلب البيانات من الـ renderer
     win.webContents.send('request-backup-data');
   } catch(e) {
     console.error('Backup error:', e);
@@ -81,7 +134,6 @@ function cleanOldBackups(keepDays = 30) {
   } catch(e) {}
 }
 
-// IPC: استقبال البيانات من renderer وحفظها
 ipcMain.on('backup-data', (event, jsonStr) => {
   try {
     const dir = getBackupDir();
@@ -95,7 +147,6 @@ ipcMain.on('backup-data', (event, jsonStr) => {
   }
 });
 
-// IPC: تصدير يدوي — يفتح مربع حوار الحفظ
 ipcMain.handle('export-backup', async (event, jsonStr) => {
   const { dialog } = require('electron');
   const today = new Date().toISOString().split('T')[0];
@@ -111,7 +162,6 @@ ipcMain.handle('export-backup', async (event, jsonStr) => {
   return { success: false };
 });
 
-// IPC: استيراد — يفتح مربع حوار الفتح
 ipcMain.handle('import-backup', async () => {
   const { dialog } = require('electron');
   const result = await dialog.showOpenDialog({
@@ -126,7 +176,6 @@ ipcMain.handle('import-backup', async () => {
   return { success: false };
 });
 
-// IPC: قائمة النسخ المحفوظة
 ipcMain.handle('list-backups', () => {
   try {
     const dir = getBackupDir();
@@ -139,12 +188,15 @@ ipcMain.handle('list-backups', () => {
   }
 });
 
+// ============================================================
+// تشغيل التطبيق
+// ============================================================
 app.whenReady().then(() => {
-  // السماح لجميع المستخدمين بالكتابة في session storage
+  // تهيئة قاعدة البيانات قبل أي شيء
+  initDatabase();
+
   session.fromPartition('persist:accounting').setPermissionRequestHandler(
-    (webContents, permission, callback) => {
-      callback(true);
-    }
+    (webContents, permission, callback) => { callback(true); }
   );
 
   createWindow();
@@ -154,11 +206,8 @@ app.whenReady().then(() => {
   });
 });
 
-app.on('window-all-closed', () => {
-  app.quit();
-});
+app.on('window-all-closed', () => { app.quit(); });
 
-// فتح النافذة الموجودة لو حاول يشغل نسخة ثانية
 app.on('second-instance', () => {
   const windows = BrowserWindow.getAllWindows();
   if (windows.length > 0) {
