@@ -99,6 +99,48 @@ ipcMain.handle('db-has-data', () => {
   return dbModule.hasData();
 });
 
+// تصدير ملف data.db
+ipcMain.handle('export-database', async () => {
+  const { dialog } = require('electron');
+  const srcPath = require('path').join(app.getPath('userData'), 'data.db');
+  const today = new Date().toISOString().split('T')[0];
+  const result = await dialog.showSaveDialog({
+    title: 'تصدير قاعدة البيانات',
+    defaultPath: `accounting-data-${today}.db`,
+    filters: [{ name: 'SQLite Database', extensions: ['db'] }]
+  });
+  if (!result.canceled && result.filePath) {
+    require('fs').copyFileSync(srcPath, result.filePath);
+    return { success: true };
+  }
+  return { success: false, canceled: true };
+});
+
+// استيراد ملف data.db
+ipcMain.handle('import-database', async () => {
+  const { dialog } = require('electron');
+  const result = await dialog.showOpenDialog({
+    title: 'استيراد قاعدة البيانات',
+    filters: [{ name: 'SQLite Database', extensions: ['db'] }],
+    properties: ['openFile']
+  });
+  if (!result.canceled && result.filePaths.length > 0) {
+    try {
+      const destPath = require('path').join(app.getPath('userData'), 'data.db');
+      // نسخة احتياطية من الملف الحالي قبل الاستبدال
+      const backupPath = destPath + '.bak';
+      if (require('fs').existsSync(destPath)) {
+        require('fs').copyFileSync(destPath, backupPath);
+      }
+      require('fs').copyFileSync(result.filePaths[0], destPath);
+      return { success: true };
+    } catch(e) {
+      return { success: false, error: e.message };
+    }
+  }
+  return { success: false, canceled: true };
+});
+
 // ============================================================
 // BACKUP HELPERS (محفوظة كما هي)
 // ============================================================
