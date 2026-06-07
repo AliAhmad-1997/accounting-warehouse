@@ -1,6 +1,33 @@
+// ============================================================
+// preload.js — محدَّث لدعم SQLite
+// أُضيفت: dbLoad, dbSave, dbMigrate, dbHasData
+// كل الـ API القديم محفوظ كما هو
+// ============================================================
+
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
+
+  // ============================================================
+  // SQLite API (جديد)
+  // ============================================================
+
+  // تحميل كل البيانات من SQLite
+  dbLoad: () => ipcRenderer.invoke('db-load'),
+
+  // حفظ كل البيانات إلى SQLite
+  dbSave: (data) => ipcRenderer.invoke('db-save', data),
+
+  // ترحيل بيانات localStorage القديمة (يُستدعى مرة واحدة)
+  dbMigrate: (jsonData) => ipcRenderer.invoke('db-migrate', jsonData),
+
+  // التحقق هل في بيانات في SQLite
+  dbHasData: () => ipcRenderer.invoke('db-has-data'),
+
+  // ============================================================
+  // Backup API (محفوظ كما هو)
+  // ============================================================
+
   // Auto backup
   onRequestBackupData: (cb) => ipcRenderer.on('request-backup-data', cb),
   sendBackupData: (data) => ipcRenderer.send('backup-data', data),
