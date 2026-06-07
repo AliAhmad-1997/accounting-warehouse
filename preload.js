@@ -24,6 +24,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // التحقق هل في بيانات في SQLite
   dbHasData: () => ipcRenderer.invoke('db-has-data'),
 
+  // تصدير واستيراد DB
+  exportDatabase: () => ipcRenderer.invoke('export-database'),
+  importDatabase: () => ipcRenderer.invoke('import-database'),
+
   // ============================================================
   // Backup API (محفوظ كما هو)
   // ============================================================
