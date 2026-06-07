@@ -1,6 +1,6 @@
 {
   "name": "accounting-warehouse",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "برنامج المحاسبة والمستودعات",
   "main": "main.js",
   "author": "AMAhmoud",
@@ -8,17 +8,18 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win --x64"
+    "build": "electron-builder --win --x64",
+    "postinstall": "electron-builder install-app-deps"
   },
   "build": {
     "appId": "com.accounting.warehouse",
     "productName": "AccountingWarehouse",
     "copyright": "Copyright 2026",
-    "directories": {
-      "output": "dist"
-    },
+    "asar": true,
+    "directories": { "output": "dist" },
     "files": [
       "main.js",
+      "db.js",
       "index.html",
       "preload.js",
       "app.js",
@@ -32,14 +33,7 @@
       "!*.lock"
     ],
     "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
       "requestedExecutionLevel": "asInvoker",
       "signAndEditExecutable": false
     },
@@ -52,6 +46,9 @@
       "runAfterFinish": false
     },
     "compression": "maximum"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.3"
   },
   "devDependencies": {
     "electron": "^28.3.3",
