@@ -528,6 +528,7 @@ function saveSaleInvoice() {
   db.salesInvoices.push(inv);
   saveData(db);
   saleLines = [{itemId:'',qty:1,price:0,total:0}];
+  document.getElementById('sale-customer-input').value = '';
   showToast('✅ تم حفظ الفاتورة '+inv.number,'success');
   navigate('dashboard');
 }
@@ -770,6 +771,7 @@ function savePurchaseInvoice() {
   db.purchaseInvoices.push(inv);
   saveData(db);
   purchaseLines = [{itemId:'',qty:1,price:0,total:0}];
+  document.getElementById('pur-supplier-input').value = '';
   showToast('✅ تم حفظ فاتورة الشراء '+inv.number,'success');
   navigate('dashboard');
 }
