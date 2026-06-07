@@ -1290,6 +1290,23 @@
         </div>
       </div>
 
+      <!-- بطاقة النسخ الاحتياطي لقاعدة البيانات -->
+      <div class="settings-card" style="margin-top:var(--space-5);border:2px solid #0ea5e920;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);">
+        <div style="font-size:16px;font-weight:700;color:#0369a1;margin-bottom:4px;">🗄️ قاعدة البيانات (SQLite)</div>
+        <div style="font-size:13px;color:#0284c7;margin-bottom:var(--space-4);">نسخ ملف البيانات الكامل أو استيراده — للنقل بين الأجهزة أو الاسترداد</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button class="btn btn-lg" onclick="exportDatabase()" style="background:#0369a1;color:#fff;border:none;">
+            📤 تصدير قاعدة البيانات
+          </button>
+          <button class="btn btn-lg" onclick="importDatabase()" style="background:#fff;color:#0369a1;border:2px solid #0369a1;">
+            📥 استيراد قاعدة البيانات
+          </button>
+        </div>
+        <div style="font-size:11px;color:#0284c7;margin-top:var(--space-3);opacity:0.8;">
+          ⓘ التصدير: يحفظ ملف <code style="background:#e0f2fe;padding:1px 4px;border-radius:3px;">data.db</code> على جهازك &nbsp;|&nbsp; الاستيراد: يستبدل البيانات الحالية بالملف المختار
+        </div>
+      </div>
+
     </div>
 
   </main>
