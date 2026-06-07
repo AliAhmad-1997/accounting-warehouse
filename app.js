@@ -1061,6 +1061,36 @@ function resetData() {
 }
 
 // ============================================================
+// تصدير واستيراد قاعدة البيانات (SQLite)
+// ============================================================
+async function exportDatabase() {
+  if (!window.electronAPI || !window.electronAPI.exportDatabase) {
+    showToast('هذه الميزة تعمل فقط داخل البرنامج', 'error');
+    return;
+  }
+  const result = await window.electronAPI.exportDatabase();
+  if (result && result.success) {
+    showToast('✅ تم تصدير قاعدة البيانات بنجاح', 'success');
+  } else if (result && !result.canceled) {
+    showToast('❌ فشل التصدير', 'error');
+  }
+}
+
+async function importDatabase() {
+  if (!window.electronAPI || !window.electronAPI.importDatabase) {
+    showToast('هذه الميزة تعمل فقط داخل البرنامج', 'error');
+    return;
+  }
+  const result = await window.electronAPI.importDatabase();
+  if (result && result.success) {
+    showToast('✅ تم استيراد قاعدة البيانات — سيُعاد تشغيل البرنامج', 'success');
+    setTimeout(() => location.reload(), 1500);
+  } else if (result && result.error) {
+    showToast('❌ ' + result.error, 'error');
+  }
+}
+
+// ============================================================
 // TOAST
 // ============================================================
 function showToast(msg,type='success') {
