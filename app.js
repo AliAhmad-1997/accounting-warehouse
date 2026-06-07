@@ -138,17 +138,52 @@ const defaultData = {
   invoiceCounters: { sale:0, purchase:0, returnSale:0, returnPurchase:0 }
 };
 
-function loadData() {
-  try {
-    const saved = localStorage.getItem(DB_KEY);
-    if (saved) return JSON.parse(saved);
-  } catch(e) {}
-  return JSON.parse(JSON.stringify(defaultData));
+// ============================================================
+// SQLite — تحميل وحفظ البيانات
+// ============================================================
+async function initDB() {
+  const hasData = await window.electronAPI.dbHasData();
+  if (!hasData) {
+    const oldData = localStorage.getItem(DB_KEY);
+    if (oldData) {
+      const result = await window.electronAPI.dbMigrate(oldData);
+      if (result && result.success && !result.skipped) {
+        showToast('✅ تم ترحيل بياناتك إلى النظام الجديد بنجاح', 'success');
+        localStorage.setItem(DB_KEY + '_migrated_backup', oldData);
+      }
+    }
+  }
+  const loaded = await window.electronAPI.dbLoad();
+  if (loaded && (loaded.items || []).length > 0) {
+    db = loaded;
+    if (!db.company)          db.company = JSON.parse(JSON.stringify(defaultData.company));
+    if (!db.exchange)         db.exchange = JSON.parse(JSON.stringify(defaultData.exchange));
+    if (!db.invoiceCounters)  db.invoiceCounters = JSON.parse(JSON.stringify(defaultData.invoiceCounters));
+    if (!db.customers)        db.customers = [];
+    if (!db.suppliers)        db.suppliers = [];
+    if (!db.salesInvoices)    db.salesInvoices = [];
+    if (!db.purchaseInvoices) db.purchaseInvoices = [];
+    if (!db.returns)          db.returns = [];
+    if (!db.customerPayments) db.customerPayments = [];
+    if (!db.supplierPayments) db.supplierPayments = [];
+  } else {
+    db = JSON.parse(JSON.stringify(defaultData));
+    await window.electronAPI.dbSave(db);
+  }
 }
 
-function saveData(data) { localStorage.setItem(DB_KEY, JSON.stringify(data)); }
+function loadData() {
+  return db || JSON.parse(JSON.stringify(defaultData));
+}
 
-let db = loadData();
+function saveData(data) {
+  db = data;
+  if (window.electronAPI && window.electronAPI.dbSave) {
+    window.electronAPI.dbSave(data).catch(e => console.error('saveData error:', e));
+  }
+}
+
+let db = JSON.parse(JSON.stringify(defaultData));
 
 // ============================================================
 // حساب المخزون
@@ -1836,7 +1871,8 @@ function checkLogin() {
   }
 }
 
-function initApp() {
+async function initApp() {
+  await initDB();
   if(!db.exchange) db.exchange = { usdToOld: 12000 };
   const hdr = document.getElementById('company-name-header');
   if (hdr) hdr.value = db.company.name;
