@@ -77,28 +77,32 @@
   --orange-600: #f97316;
   --orange-800: #c2410c;
 
-  /* Semantic Tokens — Custom Theme */
-  --surface-base: #f0f4ff;
+  /* Semantic Tokens — Sultan Premium Theme */
+  --surface-base: #eef4fb;
   --surface-primary: #ffffff;
-  --surface-secondary: #f5f7ff;
+  --surface-secondary: #f4f8fd;
   --surface-elevated: #ffffff;
-  --surface-hover: rgba(99,102,241,0.06);
-  --surface-active: rgba(99,102,241,0.1);
+  --surface-hover: rgba(14,165,233,0.06);
+  --surface-active: rgba(14,165,233,0.12);
 
-  --text-primary: #0f172a;
-  --text-secondary: #1e293b;
-  --text-tertiary: #475569;
-  --text-muted: #64748b;
+  --text-primary: #0c1a2e;
+  --text-secondary: #1a3350;
+  --text-tertiary: #3b5a80;
+  --text-muted: #5a7a9a;
   --text-inverse: #ffffff;
 
-  --border-subtle: rgba(99,102,241,0.08);
-  --border-default: rgba(99,102,241,0.15);
-  --border-strong: rgba(99,102,241,0.3);
-  --border-focus: #6366f1;
+  --border-subtle: rgba(14,165,233,0.1);
+  --border-default: rgba(14,165,233,0.2);
+  --border-strong: rgba(14,165,233,0.4);
+  --border-focus: #0ea5e9;
 
-  --button-primary-bg: #6366f1;
+  --button-primary-bg: #0ea5e9;
   --button-primary-fg: #ffffff;
-  --button-primary-hover: var(--neutral-1000);
+  --button-primary-hover: #0284c7;
+
+  /* Sultan accent */
+  --accent: #0ea5e9;
+  --accent-glow: rgba(14,165,233,0.18);
 
   --state-success-bg: var(--green-100);
   --state-success-fg: var(--green-800);
@@ -143,10 +147,12 @@
 
   /* Shadows */
   --shadow-lifted:
-    0px 0px 2px 0px rgba(0, 0, 0, 0.05), 0px 0px 1px 0px rgba(0, 0, 0, 0.05), 0px 0px 0px 1px rgba(0, 0, 0, 0.08);
+    0 1px 3px rgba(14,165,233,0.08), 0 0 0 1px rgba(14,165,233,0.1);
   --shadow-lifted-card:
-    0px 1px 2px 0px rgba(0, 0, 0, 0.05), 0px 0px 1px 0px rgba(0, 0, 0, 0.05), 0px 0px 0px 1px rgba(0, 0, 0, 0.08);
-  --shadow-tooltip: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    0 2px 8px rgba(14,165,233,0.08), 0 0 0 1px rgba(14,165,233,0.1);
+  --shadow-card-hover:
+    0 8px 24px rgba(14,165,233,0.14), 0 0 0 1px rgba(14,165,233,0.2);
+  --shadow-tooltip: 0 4px 12px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.06);
 }
 
 /* =============================================================================
@@ -341,12 +347,15 @@ small,
 }
 
 .btn-primary {
-  background-color: var(--button-primary-bg);
-  color: var(--button-primary-fg);
+  background: linear-gradient(135deg, #0ea5e9, #3b82f6);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(14,165,233,0.3);
 }
 
 .btn-primary:hover {
-  background-color: var(--button-primary-hover);
+  background: linear-gradient(135deg, #0284c7, #2563eb);
+  box-shadow: 0 4px 16px rgba(14,165,233,0.4);
+  transform: translateY(-1px);
 }
 
 .btn-secondary {
@@ -401,7 +410,8 @@ small,
 .input:focus {
   outline: none;
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 2px rgba(5, 136, 240, 0.16);
+  box-shadow: 0 0 0 3px rgba(14,165,233,0.15);
+  background-color: #fff;
 }
 
 .input-lg {
@@ -421,9 +431,11 @@ textarea.input {
 
 .card {
   background-color: var(--surface-primary);
-  border-radius: var(--radius-lg);
+  border-radius: 14px;
   box-shadow: var(--shadow-lifted-card);
+  border: 1px solid var(--border-subtle);
   padding: var(--space-5);
+  transition: box-shadow 0.2s ease;
 }
 
 .card-hover {
@@ -434,10 +446,7 @@ textarea.input {
 
 .card-hover:hover {
   transform: translateY(-2px);
-  box-shadow:
-    0px 4px 8px 0px rgba(0, 0, 0, 0.08),
-    0px 0px 1px 0px rgba(0, 0, 0, 0.05),
-    0px 0px 0px 1px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .dark .card-hover:hover {
