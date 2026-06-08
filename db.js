@@ -392,4 +392,12 @@ function hasData() {
   return row.cnt > 0;
 }
 
-module.exports = { openDatabase, loadAll, saveAll, migrateFromJSON, hasData };
+// ============================================================
+// تصدير قاعدة البيانات بشكل آمن (WAL checkpoint)
+// ============================================================
+async function backupTo(destPath) {
+  if (!db) throw new Error('DB not open');
+  await db.backup(destPath);
+}
+
+module.exports = { openDatabase, loadAll, saveAll, migrateFromJSON, hasData, backupTo };
