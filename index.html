@@ -1154,11 +1154,18 @@
     <!-- SETTINGS -->
     <div id="page-settings" class="hidden">
       <div class="page-header">
-        <div class="page-title">⚙️ إعدادات الشركة</div>
-        <div class="page-subtitle">بيانات شركتك تظهر في الفواتير</div>
+        <div class="page-title">⚙️ الإعدادات</div>
+        <div class="page-subtitle">إعدادات الشركة والنظام</div>
       </div>
-      <div class="settings-card">
-        <div class="settings-grid">
+
+      <!-- شبكة الإعدادات الرئيسية: عمودان -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-5);margin-bottom:var(--space-5);align-items:start">
+
+        <!-- بطاقة بيانات الشركة -->
+        <div class="settings-card" style="margin-top:0">
+          <div style="font-size:15px;font-weight:700;margin-bottom:var(--space-4);display:flex;align-items:center;gap:8px;color:var(--text-primary)">
+            🏢 بيانات الشركة
+          </div>
           <div class="form-group">
             <label class="form-label">اسم الشركة</label>
             <input id="set-name" class="input" type="text" placeholder="اسم شركتك">
@@ -1175,30 +1182,33 @@
             <label class="form-label">البريد الإلكتروني</label>
             <input id="set-email" class="input" type="email" placeholder="email@example.com">
           </div>
-        </div>
-        <div class="form-group" style="margin-bottom:var(--space-5)">
-          <label class="form-label">شعار / رسالة ترحيب</label>
-          <input id="set-slogan" class="input" type="text" placeholder="نشكر ثقتكم بنا">
-        </div>
-        <div style="background:var(--surface-secondary);border-radius:var(--radius-lg);padding:var(--space-4);margin-bottom:var(--space-5)">
-          <div style="font-size:13px;font-weight:700;margin-bottom:var(--space-3);color:var(--text-primary)">💱 إعدادات العملات وسعر الصرف</div>
-          <div class="settings-grid" style="margin-bottom:0">
-            <div class="form-group">
-              <label class="form-label">سعر الدولار بالليرة السورية القديمة</label>
-              <input id="set-usd-rate" class="input" type="number" placeholder="12000" min="1">
-              <span style="font-size:11px;color:var(--text-muted);margin-top:4px">مثال: 12000 يعني $1 = 12,000 ل.س ق = 120 ل.س ج</span>
-            </div>
-            <div class="form-group" style="display:flex;flex-direction:column;justify-content:center;gap:var(--space-2)">
-              <div style="font-size:12px;color:var(--text-muted)">📌 قاعدة التحويل الثابتة:</div>
-              <div style="font-size:13px;font-weight:600">1 ل.س جديدة = 100 ل.س قديمة</div>
-              <div style="font-size:12px;color:var(--text-muted)">جميع أسعار المواد تُدخل بالدولار</div>
-            </div>
+          <div class="form-group" style="margin-bottom:var(--space-4)">
+            <label class="form-label">شعار / رسالة ترحيب</label>
+            <input id="set-slogan" class="input" type="text" placeholder="نشكر ثقتكم بنا">
+          </div>
+          <div class="flex gap-3">
+            <button class="btn btn-success btn-lg" onclick="saveSettings()">💾 حفظ الإعدادات</button>
+            <button class="btn btn-danger" onclick="resetData()">🔄 إعادة تعيين</button>
           </div>
         </div>
-        <div class="flex gap-3">
-          <button class="btn btn-success btn-lg" onclick="saveSettings()">💾 حفظ الإعدادات</button>
-          <button class="btn btn-danger" onclick="resetData()">🔄 إعادة تعيين (يحتفظ بالمواد)</button>
+
+        <!-- بطاقة العملات وسعر الصرف -->
+        <div class="settings-card" style="margin-top:0">
+          <div style="font-size:15px;font-weight:700;margin-bottom:var(--space-4);display:flex;align-items:center;gap:8px;color:var(--text-primary)">
+            💱 العملات وسعر الصرف
+          </div>
+          <div class="form-group">
+            <label class="form-label">سعر الدولار بالليرة السورية القديمة</label>
+            <input id="set-usd-rate" class="input" type="number" placeholder="12000" min="1">
+            <span style="font-size:11px;color:var(--text-muted);margin-top:4px;display:block">مثال: 12000 يعني $1 = 12,000 ل.س ق = 120 ل.س ج</span>
+          </div>
+          <div style="background:var(--surface-secondary);border-radius:var(--radius-md);padding:var(--space-4);margin-top:var(--space-3)">
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">📌 قاعدة التحويل الثابتة:</div>
+            <div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:4px">1 ل.س جديدة = 100 ل.س قديمة</div>
+            <div style="font-size:12px;color:var(--text-muted)">جميع أسعار المواد تُدخل بالدولار</div>
+          </div>
         </div>
+
       </div>
 
       <!-- قسم تغيير كلمة السر -->
