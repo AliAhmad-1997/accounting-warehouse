@@ -16,7 +16,9 @@
     "productName": "AccountingWarehouse",
     "copyright": "Copyright 2026",
     "asar": true,
-    "directories": { "output": "dist" },
+    "directories": {
+      "output": "dist"
+    },
     "files": [
       "main.js",
       "db.js",
@@ -33,9 +35,17 @@
       "!*.lock"
     ],
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "requestedExecutionLevel": "asInvoker",
-      "signAndEditExecutable": false
+      "signAndEditExecutable": false,
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
@@ -45,7 +55,8 @@
       "shortcutName": "المحاسبة والمستودعات",
       "runAfterFinish": false
     },
-    "compression": "maximum"
+    "compression": "maximum",
+    "icon": "build/icon.ico"
   },
   "dependencies": {
     "better-sqlite3": "^9.4.3"
