@@ -395,9 +395,15 @@ function hasData() {
 // ============================================================
 // تصدير قاعدة البيانات بشكل آمن (WAL checkpoint)
 // ============================================================
-async function backupTo(destPath) {
+function backupTo(destPath) {
   if (!db) throw new Error('DB not open');
-  await db.backup(destPath);
+  const fs = require('fs');
+  const path = require('path');
+  // WAL checkpoint قبل النسخ
+  try { db.pragma('wal_checkpoint(FULL)'); } catch(e) {}
+  // نسخ الملف مباشرة
+  const srcPath = db.name;
+  fs.copyFileSync(srcPath, destPath);
 }
 
 module.exports = { openDatabase, loadAll, saveAll, migrateFromJSON, hasData, backupTo };
