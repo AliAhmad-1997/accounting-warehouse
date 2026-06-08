@@ -1578,6 +1578,21 @@ function renderReturnLines() {
   const type = document.getElementById('return-type')?.value || 'sale';
   tbody.innerHTML = returnLines.map((line, i) => {
     const item = db.items.find(it=>it.id===line.itemId);
+    // بناء dropdown الوحدة — مثل فاتورة البيع
+    let unitSelect = '';
+    if(item) {
+      const hasUnit2 = item.unit2 && item.unit2.trim();
+      if(hasUnit2) {
+        unitSelect = `<select onchange="onReturnUnitChange(${i},this.value)" class="input input-sm" style="width:90px">
+          <option value="unit" ${(line.unitType||'unit')==='unit'?'selected':''}>${item.unit}</option>
+          <option value="unit2" ${line.unitType==='unit2'?'selected':''}>${item.unit2}</option>
+        </select>`;
+      } else {
+        unitSelect = `<span class="text-muted">${item.unit||''}</span>`;
+      }
+    } else {
+      unitSelect = '<span class="text-muted">—</span>';
+    }
     return `<tr>
       <td>${i+1}</td>
       <td>
@@ -1586,7 +1601,7 @@ function renderReturnLines() {
           ${db.items.map(it=>`<option value="${it.id}" ${it.id===line.itemId?'selected':''}>${it.id} - ${it.name}</option>`).join('')}
         </select>
       </td>
-      <td><span class="text-muted">${item?.unit||'—'}</span></td>
+      <td>${unitSelect}</td>
       <td><input type="number" class="input input-sm" value="${line.qty}" min="0.01" step="0.01"
           onchange="onReturnQtyChange(${i},this.value)" style="width:80px"></td>
       <td><input type="number" class="input input-sm" value="${line.price}" min="0"
@@ -1601,7 +1616,22 @@ function onReturnItemChange(i, itemId) {
   const type = document.getElementById('return-type')?.value || 'sale';
   const item = db.items.find(it=>it.id===itemId);
   returnLines[i].itemId = itemId;
+  returnLines[i].unitType = 'unit'; // reset للوحدة الأساسية
   returnLines[i].price = item ? (type === 'sale' ? item.price : item.cost) : 0;
+  returnLines[i].total = returnLines[i].price * returnLines[i].qty;
+  renderReturnLines(); renderReturnTotal();
+}
+function onReturnUnitChange(i, unitType) {
+  const type = document.getElementById('return-type')?.value || 'sale';
+  const item = db.items.find(it=>it.id===returnLines[i].itemId);
+  if(!item) return;
+  returnLines[i].unitType = unitType;
+  const basePrice = type === 'sale' ? item.price : item.cost;
+  if(unitType === 'unit2') {
+    returnLines[i].price = basePrice * (item.factor || 1);
+  } else {
+    returnLines[i].price = basePrice;
+  }
   returnLines[i].total = returnLines[i].price * returnLines[i].qty;
   renderReturnLines(); renderReturnTotal();
 }
@@ -1654,6 +1684,11 @@ function saveReturn() {
 
   saveData(db);
   returnLines = [{itemId:'',qty:1,price:0,total:0}];
+  // مسح اسم الزبون أو المورد بعد الحفظ
+  const custInput = document.getElementById('return-customer-input');
+  const suppInput = document.getElementById('return-supplier-input');
+  if(custInput) custInput.value = '';
+  if(suppInput) suppInput.value = '';
   showToast('✅ تم حفظ المرتجع ' + number, 'success');
   renderReturns();
 }
