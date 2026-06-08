@@ -977,6 +977,14 @@ function addCustomer() {
 // ============================================================
 // SETTINGS
 // ============================================================
+function updateRateDisplay(val) {
+  const rate = parseFloat(val) || 0;
+  const oldEl = document.getElementById('rate-display-old');
+  const newEl = document.getElementById('rate-display-new');
+  if(oldEl) oldEl.textContent = rate ? new Intl.NumberFormat('ar-SY').format(rate) + ' ل.س ق' : '—';
+  if(newEl) newEl.textContent = rate ? new Intl.NumberFormat('ar-SY').format(rate/100) + ' ل.س ج' : '—';
+}
+
 function renderSettings() {
   document.getElementById('set-name').value = db.company.name;
   document.getElementById('set-address').value = db.company.address;
@@ -984,7 +992,9 @@ function renderSettings() {
   document.getElementById('set-email').value = db.company.email;
   document.getElementById('set-slogan').value = db.company.slogan;
   if(!db.exchange) db.exchange = { usdToOld: 12000 };
-  document.getElementById('set-usd-rate').value = db.exchange.usdToOld;
+  const rate = db.exchange.usdToOld;
+  document.getElementById('set-usd-rate').value = rate;
+  updateRateDisplay(rate);
 }
 
 function saveCompanyName(name) {
