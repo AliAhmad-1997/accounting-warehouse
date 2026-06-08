@@ -99,10 +99,9 @@ ipcMain.handle('db-has-data', () => {
   return dbModule.hasData();
 });
 
-// تصدير ملف data.db
+// تصدير ملف data.db — باستخدام db.backup() لضمان WAL checkpoint
 ipcMain.handle('export-database', async () => {
   const { dialog } = require('electron');
-  const srcPath = require('path').join(app.getPath('userData'), 'data.db');
   const today = new Date().toISOString().split('T')[0];
   const result = await dialog.showSaveDialog({
     title: 'تصدير قاعدة البيانات',
@@ -110,8 +109,14 @@ ipcMain.handle('export-database', async () => {
     filters: [{ name: 'SQLite Database', extensions: ['db'] }]
   });
   if (!result.canceled && result.filePath) {
-    require('fs').copyFileSync(srcPath, result.filePath);
-    return { success: true };
+    try {
+      // db.backup() يعمل WAL checkpoint كامل قبل النسخ — يضمن حفظ كل البيانات
+      await dbModule.backupTo(result.filePath);
+      return { success: true };
+    } catch(e) {
+      console.error('export-database error:', e);
+      return { success: false, error: e.message };
+    }
   }
   return { success: false, canceled: true };
 });
