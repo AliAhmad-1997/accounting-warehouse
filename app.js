@@ -638,6 +638,8 @@ function renderPurchaseInvoice() {
   const nextNum = 'PUR-'+String(db.invoiceCounters.purchase+1).padStart(3,'0');
   document.getElementById('pur-inv-num').textContent = nextNum;
   document.getElementById('pur-date').value = new Date().toISOString().split('T')[0];
+  // reset السطور عند كل فتح للصفحة
+  purchaseLines = [{itemId:'',qty:1,price:0,total:0}];
   renderPurchaseLines(); renderPurchaseTotal();
   const datalist = document.getElementById('suppliers-datalist');
   if(datalist) datalist.innerHTML = db.suppliers.filter(s=>s.name).map(s=>`<option value="${s.name}">`).join('');
