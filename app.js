@@ -1094,9 +1094,7 @@ async function exportDatabase() {
   if (result && result.success) {
     showToast('✅ تم تصدير قاعدة البيانات بنجاح', 'success');
   } else if (result && !result.canceled) {
-    const errMsg = result.error ? ' — ' + result.error : '';
-    showToast('❌ فشل التصدير' + errMsg, 'error');
-    console.error('Export error:', result.error);
+    showToast('❌ فشل التصدير', 'error');
   }
 }
 
@@ -1816,7 +1814,7 @@ function togglePassField(fieldId, btn) {
   }
 }
 
-async function changePassword() {
+function changePassword() {
   const currentPass = document.getElementById('pass-current').value;
   const newPass = document.getElementById('pass-new').value;
   const confirmPass = document.getElementById('pass-confirm').value;
@@ -1832,13 +1830,19 @@ async function changePassword() {
     showToast('كلمة السر الجديدة وتأكيدها غير متطابقتين', 'error'); return;
   }
 
-  // ✅ إصلاح: تغيير الباسورد عبر Node crypto
-  const result = await window.electronAPI.authChange(currentPass, newPass);
-  if (!result || !result.success) {
+  // تحقق من كلمة السر الحالية
+  const currentHash = btoa(unescape(encodeURIComponent(currentPass)));
+  const storedHash = localStorage.getItem('app_password') || btoa(unescape(encodeURIComponent('Ali#1997')));
+
+  if (currentHash !== storedHash) {
     showToast('❌ كلمة السر الحالية غير صحيحة', 'error');
     document.getElementById('pass-current').value = '';
     return;
   }
+
+  // حفظ كلمة السر الجديدة
+  const newHash = btoa(unescape(encodeURIComponent(newPass)));
+  localStorage.setItem('app_password', newHash);
 
   // مسح الحقول
   document.getElementById('pass-current').value = '';
@@ -1852,7 +1856,7 @@ async function changePassword() {
 // SETUP SCREEN — يظهر مرة واحدة فقط
 // ============================================================
 function resetBusinessType() {
-  // ✅ إصلاح: التحقق من كلمة سر المدير عبر Node crypto
+  const ADMIN_HASH = btoa(unescape(encodeURIComponent('AdminAli1997')));
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:inherit;';
   overlay.innerHTML = `
@@ -1870,10 +1874,10 @@ function resetBusinessType() {
   document.body.appendChild(overlay);
   document.getElementById('rbt-cancel').onclick = () => document.body.removeChild(overlay);
   document.getElementById('rbt-pass').onkeydown = (e) => { if(e.key==='Enter') document.getElementById('rbt-confirm').click(); };
-  document.getElementById('rbt-confirm').onclick = async () => {
+  document.getElementById('rbt-confirm').onclick = () => {
     const input = document.getElementById('rbt-pass').value;
-    const adminResult = await window.electronAPI.authCheckAdmin(input);
-    if(!adminResult || !adminResult.success) {
+    const inputHash = btoa(unescape(encodeURIComponent(input)));
+    if(inputHash !== ADMIN_HASH) {
       document.getElementById('rbt-error').style.display = 'block';
       document.getElementById('rbt-pass').value = '';
       document.getElementById('rbt-pass').focus();
@@ -1926,27 +1930,14 @@ function selectBusiness(type) {
 // ============================================================
 // LOGIN + INIT
 // ============================================================
-// ✅ إصلاح: كلمة السر عبر Node crypto (آمن)
-async function checkLogin() {
+const PASS_HASH = btoa(unescape(encodeURIComponent('Ali#1997')));
+
+function checkLogin() {
   const input = document.getElementById('login-password').value;
-  if (!input) return;
+  const inputHash = btoa(unescape(encodeURIComponent(input)));
+  const storedHash = localStorage.getItem('app_password') || PASS_HASH;
   const btn = document.getElementById('login-btn');
-  btn.disabled = true;
-  btn.textContent = '...';
-
-  let result = null;
-  try {
-    if (window.electronAPI && window.electronAPI.authCheck) {
-      result = await window.electronAPI.authCheck(input);
-    }
-  } catch(e) {
-    console.error('authCheck error:', e);
-  }
-
-  btn.disabled = false;
-  btn.textContent = 'دخول';
-
-  if (result && result.success) {
+  if (inputHash === storedHash) {
     btn.style.background = 'linear-gradient(135deg,#10b981,#059669)';
     btn.textContent = '✓ جاري الدخول...';
     setTimeout(() => {
@@ -1960,11 +1951,10 @@ async function checkLogin() {
     document.getElementById('login-password').focus();
     const screen = document.getElementById('login-screen');
     screen.style.animation = 'none';
-    const loginBox = document.querySelector('#login-screen > div:nth-child(3)');
-    if (loginBox) {
-      loginBox.style.animation = 'shake 0.4s ease';
-      setTimeout(() => { loginBox.style.animation = ''; }, 400);
-    }
+    document.querySelector('#login-screen > div:nth-child(3)').style.animation = 'shake 0.4s ease';
+    setTimeout(() => {
+      document.querySelector('#login-screen > div:nth-child(3)').style.animation = '';
+    }, 400);
   }
 }
 
