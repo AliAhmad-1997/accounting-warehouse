@@ -274,14 +274,15 @@ function hashPassword(plain) {
 
 // التحقق من كلمة السر
 ipcMain.handle('auth-check', (event, plain) => {
-  if (!dbReady) return { success: false };
+  const defaultHash = hashPassword('Ali#1997');
   try {
-    const stored = dbModule.getSetting('app_password_hash');
-    const defaultHash = hashPassword('Ali#1997');
+    // لو DB جاهز نتحقق من الهاش المخزن، وإلا نستخدم الافتراضي
+    const stored = dbReady ? dbModule.getSetting('app_password_hash') : null;
     const target = stored || defaultHash;
     return { success: hashPassword(plain) === target };
   } catch(e) {
-    return { success: false };
+    // fallback للباسورد الافتراضي لو في أي خطأ
+    return { success: hashPassword(plain) === defaultHash };
   }
 });
 
@@ -304,14 +305,13 @@ ipcMain.handle('auth-change', (event, currentPlain, newPlain) => {
 
 // التحقق من كلمة سر المدير
 ipcMain.handle('auth-check-admin', (event, plain) => {
-  if (!dbReady) return { success: false };
+  const defaultHash = hashPassword('AdminAli1997');
   try {
-    const stored = dbModule.getSetting('admin_password_hash');
-    const defaultHash = hashPassword('AdminAli1997');
+    const stored = dbReady ? dbModule.getSetting('admin_password_hash') : null;
     const target = stored || defaultHash;
     return { success: hashPassword(plain) === target };
   } catch(e) {
-    return { success: false };
+    return { success: hashPassword(plain) === defaultHash };
   }
 });
 

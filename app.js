@@ -1929,10 +1929,23 @@ function selectBusiness(type) {
 // ✅ إصلاح: كلمة السر عبر Node crypto (آمن)
 async function checkLogin() {
   const input = document.getElementById('login-password').value;
+  if (!input) return;
   const btn = document.getElementById('login-btn');
   btn.disabled = true;
-  const result = await window.electronAPI.authCheck(input);
+  btn.textContent = '...';
+
+  let result = null;
+  try {
+    if (window.electronAPI && window.electronAPI.authCheck) {
+      result = await window.electronAPI.authCheck(input);
+    }
+  } catch(e) {
+    console.error('authCheck error:', e);
+  }
+
   btn.disabled = false;
+  btn.textContent = 'دخول';
+
   if (result && result.success) {
     btn.style.background = 'linear-gradient(135deg,#10b981,#059669)';
     btn.textContent = '✓ جاري الدخول...';
@@ -1947,10 +1960,11 @@ async function checkLogin() {
     document.getElementById('login-password').focus();
     const screen = document.getElementById('login-screen');
     screen.style.animation = 'none';
-    document.querySelector('#login-screen > div:nth-child(3)').style.animation = 'shake 0.4s ease';
-    setTimeout(() => {
-      document.querySelector('#login-screen > div:nth-child(3)').style.animation = '';
-    }, 400);
+    const loginBox = document.querySelector('#login-screen > div:nth-child(3)');
+    if (loginBox) {
+      loginBox.style.animation = 'shake 0.4s ease';
+      setTimeout(() => { loginBox.style.animation = ''; }, 400);
+    }
   }
 }
 
