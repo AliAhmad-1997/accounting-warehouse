@@ -44,4 +44,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // قائمة النسخ
   listBackups: () => ipcRenderer.invoke('list-backups'),
+
+  // ============================================================
+  // AUTH — كلمة السر (آمن عبر Node/crypto)
+  // ============================================================
+  authCheck: (plain) => ipcRenderer.invoke('auth-check', plain),
+  authChange: (current, newPass) => ipcRenderer.invoke('auth-change', current, newPass),
+  authCheckAdmin: (plain) => ipcRenderer.invoke('auth-check-admin', plain),
+
+  // ============================================================
+  // Incremental DB Operations
+  // ============================================================
+  dbSaveInvoice: (inv, type) => ipcRenderer.invoke('db-save-invoice', inv, type),
+  dbDeleteInvoice: (number, type) => ipcRenderer.invoke('db-delete-invoice', number, type),
+  dbSaveItem: (item) => ipcRenderer.invoke('db-save-item', item),
+  dbDeleteItem: (id) => ipcRenderer.invoke('db-delete-item', id),
+  dbSaveCustomer: (customer) => ipcRenderer.invoke('db-save-customer', customer),
+  dbSaveSupplier: (supplier) => ipcRenderer.invoke('db-save-supplier', supplier),
+  dbAddPayment: (type, payment) => ipcRenderer.invoke('db-add-payment', type, payment),
 });

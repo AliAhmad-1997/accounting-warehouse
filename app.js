@@ -211,12 +211,20 @@ function calcInventory() {
 function getStats() {
   const totalSales = db.salesInvoices.reduce((s,i)=>s+(i.total||0),0);
   const totalPurchases = db.purchaseInvoices.reduce((s,i)=>s+(i.total||0),0);
-  const profit = totalSales - totalPurchases;
+  // ✅ إصلاح: حساب المرتجعات في الأرباح
+  const totalReturnSales = (db.returns||[]).filter(r=>r.type==='sale').reduce((s,r)=>s+(r.total||0),0);
+  const totalReturnPurchases = (db.returns||[]).filter(r=>r.type==='purchase').reduce((s,r)=>s+(r.total||0),0);
+  const netSales = totalSales - totalReturnSales;
+  const netPurchases = totalPurchases - totalReturnPurchases;
+  const profit = netSales - netPurchases;
   const inv = calcInventory();
   const lowStock = db.items.filter(item => (inv[item.id]||0) < item.minStock);
   const invValue = db.items.reduce((s,item)=>s+(inv[item.id]||0)*item.cost,0);
-  return { totalSales, totalPurchases, profit, lowStock, invValue,
-           salesCount: db.salesInvoices.length, purchasesCount: db.purchaseInvoices.length };
+  return { totalSales, totalPurchases, netSales, netPurchases, profit,
+           totalReturnSales, totalReturnPurchases,
+           lowStock, invValue,
+           salesCount: db.salesInvoices.length, purchasesCount: db.purchaseInvoices.length,
+           returnsCount: (db.returns||[]).length };
 }
 
 // ============================================================
@@ -550,8 +558,8 @@ function printInvoice(invNumber) {
       <td style="padding:8px;border:1px solid #ddd">${item?.name||l.itemId}</td>
       <td style="padding:8px;border:1px solid #ddd;text-align:center">${item?.unit||''}</td>
       <td style="padding:8px;border:1px solid #ddd;text-align:center">${l.qty}</td>
-      <td style="padding:8px;border:1px solid #ddd;text-align:center">${new Intl.NumberFormat('ar-SY').format(l.price)}</td>
-      <td style="padding:8px;border:1px solid #ddd;text-align:center;font-weight:bold">${new Intl.NumberFormat('ar-SY').format(l.total)}</td>
+      <td style="padding:8px;border:1px solid #ddd;text-align:center">$${l.price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+      <td style="padding:8px;border:1px solid #ddd;text-align:center;font-weight:bold">$${l.total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
     </tr>`;
   }).join('');
 
@@ -612,7 +620,7 @@ function printInvoice(invNumber) {
 <div class="totals">
   <div class="totals-box">
     <div class="label">💰 الإجمالي النهائي</div>
-    <div class="amount">${new Intl.NumberFormat('ar-SY').format(inv.total)} ل.س</div>
+    <div class="amount">$${inv.total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
     ${inv.discount>0?`<div style="font-size:12px;opacity:0.8;margin-top:4px">خصم ${inv.discount}%</div>`:''}
   </div>
 </div>
@@ -960,7 +968,7 @@ function addSupplier() {
     showToast('المورد موجود مسبقاً', 'error'); return;
   }
   db.suppliers.push({ name: name.trim(), phone: '', address: '' });
-  saveData();
+  saveData(db);
   renderSuppliers();
   showToast('✅ تم إضافة المورد');
 }
@@ -1000,7 +1008,7 @@ function renderSettings() {
 function saveCompanyName(name) {
   if (!name || name === db.company.name) return;
   db.company.name = name;
-  saveData();
+  saveData(db);
   // حدّث حقل الإعدادات كمان
   const setName = document.getElementById('set-name');
   if (setName) setName.value = name;
@@ -1806,7 +1814,7 @@ function togglePassField(fieldId, btn) {
   }
 }
 
-function changePassword() {
+async function changePassword() {
   const currentPass = document.getElementById('pass-current').value;
   const newPass = document.getElementById('pass-new').value;
   const confirmPass = document.getElementById('pass-confirm').value;
@@ -1822,19 +1830,13 @@ function changePassword() {
     showToast('كلمة السر الجديدة وتأكيدها غير متطابقتين', 'error'); return;
   }
 
-  // تحقق من كلمة السر الحالية
-  const currentHash = btoa(unescape(encodeURIComponent(currentPass)));
-  const storedHash = localStorage.getItem('app_password') || btoa(unescape(encodeURIComponent('Ali#1997')));
-
-  if (currentHash !== storedHash) {
+  // ✅ إصلاح: تغيير الباسورد عبر Node crypto
+  const result = await window.electronAPI.authChange(currentPass, newPass);
+  if (!result || !result.success) {
     showToast('❌ كلمة السر الحالية غير صحيحة', 'error');
     document.getElementById('pass-current').value = '';
     return;
   }
-
-  // حفظ كلمة السر الجديدة
-  const newHash = btoa(unescape(encodeURIComponent(newPass)));
-  localStorage.setItem('app_password', newHash);
 
   // مسح الحقول
   document.getElementById('pass-current').value = '';
@@ -1848,7 +1850,7 @@ function changePassword() {
 // SETUP SCREEN — يظهر مرة واحدة فقط
 // ============================================================
 function resetBusinessType() {
-  const ADMIN_HASH = btoa(unescape(encodeURIComponent('AdminAli1997')));
+  // ✅ إصلاح: التحقق من كلمة سر المدير عبر Node crypto
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:inherit;';
   overlay.innerHTML = `
@@ -1866,10 +1868,10 @@ function resetBusinessType() {
   document.body.appendChild(overlay);
   document.getElementById('rbt-cancel').onclick = () => document.body.removeChild(overlay);
   document.getElementById('rbt-pass').onkeydown = (e) => { if(e.key==='Enter') document.getElementById('rbt-confirm').click(); };
-  document.getElementById('rbt-confirm').onclick = () => {
+  document.getElementById('rbt-confirm').onclick = async () => {
     const input = document.getElementById('rbt-pass').value;
-    const inputHash = btoa(unescape(encodeURIComponent(input)));
-    if(inputHash !== ADMIN_HASH) {
+    const adminResult = await window.electronAPI.authCheckAdmin(input);
+    if(!adminResult || !adminResult.success) {
       document.getElementById('rbt-error').style.display = 'block';
       document.getElementById('rbt-pass').value = '';
       document.getElementById('rbt-pass').focus();
@@ -1922,14 +1924,14 @@ function selectBusiness(type) {
 // ============================================================
 // LOGIN + INIT
 // ============================================================
-const PASS_HASH = btoa(unescape(encodeURIComponent('Ali#1997')));
-
-function checkLogin() {
+// ✅ إصلاح: كلمة السر عبر Node crypto (آمن)
+async function checkLogin() {
   const input = document.getElementById('login-password').value;
-  const inputHash = btoa(unescape(encodeURIComponent(input)));
-  const storedHash = localStorage.getItem('app_password') || PASS_HASH;
   const btn = document.getElementById('login-btn');
-  if (inputHash === storedHash) {
+  btn.disabled = true;
+  const result = await window.electronAPI.authCheck(input);
+  btn.disabled = false;
+  if (result && result.success) {
     btn.style.background = 'linear-gradient(135deg,#10b981,#059669)';
     btn.textContent = '✓ جاري الدخول...';
     setTimeout(() => {

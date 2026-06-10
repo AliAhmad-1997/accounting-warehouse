@@ -262,3 +262,101 @@ app.on('second-instance', () => {
     windows[0].focus();
   }
 });
+
+// ============================================================
+// PASSWORD — SHA-256 via Node crypto (آمن — لا يُكشف في renderer)
+// ============================================================
+const crypto = require('crypto');
+
+function hashPassword(plain) {
+  return crypto.createHash('sha256').update(plain + 'acc_salt_2026').digest('hex');
+}
+
+// التحقق من كلمة السر
+ipcMain.handle('auth-check', (event, plain) => {
+  if (!dbReady) return { success: false };
+  try {
+    const stored = dbModule.getSetting('app_password_hash');
+    const defaultHash = hashPassword('Ali#1997');
+    const target = stored || defaultHash;
+    return { success: hashPassword(plain) === target };
+  } catch(e) {
+    return { success: false };
+  }
+});
+
+// تغيير كلمة السر
+ipcMain.handle('auth-change', (event, currentPlain, newPlain) => {
+  if (!dbReady) return { success: false, error: 'DB not ready' };
+  try {
+    const stored = dbModule.getSetting('app_password_hash');
+    const defaultHash = hashPassword('Ali#1997');
+    const target = stored || defaultHash;
+    if (hashPassword(currentPlain) !== target) {
+      return { success: false, error: 'wrong_password' };
+    }
+    dbModule.setSetting('app_password_hash', hashPassword(newPlain));
+    return { success: true };
+  } catch(e) {
+    return { success: false, error: e.message };
+  }
+});
+
+// التحقق من كلمة سر المدير
+ipcMain.handle('auth-check-admin', (event, plain) => {
+  if (!dbReady) return { success: false };
+  try {
+    const stored = dbModule.getSetting('admin_password_hash');
+    const defaultHash = hashPassword('AdminAli1997');
+    const target = stored || defaultHash;
+    return { success: hashPassword(plain) === target };
+  } catch(e) {
+    return { success: false };
+  }
+});
+
+// ============================================================
+// IPC — Incremental DB Operations (أسرع من db-save الكامل)
+// ============================================================
+
+ipcMain.handle('db-save-invoice', (event, inv, type) => {
+  if (!dbReady) return { success: false };
+  try { dbModule.saveInvoice(inv, type); return { success: true }; }
+  catch(e) { return { success: false, error: e.message }; }
+});
+
+ipcMain.handle('db-delete-invoice', (event, number, type) => {
+  if (!dbReady) return { success: false };
+  try { dbModule.deleteInvoice(number, type); return { success: true }; }
+  catch(e) { return { success: false, error: e.message }; }
+});
+
+ipcMain.handle('db-save-item', (event, item) => {
+  if (!dbReady) return { success: false };
+  try { dbModule.saveItem(item); return { success: true }; }
+  catch(e) { return { success: false, error: e.message }; }
+});
+
+ipcMain.handle('db-delete-item', (event, id) => {
+  if (!dbReady) return { success: false };
+  try { dbModule.deleteItem(id); return { success: true }; }
+  catch(e) { return { success: false, error: e.message }; }
+});
+
+ipcMain.handle('db-save-customer', (event, customer) => {
+  if (!dbReady) return { success: false };
+  try { dbModule.saveCustomer(customer); return { success: true }; }
+  catch(e) { return { success: false, error: e.message }; }
+});
+
+ipcMain.handle('db-save-supplier', (event, supplier) => {
+  if (!dbReady) return { success: false };
+  try { dbModule.saveSupplier(supplier); return { success: true }; }
+  catch(e) { return { success: false, error: e.message }; }
+});
+
+ipcMain.handle('db-add-payment', (event, type, payment) => {
+  if (!dbReady) return { success: false };
+  try { dbModule.addPayment(type, payment); return { success: true }; }
+  catch(e) { return { success: false, error: e.message }; }
+});

@@ -406,4 +406,95 @@ function backupTo(destPath) {
   fs.copyFileSync(srcPath, destPath);
 }
 
-module.exports = { openDatabase, loadAll, saveAll, migrateFromJSON, hasData, backupTo };
+
+// ============================================================
+// إعدادات عامة (key-value) — للباسورد وغيره
+// ============================================================
+function getSetting(key) {
+  if (!db) return null;
+  const row = db.prepare('SELECT value FROM company WHERE key = ?').get(key);
+  return row ? row.value : null;
+}
+
+function setSetting(key, value) {
+  if (!db) return;
+  db.prepare('INSERT OR REPLACE INTO company (key, value) VALUES (?, ?)').run(key, value);
+}
+
+
+// ============================================================
+// حفظ جزئي — أسرع من saveAll
+// ============================================================
+
+function saveInvoice(inv, type) {
+  // type: 'sale' | 'purchase'
+  const t = db.transaction(() => {
+    if (type === 'sale') {
+      db.prepare('INSERT OR REPLACE INTO sales_invoices (number,date,customerName,subtotal,discount,total,currency,usdToOld) VALUES (@number,@date,@customerName,@subtotal,@discount,@total,@currency,@usdToOld)').run({
+        number: inv.number, date: inv.date||'', customerName: inv.customerName||'',
+        subtotal: inv.subtotal||0, discount: inv.discount||0, total: inv.total||0,
+        currency: inv.currency||'USD', usdToOld: inv.usdToOld||0
+      });
+      db.prepare('DELETE FROM sales_lines WHERE invoiceNumber = ?').run(inv.number);
+      const ins = db.prepare('INSERT INTO sales_lines (invoiceNumber,itemId,qty,price,total) VALUES (@invoiceNumber,@itemId,@qty,@price,@total)');
+      (inv.lines||[]).forEach(l => ins.run({ invoiceNumber:inv.number, itemId:l.itemId||'', qty:l.qty||0, price:l.price||0, total:l.total||0 }));
+    } else {
+      db.prepare('INSERT OR REPLACE INTO purchase_invoices (number,date,supplierName,total) VALUES (@number,@date,@supplierName,@total)').run({
+        number: inv.number, date: inv.date||'', supplierName: inv.supplierName||'', total: inv.total||0
+      });
+      db.prepare('DELETE FROM purchase_lines WHERE invoiceNumber = ?').run(inv.number);
+      const ins = db.prepare('INSERT INTO purchase_lines (invoiceNumber,itemId,qty,price,total) VALUES (@invoiceNumber,@itemId,@qty,@price,@total)');
+      (inv.lines||[]).forEach(l => ins.run({ invoiceNumber:inv.number, itemId:l.itemId||'', qty:l.qty||0, price:l.price||0, total:l.total||0 }));
+    }
+  });
+  t();
+}
+
+function deleteInvoice(number, type) {
+  if (type === 'sale') {
+    db.prepare('DELETE FROM sales_invoices WHERE number = ?').run(number);
+  } else {
+    db.prepare('DELETE FROM purchase_invoices WHERE number = ?').run(number);
+  }
+}
+
+function saveItem(item) {
+  db.prepare('INSERT OR REPLACE INTO items (id,name,type,unit,unit2,factor,cost,price,minStock) VALUES (@id,@name,@type,@unit,@unit2,@factor,@cost,@price,@minStock)').run({
+    id:item.id, name:item.name||'', type:item.type||'', unit:item.unit||'',
+    unit2:item.unit2||'', factor:item.factor||1, cost:item.cost||0,
+    price:item.price||0, minStock:item.minStock||0
+  });
+}
+
+function deleteItem(id) {
+  db.prepare('DELETE FROM items WHERE id = ?').run(id);
+}
+
+function saveCustomer(c) {
+  db.prepare('INSERT OR REPLACE INTO customers (id,name,phone,address) VALUES (@id,@name,@phone,@address)').run({
+    id:c.id||('CUS-'+Date.now()), name:c.name||'', phone:c.phone||'', address:c.address||''
+  });
+}
+
+function saveSupplier(s) {
+  db.prepare('INSERT OR REPLACE INTO suppliers (id,name,phone,address) VALUES (@id,@name,@phone,@address)').run({
+    id:s.id||('SUP-'+Date.now()), name:s.name||'', phone:s.phone||'', address:s.address||''
+  });
+}
+
+function addPayment(type, payment) {
+  // type: 'customer' | 'supplier'
+  if (type === 'customer') {
+    db.prepare('INSERT INTO customer_payments (customerName,amount,note,date) VALUES (@customerName,@amount,@note,@date)').run({
+      customerName:payment.customerName||'', amount:payment.amount||0,
+      note:payment.note||'', date:payment.date||''
+    });
+  } else {
+    db.prepare('INSERT INTO supplier_payments (supplierName,amount,note,date) VALUES (@supplierName,@amount,@note,@date)').run({
+      supplierName:payment.supplierName||'', amount:payment.amount||0,
+      note:payment.note||'', date:payment.date||''
+    });
+  }
+}
+
+module.exports = { openDatabase, loadAll, saveAll, migrateFromJSON, hasData, backupTo, getSetting, setSetting, saveInvoice, deleteInvoice, saveItem, deleteItem, saveCustomer, saveSupplier, addPayment };
