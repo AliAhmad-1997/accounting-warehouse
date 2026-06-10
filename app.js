@@ -1094,7 +1094,7 @@ async function exportDatabase() {
   if (result && result.success) {
     showToast('✅ تم تصدير قاعدة البيانات بنجاح', 'success');
   } else if (result && !result.canceled) {
-    showToast('❌ فشل التصدير', 'error');
+    showToast('❌ ' + (result.error || 'فشل التصدير'), 'error');
   }
 }
 

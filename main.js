@@ -111,7 +111,7 @@ ipcMain.handle('export-database', async () => {
   if (!result.canceled && result.filePath) {
     try {
       // db.backup() يعمل WAL checkpoint كامل قبل النسخ — يضمن حفظ كل البيانات
-      await dbModule.backupTo(result.filePath);
+      dbModule.backupTo(result.filePath);
       return { success: true };
     } catch(e) {
       console.error('export-database error:', e);
