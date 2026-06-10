@@ -60,7 +60,11 @@
       "installerHeaderIcon": "icon.ico"
     },
     "compression": "maximum",
-    "icon": "icon.ico"
+    "icon": "icon.ico",
+    "asarUnpack": [
+      "**/*.node",
+      "**/better-sqlite3/**"
+    ]
   },
   "dependencies": {
     "better-sqlite3": "^9.4.3"

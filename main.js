@@ -26,8 +26,12 @@ function initDatabase() {
     console.log('✅ SQLite ready:', dbPath);
   } catch (e) {
     console.error('❌ SQLite init error:', e);
+    // نعرض الخطأ الحقيقي للمستخدم
+    dbInitError = e.message;
   }
 }
+
+let dbInitError = null;
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -102,6 +106,9 @@ ipcMain.handle('db-has-data', () => {
 // تصدير ملف data.db — باستخدام db.backup() لضمان WAL checkpoint
 ipcMain.handle('export-database', async () => {
   const { dialog } = require('electron');
+  if (!dbReady) {
+    return { success: false, error: 'قاعدة البيانات لم تُفتح. السبب: ' + (dbInitError || 'unknown') };
+  }
   const today = new Date().toISOString().split('T')[0];
   const result = await dialog.showSaveDialog({
     title: 'تصدير قاعدة البيانات',
