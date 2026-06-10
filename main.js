@@ -276,12 +276,31 @@ function hashPassword(plain) {
 ipcMain.handle('auth-check', (event, plain) => {
   const defaultHash = hashPassword('Ali#1997');
   try {
-    // لو DB جاهز نتحقق من الهاش المخزن، وإلا نستخدم الافتراضي
+    // نتحقق من الهاش الجديد (SHA-256) أولاً
     const stored = dbReady ? dbModule.getSetting('app_password_hash') : null;
     const target = stored || defaultHash;
-    return { success: hashPassword(plain) === target };
+    if (hashPassword(plain) === target) {
+      return { success: true };
+    }
+    // Migration: نقبل الباسورد القديم (btoa) أيضاً
+    // الكود القديم كان يحفظ الباسورد هيك: btoa(unescape(encodeURIComponent(pass)))
+    const legacyHash = Buffer.from(unescape(encodeURIComponent(plain))).toString('base64');
+    const legacyStored = dbReady ? dbModule.getSetting('app_password_legacy') : null;
+    // الباسورد الافتراضي القديم
+    const legacyDefault = Buffer.from(unescape(encodeURIComponent('Ali#1997'))).toString('base64');
+    const legacyTarget = legacyStored || legacyDefault;
+    if (legacyHash === legacyTarget) {
+      // ✅ تطابق مع الباسورد القديم — نحوله لـ SHA-256 ونحفظه
+      if (dbReady) {
+        dbModule.setSetting('app_password_hash', hashPassword(plain));
+        console.log('✅ Password migrated from btoa to SHA-256');
+      }
+      return { success: true };
+    }
+    return { success: false };
   } catch(e) {
-    // fallback للباسورد الافتراضي لو في أي خطأ
+    console.error('auth-check error:', e);
+    // fallback: قبول الباسورد الافتراضي
     return { success: hashPassword(plain) === defaultHash };
   }
 });
