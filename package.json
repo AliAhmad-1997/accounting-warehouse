@@ -15,7 +15,7 @@
     "appId": "com.accounting.warehouse",
     "productName": "AccountingWarehouse",
     "copyright": "Copyright 2026",
-    "asar": true,
+    "asar": false,
     "directories": {
       "output": "dist"
     },
@@ -29,8 +29,7 @@
       "styles.css",
       "theme.js",
       "logo.png",
-      "node_modules/better-sqlite3/**/*",
-      "!node_modules/**/*",
+      "node_modules/**/*",
       "!src/**/*",
       "!dist/**/*",
       "!*.md",
@@ -61,10 +60,7 @@
       "installerHeaderIcon": "icon.ico"
     },
     "compression": "maximum",
-    "icon": "icon.ico",
-    "asarUnpack": [
-      "node_modules/better-sqlite3/**/*"
-    ]
+    "icon": "icon.ico"
   },
   "dependencies": {
     "better-sqlite3": "^9.4.3"
