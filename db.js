@@ -393,17 +393,13 @@ function hasData() {
 }
 
 // ============================================================
-// تصدير قاعدة البيانات بشكل آمن (WAL checkpoint)
+// تصدير قاعدة البيانات بشكل آمن
 // ============================================================
-function backupTo(destPath) {
+async function backupTo(destPath) {
   if (!db) throw new Error('DB not open');
-  const fs = require('fs');
-  const path = require('path');
-  // WAL checkpoint قبل النسخ
-  try { db.pragma('wal_checkpoint(FULL)'); } catch(e) {}
-  // نسخ الملف مباشرة
-  const srcPath = db.name;
-  fs.copyFileSync(srcPath, destPath);
+  // db.backup() هو الطريقة الرسمية في better-sqlite3
+  // بتعمل WAL checkpoint كامل وتضمن سلامة البيانات
+  await db.backup(destPath);
 }
 
 
