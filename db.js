@@ -17,20 +17,7 @@ function openDatabase(userDataPath) {
     fs.mkdirSync(userDataPath, { recursive: true });
   }
 
-  // ✅ نحاول require بكل الطرق الممكنة (asar + non-asar)
-  let Database;
-  try {
-    Database = require('better-sqlite3');
-  } catch(e1) {
-    try {
-      // لو فشل بسبب asar، نجرب المسار المباشر
-      const appPath = require('electron').app.getAppPath();
-      const nativePath = appPath.replace('app.asar', 'app.asar.unpacked');
-      Database = require(require('path').join(nativePath, 'node_modules', 'better-sqlite3'));
-    } catch(e2) {
-      throw new Error('فشل تحميل better-sqlite3: ' + e1.message + ' | ' + e2.message);
-    }
-  }
+  const Database = require('better-sqlite3');
 
   const dbPath = path.join(userDataPath, 'data.db');
   db = new Database(dbPath);

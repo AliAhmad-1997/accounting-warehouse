@@ -29,6 +29,7 @@
       "styles.css",
       "theme.js",
       "logo.png",
+      "node_modules/better-sqlite3/**/*",
       "!node_modules/**/*",
       "!src/**/*",
       "!dist/**/*",
@@ -62,8 +63,7 @@
     "compression": "maximum",
     "icon": "icon.ico",
     "asarUnpack": [
-      "**/*.node",
-      "**/better-sqlite3/**"
+      "node_modules/better-sqlite3/**/*"
     ]
   },
   "dependencies": {
