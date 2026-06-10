@@ -396,14 +396,29 @@ function hasData() {
 // تصدير قاعدة البيانات بشكل آمن
 // ============================================================
 function backupTo(destPath) {
-  if (!db) throw new Error('DB not open');
   const fs = require('fs');
-  // WAL checkpoint أولاً لضمان كل البيانات محفوظة
-  try { db.pragma('wal_checkpoint(TRUNCATE)'); } catch(e) { console.log('checkpoint warn:', e.message); }
-  // نسخ الملف
-  const srcPath = db.name;
-  if (!srcPath) throw new Error('DB path unknown');
-  fs.copyFileSync(srcPath, destPath);
+  const path = require('path');
+
+  // محاولة 1: استخدام db object مباشرة
+  if (db) {
+    try { db.pragma('wal_checkpoint(TRUNCATE)'); } catch(e) {}
+    const srcPath = db.name;
+    if (srcPath && fs.existsSync(srcPath)) {
+      fs.copyFileSync(srcPath, destPath);
+      return;
+    }
+  }
+
+  // محاولة 2: البحث عن data.db في userData مباشرة
+  const { app } = require('electron');
+  const userDataPath = app.getPath('userData');
+  const dbPath = path.join(userDataPath, 'data.db');
+
+  if (!fs.existsSync(dbPath)) {
+    throw new Error('ملف قاعدة البيانات غير موجود: ' + dbPath);
+  }
+
+  fs.copyFileSync(dbPath, destPath);
 }
 
 

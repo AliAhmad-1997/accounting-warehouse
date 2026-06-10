@@ -110,11 +110,13 @@ ipcMain.handle('export-database', async () => {
   });
   if (!result.canceled && result.filePath) {
     try {
-      // db.backup() يعمل WAL checkpoint كامل قبل النسخ — يضمن حفظ كل البيانات
+      console.log('📦 Exporting DB to:', result.filePath);
+      console.log('📦 dbReady:', dbReady);
       dbModule.backupTo(result.filePath);
+      console.log('✅ Export success');
       return { success: true };
     } catch(e) {
-      console.error('export-database error:', e);
+      console.error('❌ export-database error:', e.message);
       return { success: false, error: e.message };
     }
   }
