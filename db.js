@@ -13,6 +13,12 @@ let db = null; // better-sqlite3 instance
 // ============================================================
 function openDatabase(userDataPath) {
   const Database = require('better-sqlite3');
+
+  // ✅ تأكد من وجود المجلد قبل فتح DB
+  if (!fs.existsSync(userDataPath)) {
+    fs.mkdirSync(userDataPath, { recursive: true });
+  }
+
   const dbPath = path.join(userDataPath, 'data.db');
   db = new Database(dbPath);
 
@@ -396,10 +402,10 @@ function hasData() {
 // تصدير قاعدة البيانات بشكل آمن
 // ============================================================
 function backupTo(destPath) {
-  const fs = require('fs');
+  const fs   = require('fs');
   const path = require('path');
 
-  // محاولة 1: استخدام db object مباشرة
+  // محاولة 1: استخدام db object المفتوح مباشرة
   if (db) {
     try { db.pragma('wal_checkpoint(TRUNCATE)'); } catch(e) {}
     const srcPath = db.name;
@@ -409,16 +415,25 @@ function backupTo(destPath) {
     }
   }
 
-  // محاولة 2: البحث عن data.db في userData مباشرة
+  // محاولة 2: البحث في كل المسارات الممكنة
   const { app } = require('electron');
-  const userDataPath = app.getPath('userData');
-  const dbPath = path.join(userDataPath, 'data.db');
+  const candidates = [
+    path.join(app.getPath('userData'), 'data.db'),
+    path.join(app.getPath('appData'), 'AccountingWarehouse', 'data.db'),
+    path.join(app.getPath('appData'), 'accounting-warehouse', 'data.db'),
+  ];
 
-  if (!fs.existsSync(dbPath)) {
-    throw new Error('ملف قاعدة البيانات غير موجود: ' + dbPath);
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      // لو لقيناه — نعمل checkpoint لو DB مفتوح ثم ننسخ
+      if (db) { try { db.pragma('wal_checkpoint(TRUNCATE)'); } catch(e) {} }
+      fs.copyFileSync(candidate, destPath);
+      return;
+    }
   }
 
-  fs.copyFileSync(dbPath, destPath);
+  // لو ما لقينا الملف — نعطي رسالة واضحة مع كل المسارات اللي جربناها
+  throw new Error('ملف قاعدة البيانات غير موجود.\nجرّبنا:\n' + candidates.join('\n'));
 }
 
 
