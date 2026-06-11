@@ -1845,7 +1845,7 @@
       <div style="font-size:13px;font-weight:600;margin-bottom:8px;">🧾 الفواتير</div>
       <div class="invoice-table-wrap" style="max-height:180px;overflow-y:auto;">
         <table>
-          <thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>الإجمالي</th></tr></thead>
+          <thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>النوع</th><th>الإجمالي</th><th>المتبقي</th></tr></thead>
           <tbody id="ca-invoices-tbody"></tbody>
         </table>
       </div>
@@ -1924,7 +1924,7 @@
       <div style="font-size:13px;font-weight:600;margin-bottom:8px;">🛒 فواتير الشراء</div>
       <div class="invoice-table-wrap" style="max-height:180px;overflow-y:auto;">
         <table>
-          <thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>الإجمالي</th></tr></thead>
+          <thead><tr><th>رقم الفاتورة</th><th>التاريخ</th><th>النوع</th><th>الإجمالي</th><th>المتبقي</th></tr></thead>
           <tbody id="sa-invoices-tbody"></tbody>
         </table>
       </div>
@@ -1956,6 +1956,16 @@
         <h1 class="page-title">🧾 إيصال القبض</h1>
         <span style="color:var(--text-muted);font-size:14px">سند رقم: <strong id="rec-cust-num">REC-001</strong></span>
       </div>
+
+      <!-- الديون المستحقة -->
+      <div class="card" style="margin-bottom:var(--space-4)">
+        <div class="card-title" style="display:flex;align-items:center;gap:8px">
+          🔴 الفواتير الآجلة المستحقة
+          <span style="font-size:12px;font-weight:400;color:var(--text-muted)">اضغط على الزبون لتعبئة الفورم تلقائياً</span>
+        </div>
+        <div id="rec-deferred-customers"></div>
+      </div>
+
       <div class="card">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4)">
           <div style="display:flex;flex-direction:column;gap:var(--space-3)">
@@ -2016,6 +2026,16 @@
         <h1 class="page-title">💸 إيصال الدفع للمورد</h1>
         <span style="color:var(--text-muted);font-size:14px">سند رقم: <strong id="rec-sup-num">PAY-001</strong></span>
       </div>
+
+      <!-- المستحقات للموردين -->
+      <div class="card" style="margin-bottom:var(--space-4)">
+        <div class="card-title" style="display:flex;align-items:center;gap:8px">
+          🔴 فواتير الشراء الآجلة المستحقة
+          <span style="font-size:12px;font-weight:400;color:var(--text-muted)">اضغط على المورد لتعبئة الفورم تلقائياً</span>
+        </div>
+        <div id="rec-deferred-suppliers"></div>
+      </div>
+
       <div class="card">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4)">
           <div style="display:flex;flex-direction:column;gap:var(--space-3)">
