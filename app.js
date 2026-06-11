@@ -1402,25 +1402,22 @@ ${area.innerHTML}
 
 function getCustomerAccount(customerName) {
   const invoices = db.salesInvoices.filter(i => i.customerName === customerName);
-  // نقدي: دفع كامل = الإجمالي
   const cashInvoices     = invoices.filter(i => (i.paymentType||'cash') === 'cash');
-  // آجل: دفع جزئي أو صفر
   const deferredInvoices = invoices.filter(i => (i.paymentType||'cash') === 'deferred');
 
   const totalCash     = cashInvoices.reduce((s,i) => s + (i.total||0), 0);
   const totalDeferred = deferredInvoices.reduce((s,i) => s + (i.total||0), 0);
-  const totalPaidOnInvoice = deferredInvoices.reduce((s,i) => s + (i.paidAmount||0), 0);
   const totalInvoices = invoices.reduce((s,i) => s + (i.total||0), 0);
 
-  // إيصالات القبض المسجلة منفصلة
+  // كل الدفعات (مع الفاتورة + لاحقة) محفوظة في customerPayments
   const payments = (db.customerPayments || []).filter(p => p.customerName === customerName);
   const totalPaid = payments.reduce((s,p) => s + (p.amount||0) + (p.discountOnPayment||0), 0);
 
-  // الدين الكلي = مجموع الآجل - ما دُفع على الفواتير - إيصالات القبض
-  const remaining = Math.max(0, totalDeferred - totalPaidOnInvoice - totalPaid);
+  // المتبقي = إجمالي الآجل - كل المدفوع
+  const remaining = Math.max(0, totalDeferred - totalPaid);
 
   return { invoices, cashInvoices, deferredInvoices, payments,
-           totalInvoices, totalCash, totalDeferred, totalPaidOnInvoice, totalPaid, remaining };
+           totalInvoices, totalCash, totalDeferred, totalPaidOnInvoice: 0, totalPaid, remaining };
 }
 
 function openCustomerAccount(customerName) {
@@ -1568,16 +1565,17 @@ function getSupplierAccount(supplierName) {
 
   const totalCash     = cashInvoices.reduce((s,i) => s + (i.total||0), 0);
   const totalDeferred = deferredInvoices.reduce((s,i) => s + (i.total||0), 0);
-  const totalPaidOnInvoice = deferredInvoices.reduce((s,i) => s + (i.paidAmount||0), 0);
   const totalInvoices = invoices.reduce((s,i) => s + (i.total||0), 0);
 
+  // كل الدفعات للمورد محفوظة في supplierPayments
   const payments = (db.supplierPayments || []).filter(p => p.supplierName === supplierName);
   const totalPaid = payments.reduce((s,p) => s + (p.amount||0), 0);
 
-  const remaining = Math.max(0, totalDeferred - totalPaidOnInvoice - totalPaid);
+  // المتبقي = إجمالي الآجل - كل المدفوع
+  const remaining = Math.max(0, totalDeferred - totalPaid);
 
   return { invoices, cashInvoices, deferredInvoices, payments,
-           totalInvoices, totalCash, totalDeferred, totalPaidOnInvoice, totalPaid, remaining };
+           totalInvoices, totalCash, totalDeferred, totalPaidOnInvoice: 0, totalPaid, remaining };
 }
 
 function openSupplierAccount(supplierName) {
@@ -2378,12 +2376,13 @@ function renderDeferredCustomers() {
     // فواتير الآجل لهذا الزبون
     const deferredInvs = c.acc.deferredInvoices || [];
     const invoicesHTML = deferredInvs.map(inv => {
-      const paid = inv.paidAmount || 0;
-      // دفعات اضافية من customerPayments على هذه الفاتورة
-      const extraPaid = (db.customerPayments||[])
-        .filter(p => p.customerName === c.name && p.linkedInvoice === inv.number)
-        .reduce((s,p) => s + (p.amount||0), 0);
-      const remaining = Math.max(0, inv.total - paid - extraPaid);
+      // كل الدفعات المرتبطة بهذه الفاتورة (مع الإنشاء + اللاحقة)
+      const allPaymentsForInv = (db.customerPayments||[])
+        .filter(p => p.customerName === c.name &&
+          (p.linkedInvoice === inv.number || p.description === 'دفعة مع الفاتورة ' + inv.number))
+        .reduce((s,p) => s + (p.amount||0) + (p.discountOnPayment||0), 0);
+      const paid = allPaymentsForInv;
+      const remaining = Math.max(0, inv.total - paid);
       if(remaining <= 0) return '';
       return `<tr style="font-size:12px;border-bottom:1px solid #e2e8f0;">
         <td style="padding:6px 8px;font-weight:600;color:#1F3864">${inv.number}</td>
@@ -2486,14 +2485,7 @@ function saveReceiptCustomer() {
   const cust = db.customers.find(c=>c.name===customerName);
   if(cust) cust.balance = Math.max(0,(cust.balance||0)-(amount+discountOnPayment));
 
-  // لو مرتبطة بفاتورة محددة → حدّث paidAmount الفاتورة مباشرة
-  if(linkedInvoice) {
-    const inv = db.salesInvoices.find(i=>i.number===linkedInvoice);
-    if(inv) {
-      inv.paidAmount = (inv.paidAmount||0) + amount + discountOnPayment;
-      if(inv.paidAmount >= inv.total) inv.paymentType = 'cash'; // تمّت التسوية
-    }
-  }
+  // الدفعات تتتبع عبر customerPayments فقط — لا نعدّل paidAmount الفاتورة لتفادي الازدواجية
 
   db.customerPayments = db.customerPayments||[];
   db.customerPayments.push({ receiptNum, customerName, amount, paymentMethod, chequeNum, description, discountOnPayment, note, date, linkedInvoice });
@@ -2544,11 +2536,12 @@ function renderDeferredSuppliers() {
   el.innerHTML = debtors.map(s => {
     const deferredInvs = s.acc.deferredInvoices || [];
     const invoicesHTML = deferredInvs.map(inv => {
-      const paid = inv.paidAmount || 0;
-      const extraPaid = (db.supplierPayments||[])
-        .filter(p => p.supplierName === s.name && p.linkedInvoice === inv.number)
+      const allPaymentsForInv = (db.supplierPayments||[])
+        .filter(p => p.supplierName === s.name &&
+          (p.linkedInvoice === inv.number || p.description === 'دفعة مع الفاتورة ' + inv.number))
         .reduce((sum,p) => sum + (p.amount||0), 0);
-      const remaining = Math.max(0, inv.total - paid - extraPaid);
+      const paid = allPaymentsForInv;
+      const remaining = Math.max(0, inv.total - paid);
       if(remaining <= 0) return '';
       return `<tr style="font-size:12px;border-bottom:1px solid #e2e8f0;">
         <td style="padding:6px 8px;font-weight:600;color:#15803d">${inv.number}</td>
@@ -2648,14 +2641,7 @@ function saveReceiptSupplier() {
   const sup = db.suppliers.find(s=>s.name===supplierName);
   if(sup) sup.balance = Math.max(0,(sup.balance||0)-amount);
 
-  // لو مرتبطة بفاتورة محددة → حدّث paidAmount الفاتورة
-  if(linkedInvoice) {
-    const inv = db.purchaseInvoices.find(i=>i.number===linkedInvoice);
-    if(inv) {
-      inv.paidAmount = (inv.paidAmount||0) + amount;
-      if(inv.paidAmount >= inv.total) inv.paymentType = 'cash';
-    }
-  }
+  // الدفعات تتتبع عبر supplierPayments فقط — لا نعدّل paidAmount الفاتورة لتفادي الازدواجية
 
   db.supplierPayments = db.supplierPayments||[];
   db.supplierPayments.push({ receiptNum, supplierName, amount, paymentMethod, chequeNum, description, note, date, linkedInvoice });
