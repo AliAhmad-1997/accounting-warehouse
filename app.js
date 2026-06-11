@@ -912,22 +912,35 @@ function editItem(id) {
   document.getElementById('modal-item-id').value = item.id;
   document.getElementById('modal-item-name').value = item.name;
   document.getElementById('modal-item-type').value = item.type;
-  // الوحدات
   document.getElementById('modal-item-unit').value = item.unit || '';
   document.getElementById('modal-item-unit2').value = item.unit2 || '';
   document.getElementById('modal-item-factor').value = item.factor || 1;
   document.getElementById('modal-item-barcode').value = item.barcode || '';
+  // حقول جديدة
+  const el2 = document.getElementById('modal-item-barcode2'); if(el2) el2.value = item.barcode2||'';
+  const elTax = document.getElementById('modal-item-tax'); if(elTax) elTax.value = item.taxRate||0;
+  const elMax = document.getElementById('modal-item-maxstock'); if(elMax) elMax.value = item.maxStock||0;
+  const elBrand = document.getElementById('modal-item-brand'); if(elBrand) elBrand.value = item.brand||'';
+  const elDefsup = document.getElementById('modal-item-defsup'); if(elDefsup) elDefsup.value = item.defaultSupplier||'';
   // العملة والأسعار
   const currency = item.priceCurrency || 'USD';
   document.getElementById('modal-price-currency').value = currency;
-  // تحويل الأسعار للعملة المختارة للعرض
   const rate = getRate();
   let costDisplay = item.cost;
   let priceDisplay = item.price;
-  if(currency === 'OLD') { costDisplay = item.cost * rate; priceDisplay = item.price * rate; }
-  else if(currency === 'NEW') { costDisplay = item.cost * rate / 100; priceDisplay = item.price * rate / 100; }
+  let price2Display = item.price2||0;
+  let price3Display = item.price3||0;
+  if(currency === 'OLD') {
+    costDisplay *= rate; priceDisplay *= rate;
+    price2Display *= rate; price3Display *= rate;
+  } else if(currency === 'NEW') {
+    costDisplay *= rate/100; priceDisplay *= rate/100;
+    price2Display *= rate/100; price3Display *= rate/100;
+  }
   document.getElementById('modal-item-cost').value = Math.round(costDisplay * 100) / 100;
   document.getElementById('modal-item-price').value = Math.round(priceDisplay * 100) / 100;
+  const elP2 = document.getElementById('modal-item-price2'); if(elP2) elP2.value = Math.round(price2Display*100)/100;
+  const elP3 = document.getElementById('modal-item-price3'); if(elP3) elP3.value = Math.round(price3Display*100)/100;
   updateModalCurrencyLabel();
   document.getElementById('item-modal').classList.remove('hidden');
 }
@@ -948,18 +961,28 @@ function saveItemModal() {
   item.unit2 = document.getElementById('modal-item-unit2').value;
   item.factor = parseFloat(document.getElementById('modal-item-factor').value) || 1;
   item.barcode = document.getElementById('modal-item-barcode').value.trim();
-  // تحويل السعر المُدخل إلى دولار للتخزين
+  // حقول جديدة
+  const el2 = document.getElementById('modal-item-barcode2'); if(el2) item.barcode2 = el2.value.trim();
+  const elTax = document.getElementById('modal-item-tax'); if(elTax) item.taxRate = parseFloat(elTax.value)||0;
+  const elMax = document.getElementById('modal-item-maxstock'); if(elMax) item.maxStock = parseFloat(elMax.value)||0;
+  const elBrand = document.getElementById('modal-item-brand'); if(elBrand) item.brand = elBrand.value.trim();
+  const elDefsup = document.getElementById('modal-item-defsup'); if(elDefsup) item.defaultSupplier = elDefsup.value.trim();
+  // تحويل الأسعار للدولار
   const currency = document.getElementById('modal-price-currency').value;
   const rate = getRate();
-  let costInput = parseFloat(document.getElementById('modal-item-cost').value) || 0;
-  let priceInput = parseFloat(document.getElementById('modal-item-price').value) || 0;
-  if(currency === 'OLD') { costInput = costInput / rate; priceInput = priceInput / rate; }
-  else if(currency === 'NEW') { costInput = costInput / (rate/100); priceInput = priceInput / (rate/100); }
-  item.cost = Math.round(costInput * 10000) / 10000;
-  item.price = Math.round(priceInput * 10000) / 10000;
+  const toUSD = (v) => {
+    if(currency === 'OLD') return v / rate;
+    if(currency === 'NEW') return v / (rate/100);
+    return v;
+  };
+  item.cost  = Math.round(toUSD(parseFloat(document.getElementById('modal-item-cost').value)||0) * 10000) / 10000;
+  item.price = Math.round(toUSD(parseFloat(document.getElementById('modal-item-price').value)||0) * 10000) / 10000;
+  const elP2 = document.getElementById('modal-item-price2');
+  const elP3 = document.getElementById('modal-item-price3');
+  if(elP2) item.price2 = Math.round(toUSD(parseFloat(elP2.value)||0) * 10000) / 10000;
+  if(elP3) item.price3 = Math.round(toUSD(parseFloat(elP3.value)||0) * 10000) / 10000;
   item.priceCurrency = currency;
-  // حذف minStock
-  item.minStock = 0;
+  item.minStock = parseFloat(document.getElementById('modal-item-minstock')?.value)||0;
   saveData(db);
   document.getElementById('item-modal').classList.add('hidden');
   renderItems();

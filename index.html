@@ -1667,8 +1667,47 @@
           <input id="modal-item-cost" class="input input-sm" type="number" min="0" step="any">
         </div>
         <div class="form-group">
-          <label class="form-label">سعر البيع (<span class="modal-cur-label">$</span>)</label>
+          <label class="form-label">سعر المستهلك (<span class="modal-cur-label">$</span>)</label>
           <input id="modal-item-price" class="input input-sm" type="number" min="0" step="any">
+        </div>
+        <div class="form-group">
+          <label class="form-label">سعر الجملة (<span class="modal-cur-label">$</span>)</label>
+          <input id="modal-item-price2" class="input input-sm" type="number" min="0" step="any" placeholder="0 = بدون">
+        </div>
+        <div class="form-group">
+          <label class="form-label">سعر الخاص (<span class="modal-cur-label">$</span>)</label>
+          <input id="modal-item-price3" class="input input-sm" type="number" min="0" step="any" placeholder="0 = بدون">
+        </div>
+      </div>
+    </div>
+
+    <!-- حقول إضافية -->
+    <div style="background:var(--surface-secondary);border-radius:var(--radius-md);padding:var(--space-3);margin-bottom:var(--space-3)">
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:var(--space-2)">📋 معلومات إضافية</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2)">
+        <div class="form-group">
+          <label class="form-label">باركود ثانوي</label>
+          <input id="modal-item-barcode2" class="input input-sm" type="text" placeholder="اختياري">
+        </div>
+        <div class="form-group">
+          <label class="form-label">الماركة</label>
+          <input id="modal-item-brand" class="input input-sm" type="text" placeholder="اختياري">
+        </div>
+        <div class="form-group">
+          <label class="form-label">ضريبة المادة %</label>
+          <input id="modal-item-tax" class="input input-sm" type="number" min="0" step="0.1" value="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">الحد الأدنى للمخزون</label>
+          <input id="modal-item-minstock" class="input input-sm" type="number" min="0" step="any" value="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">الحد الأعلى للمخزون</label>
+          <input id="modal-item-maxstock" class="input input-sm" type="number" min="0" step="any" value="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">المورد الافتراضي</label>
+          <input id="modal-item-defsup" class="input input-sm" type="text" placeholder="اسم المورد">
         </div>
       </div>
     </div>
