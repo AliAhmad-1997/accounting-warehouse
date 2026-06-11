@@ -1375,11 +1375,25 @@ ${area.innerHTML}
 
 function getCustomerAccount(customerName) {
   const invoices = db.salesInvoices.filter(i => i.customerName === customerName);
-  const totalInvoices = invoices.reduce((s, i) => s + (i.total || 0), 0);
+  // نقدي: دفع كامل = الإجمالي
+  const cashInvoices     = invoices.filter(i => (i.paymentType||'cash') === 'cash');
+  // آجل: دفع جزئي أو صفر
+  const deferredInvoices = invoices.filter(i => (i.paymentType||'cash') === 'deferred');
+
+  const totalCash     = cashInvoices.reduce((s,i) => s + (i.total||0), 0);
+  const totalDeferred = deferredInvoices.reduce((s,i) => s + (i.total||0), 0);
+  const totalPaidOnInvoice = deferredInvoices.reduce((s,i) => s + (i.paidAmount||0), 0);
+  const totalInvoices = invoices.reduce((s,i) => s + (i.total||0), 0);
+
+  // إيصالات القبض المسجلة منفصلة
   const payments = (db.customerPayments || []).filter(p => p.customerName === customerName);
-  const totalPaid = payments.reduce((s, p) => s + (p.amount || 0), 0);
-  const remaining = totalInvoices - totalPaid;
-  return { invoices, payments, totalInvoices, totalPaid, remaining };
+  const totalPaid = payments.reduce((s,p) => s + (p.amount||0) + (p.discountOnPayment||0), 0);
+
+  // الدين الكلي = مجموع الآجل - ما دُفع على الفواتير - إيصالات القبض
+  const remaining = Math.max(0, totalDeferred - totalPaidOnInvoice - totalPaid);
+
+  return { invoices, cashInvoices, deferredInvoices, payments,
+           totalInvoices, totalCash, totalDeferred, totalPaid, remaining };
 }
 
 function openCustomerAccount(customerName) {
@@ -1395,17 +1409,25 @@ function openCustomerAccount(customerName) {
   remEl.style.color = acc.remaining > 0 ? 'var(--red-600)' : 'var(--green-700)';
   document.getElementById('ca-remaining-old').textContent = fmtOld(usdToOld(acc.remaining));
 
-  // جدول الفواتير
+  // جدول الفواتير — مع تمييز نقدي/آجل
   const invTbody = document.getElementById('ca-invoices-tbody');
   invTbody.innerHTML = acc.invoices.length === 0
-    ? '<tr><td colspan="3" style="text-align:center;padding:12px;color:var(--text-muted)">لا توجد فواتير</td></tr>'
-    : acc.invoices.map(inv =>
-        '<tr onclick="openInvoiceDetail(\'' + inv.number + '\')" style="cursor:pointer">' +
-        '<td><span class="inv-num">' + inv.number + '</span></td>' +
-        '<td>' + inv.date + '</td>' +
-        '<td><strong>' + fmtUSD(inv.total) + '</strong></td>' +
-        '</tr>'
-      ).join('');
+    ? '<tr><td colspan="5" style="text-align:center;padding:12px;color:var(--text-muted)">لا توجد فواتير</td></tr>'
+    : acc.invoices.map(inv => {
+        const isDeferred = (inv.paymentType||'cash') === 'deferred';
+        const paid = inv.paidAmount || 0;
+        const rem  = isDeferred ? Math.max(0, inv.total - paid) : 0;
+        const tag  = isDeferred
+          ? `<span style="font-size:11px;background:#fef2f2;color:#dc2626;padding:2px 6px;border-radius:10px">آجل</span>`
+          : `<span style="font-size:11px;background:#f0fdf4;color:#16a34a;padding:2px 6px;border-radius:10px">نقدي</span>`;
+        return '<tr onclick="openInvoiceDetail(\'' + inv.number + '\')" style="cursor:pointer">' +
+          '<td><span class="inv-num">' + inv.number + '</span></td>' +
+          '<td>' + inv.date + '</td>' +
+          '<td>' + tag + '</td>' +
+          '<td><strong>' + fmtUSD(inv.total) + '</strong></td>' +
+          '<td style="color:' + (rem>0?'#dc2626':'#16a34a') + ';font-weight:700">' + (isDeferred ? fmtUSD(rem) : '—') + '</td>' +
+          '</tr>';
+      }).join('');
 
   // جدول الدفعات
   const payTbody = document.getElementById('ca-payments-tbody');
@@ -1514,11 +1536,21 @@ function printCustomerAccount() {
 
 function getSupplierAccount(supplierName) {
   const invoices = db.purchaseInvoices.filter(i => i.supplierName === supplierName);
-  const totalInvoices = invoices.reduce((s, i) => s + (i.total || 0), 0);
+  const cashInvoices     = invoices.filter(i => (i.paymentType||'cash') === 'cash');
+  const deferredInvoices = invoices.filter(i => (i.paymentType||'cash') === 'deferred');
+
+  const totalCash     = cashInvoices.reduce((s,i) => s + (i.total||0), 0);
+  const totalDeferred = deferredInvoices.reduce((s,i) => s + (i.total||0), 0);
+  const totalPaidOnInvoice = deferredInvoices.reduce((s,i) => s + (i.paidAmount||0), 0);
+  const totalInvoices = invoices.reduce((s,i) => s + (i.total||0), 0);
+
   const payments = (db.supplierPayments || []).filter(p => p.supplierName === supplierName);
-  const totalPaid = payments.reduce((s, p) => s + (p.amount || 0), 0);
-  const remaining = totalInvoices - totalPaid;
-  return { invoices, payments, totalInvoices, totalPaid, remaining };
+  const totalPaid = payments.reduce((s,p) => s + (p.amount||0), 0);
+
+  const remaining = Math.max(0, totalDeferred - totalPaidOnInvoice - totalPaid);
+
+  return { invoices, cashInvoices, deferredInvoices, payments,
+           totalInvoices, totalCash, totalDeferred, totalPaid, remaining };
 }
 
 function openSupplierAccount(supplierName) {
@@ -2293,7 +2325,45 @@ function renderReceiptCustomer() {
   if(dateEl) dateEl.value = new Date().toISOString().split('T')[0];
   const datalist = document.getElementById('rec-cust-datalist');
   if(datalist) datalist.innerHTML = db.customers.filter(c=>c.name).map(c=>`<option value="${c.name}">`).join('');
+
+  // عرض الزبائن الآجل مع رصيدهم
+  renderDeferredCustomers();
   renderReceiptCustomerList();
+}
+
+function renderDeferredCustomers() {
+  const el = document.getElementById('rec-deferred-customers');
+  if(!el) return;
+
+  // كل الزبائن اللي عندهم فواتير آجل
+  const debtors = db.customers
+    .map(c => ({ ...c, acc: getCustomerAccount(c.name) }))
+    .filter(c => c.acc.remaining > 0)
+    .sort((a,b) => b.acc.remaining - a.acc.remaining);
+
+  if(debtors.length === 0) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px 0;text-align:center">✅ لا توجد ديون مستحقة</div>';
+    return;
+  }
+
+  el.innerHTML = debtors.map(c => `
+    <div class="invoice-row" style="cursor:pointer;align-items:center" onclick="selectDeferredCustomer('${c.name}',${c.acc.remaining})">
+      <span class="inv-customer" style="flex:1;font-weight:600">${c.name}</span>
+      <span style="font-size:11px;color:var(--text-muted)">
+        آجل: ${fmtUSD(c.acc.totalDeferred)} &nbsp;|&nbsp; مدفوع: ${fmtUSD(c.acc.totalPaidOnInvoice + c.acc.totalPaid)}
+      </span>
+      <span class="inv-total" style="color:var(--red-600);font-weight:700;min-width:90px;text-align:left">${fmtUSD(c.acc.remaining)}</span>
+      <span style="font-size:11px;background:var(--red-50,#fef2f2);color:var(--red-600);padding:2px 8px;border-radius:12px">مستحق</span>
+    </div>`).join('');
+}
+
+function selectDeferredCustomer(name, remaining) {
+  const nameEl = document.getElementById('rec-cust-name');
+  const amtEl  = document.getElementById('rec-cust-amount');
+  if(nameEl) nameEl.value = name;
+  if(amtEl)  amtEl.value  = Math.round(remaining * 100) / 100;
+  // scroll للفورم
+  document.getElementById('rec-cust-name')?.scrollIntoView({ behavior:'smooth', block:'center' });
 }
 
 function renderReceiptCustomerList() {
@@ -2352,7 +2422,42 @@ function renderReceiptSupplier() {
   if(dateEl) dateEl.value = new Date().toISOString().split('T')[0];
   const datalist = document.getElementById('rec-sup-datalist');
   if(datalist) datalist.innerHTML = db.suppliers.filter(s=>s.name).map(s=>`<option value="${s.name}">`).join('');
+
+  renderDeferredSuppliers();
   renderReceiptSupplierList();
+}
+
+function renderDeferredSuppliers() {
+  const el = document.getElementById('rec-deferred-suppliers');
+  if(!el) return;
+
+  const debtors = db.suppliers
+    .map(s => ({ ...s, acc: getSupplierAccount(s.name) }))
+    .filter(s => s.acc.remaining > 0)
+    .sort((a,b) => b.acc.remaining - a.acc.remaining);
+
+  if(debtors.length === 0) {
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px 0;text-align:center">✅ لا توجد مستحقات للموردين</div>';
+    return;
+  }
+
+  el.innerHTML = debtors.map(s => `
+    <div class="invoice-row" style="cursor:pointer;align-items:center" onclick="selectDeferredSupplier('${s.name}',${s.acc.remaining})">
+      <span class="inv-customer" style="flex:1;font-weight:600">${s.name}</span>
+      <span style="font-size:11px;color:var(--text-muted)">
+        آجل: ${fmtUSD(s.acc.totalDeferred)} &nbsp;|&nbsp; مدفوع: ${fmtUSD(s.acc.totalPaidOnInvoice + s.acc.totalPaid)}
+      </span>
+      <span class="inv-total" style="color:var(--red-600);font-weight:700;min-width:90px;text-align:left">${fmtUSD(s.acc.remaining)}</span>
+      <span style="font-size:11px;background:var(--red-50,#fef2f2);color:var(--red-600);padding:2px 8px;border-radius:12px">مستحق</span>
+    </div>`).join('');
+}
+
+function selectDeferredSupplier(name, remaining) {
+  const nameEl = document.getElementById('rec-sup-name');
+  const amtEl  = document.getElementById('rec-sup-amount');
+  if(nameEl) nameEl.value = name;
+  if(amtEl)  amtEl.value  = Math.round(remaining * 100) / 100;
+  document.getElementById('rec-sup-name')?.scrollIntoView({ behavior:'smooth', block:'center' });
 }
 
 function renderReceiptSupplierList() {
