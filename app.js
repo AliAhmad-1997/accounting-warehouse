@@ -141,35 +141,57 @@ const defaultData = {
 // ============================================================
 // SQLite — تحميل وحفظ البيانات
 // ============================================================
+// ============================================================
+// isElectron — يكتشف تلقائياً هل البرنامج داخل Electron أو متصفح
+// ============================================================
+const isElectron = !!(window.electronAPI && window.electronAPI.dbLoad);
+
 async function initDB() {
-  const hasData = await window.electronAPI.dbHasData();
-  if (!hasData) {
-    const oldData = localStorage.getItem(DB_KEY);
-    if (oldData) {
-      const result = await window.electronAPI.dbMigrate(oldData);
-      if (result && result.success && !result.skipped) {
-        showToast('✅ تم ترحيل بياناتك إلى النظام الجديد بنجاح', 'success');
-        localStorage.setItem(DB_KEY + '_migrated_backup', oldData);
+  if (isElectron) {
+    // ===== وضع Electron: SQLite =====
+    const hasData = await window.electronAPI.dbHasData();
+    if (!hasData) {
+      const oldData = localStorage.getItem(DB_KEY);
+      if (oldData) {
+        const result = await window.electronAPI.dbMigrate(oldData);
+        if (result && result.success && !result.skipped) {
+          showToast('✅ تم ترحيل بياناتك إلى النظام الجديد بنجاح', 'success');
+          localStorage.setItem(DB_KEY + '_migrated_backup', oldData);
+        }
       }
     }
-  }
-  const loaded = await window.electronAPI.dbLoad();
-  if (loaded && (loaded.items || []).length > 0) {
-    db = loaded;
-    if (!db.company)          db.company = JSON.parse(JSON.stringify(defaultData.company));
-    if (!db.exchange)         db.exchange = JSON.parse(JSON.stringify(defaultData.exchange));
-    if (!db.invoiceCounters)  db.invoiceCounters = JSON.parse(JSON.stringify(defaultData.invoiceCounters));
-    if (!db.customers)        db.customers = [];
-    if (!db.suppliers)        db.suppliers = [];
-    if (!db.salesInvoices)    db.salesInvoices = [];
-    if (!db.purchaseInvoices) db.purchaseInvoices = [];
-    if (!db.returns)          db.returns = [];
-    if (!db.customerPayments) db.customerPayments = [];
-    if (!db.supplierPayments) db.supplierPayments = [];
+    const loaded = await window.electronAPI.dbLoad();
+    if (loaded && (loaded.items || []).length > 0) {
+      db = loaded;
+    } else {
+      db = JSON.parse(JSON.stringify(defaultData));
+      await window.electronAPI.dbSave(db);
+    }
   } else {
-    db = JSON.parse(JSON.stringify(defaultData));
-    await window.electronAPI.dbSave(db);
+    // ===== وضع المتصفح: localStorage =====
+    const saved = localStorage.getItem(DB_KEY);
+    if (saved) {
+      try { db = JSON.parse(saved); }
+      catch(e) { db = JSON.parse(JSON.stringify(defaultData)); }
+    } else {
+      db = JSON.parse(JSON.stringify(defaultData));
+      localStorage.setItem(DB_KEY, JSON.stringify(db));
+    }
   }
+
+  // ضمان وجود كل الحقول
+  if (!db.company)          db.company = JSON.parse(JSON.stringify(defaultData.company));
+  if (!db.exchange)         db.exchange = JSON.parse(JSON.stringify(defaultData.exchange));
+  if (!db.invoiceCounters)  db.invoiceCounters = { sale:0, purchase:0, returnSale:0, returnPurchase:0, receipt:0 };
+  if (!db.invoiceCounters.receipt) db.invoiceCounters.receipt = 0;
+  if (!db.customers)        db.customers = [];
+  if (!db.suppliers)        db.suppliers = [];
+  if (!db.books)            db.books = [];
+  if (!db.salesInvoices)    db.salesInvoices = [];
+  if (!db.purchaseInvoices) db.purchaseInvoices = [];
+  if (!db.returns)          db.returns = [];
+  if (!db.customerPayments) db.customerPayments = [];
+  if (!db.supplierPayments) db.supplierPayments = [];
 }
 
 function loadData() {
@@ -178,8 +200,13 @@ function loadData() {
 
 function saveData(data) {
   db = data;
-  if (window.electronAPI && window.electronAPI.dbSave) {
+  if (isElectron) {
+    // Electron: SQLite
     window.electronAPI.dbSave(data).catch(e => console.error('saveData error:', e));
+  } else {
+    // Browser: localStorage
+    try { localStorage.setItem(DB_KEY, JSON.stringify(data)); }
+    catch(e) { console.error('localStorage saveData error:', e); }
   }
 }
 
