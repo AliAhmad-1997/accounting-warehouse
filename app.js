@@ -1420,7 +1420,7 @@ function getCustomerAccount(customerName) {
   const remaining = Math.max(0, totalDeferred - totalPaidOnInvoice - totalPaid);
 
   return { invoices, cashInvoices, deferredInvoices, payments,
-           totalInvoices, totalCash, totalDeferred, totalPaid, remaining };
+           totalInvoices, totalCash, totalDeferred, totalPaidOnInvoice, totalPaid, remaining };
 }
 
 function openCustomerAccount(customerName) {
@@ -1577,7 +1577,7 @@ function getSupplierAccount(supplierName) {
   const remaining = Math.max(0, totalDeferred - totalPaidOnInvoice - totalPaid);
 
   return { invoices, cashInvoices, deferredInvoices, payments,
-           totalInvoices, totalCash, totalDeferred, totalPaid, remaining };
+           totalInvoices, totalCash, totalDeferred, totalPaidOnInvoice, totalPaid, remaining };
 }
 
 function openSupplierAccount(supplierName) {
@@ -2351,9 +2351,7 @@ function renderReceiptCustomer() {
   const dateEl = document.getElementById('rec-cust-date');
   if(dateEl) dateEl.value = new Date().toISOString().split('T')[0];
   const datalist = document.getElementById('rec-cust-datalist');
-  if(datalist) datalist.innerHTML = db.customers.filter(c=>c.name).map(c=>`<option value="${c.name}">`).join('');
-
-  // عرض الزبائن الآجل مع رصيدهم
+  if(datalist) datalist.innerHTML = (db.customers||[]).filter(c=>c.name).map(c=>`<option value="${c.name}">`).join('');
   renderDeferredCustomers();
   renderReceiptCustomerList();
 }
@@ -2448,7 +2446,7 @@ function renderReceiptSupplier() {
   const dateEl = document.getElementById('rec-sup-date');
   if(dateEl) dateEl.value = new Date().toISOString().split('T')[0];
   const datalist = document.getElementById('rec-sup-datalist');
-  if(datalist) datalist.innerHTML = db.suppliers.filter(s=>s.name).map(s=>`<option value="${s.name}">`).join('');
+  if(datalist) datalist.innerHTML = (db.suppliers||[]).filter(s=>s.name).map(s=>`<option value="${s.name}">`).join('');
 
   renderDeferredSuppliers();
   renderReceiptSupplierList();
