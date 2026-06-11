@@ -57,8 +57,15 @@ function createTables() {
       factor        REAL DEFAULT 1,
       cost          REAL DEFAULT 0,
       price         REAL DEFAULT 0,
+      price2        REAL DEFAULT 0,
+      price3        REAL DEFAULT 0,
       minStock      REAL DEFAULT 0,
+      maxStock      REAL DEFAULT 0,
       barcode       TEXT DEFAULT '',
+      barcode2      TEXT DEFAULT '',
+      taxRate       REAL DEFAULT 0,
+      brand         TEXT DEFAULT '',
+      defaultSupplier TEXT DEFAULT '',
       priceCurrency TEXT DEFAULT 'USD'
     );
 
@@ -66,25 +73,34 @@ function createTables() {
       id      TEXT PRIMARY KEY,
       name    TEXT,
       phone   TEXT,
-      address TEXT
+      address TEXT,
+      balance REAL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS suppliers (
       id      TEXT PRIMARY KEY,
       name    TEXT,
       phone   TEXT,
-      address TEXT
+      address TEXT,
+      balance REAL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS sales_invoices (
-      number       TEXT PRIMARY KEY,
-      date         TEXT,
-      customerName TEXT,
-      subtotal     REAL DEFAULT 0,
-      discount     REAL DEFAULT 0,
-      total        REAL DEFAULT 0,
-      currency     TEXT DEFAULT 'USD',
-      usdToOld     REAL DEFAULT 0
+      number          TEXT PRIMARY KEY,
+      date            TEXT,
+      time            TEXT DEFAULT '',
+      customerName    TEXT,
+      subtotal        REAL DEFAULT 0,
+      discount        REAL DEFAULT 0,
+      total           REAL DEFAULT 0,
+      paidAmount      REAL DEFAULT 0,
+      paymentType     TEXT DEFAULT 'cash',
+      priceType       TEXT DEFAULT 'retail',
+      currency        TEXT DEFAULT 'USD',
+      usdToOld        REAL DEFAULT 0,
+      taxRate         REAL DEFAULT 0,
+      taxAmount       REAL DEFAULT 0,
+      note            TEXT DEFAULT ''
     );
 
     CREATE TABLE IF NOT EXISTS sales_lines (
@@ -94,14 +110,26 @@ function createTables() {
       qty           REAL DEFAULT 0,
       price         REAL DEFAULT 0,
       total         REAL DEFAULT 0,
-      unitType      TEXT DEFAULT 'unit'
+      unitType      TEXT DEFAULT 'unit',
+      note          TEXT DEFAULT ''
     );
 
     CREATE TABLE IF NOT EXISTS purchase_invoices (
-      number       TEXT PRIMARY KEY,
-      date         TEXT,
-      supplierName TEXT,
-      total        REAL DEFAULT 0
+      number              TEXT PRIMARY KEY,
+      date                TEXT,
+      time                TEXT DEFAULT '',
+      supplierName        TEXT,
+      supplierInvoiceNum  TEXT DEFAULT '',
+      subtotal            REAL DEFAULT 0,
+      discount            REAL DEFAULT 0,
+      total               REAL DEFAULT 0,
+      paidAmount          REAL DEFAULT 0,
+      paymentType         TEXT DEFAULT 'cash',
+      shippingCost        REAL DEFAULT 0,
+      shippingAccount     TEXT DEFAULT '',
+      currency            TEXT DEFAULT 'USD',
+      usdToOld            REAL DEFAULT 0,
+      note                TEXT DEFAULT ''
     );
 
     CREATE TABLE IF NOT EXISTS purchase_lines (
@@ -111,7 +139,8 @@ function createTables() {
       qty           REAL DEFAULT 0,
       price         REAL DEFAULT 0,
       total         REAL DEFAULT 0,
-      unitType      TEXT DEFAULT 'unit'
+      unitType      TEXT DEFAULT 'unit',
+      note          TEXT DEFAULT ''
     );
 
     CREATE TABLE IF NOT EXISTS returns (
@@ -124,43 +153,103 @@ function createTables() {
     );
 
     CREATE TABLE IF NOT EXISTS return_lines (
-      id            INTEGER PRIMARY KEY AUTOINCREMENT,
-      returnNumber  TEXT REFERENCES returns(number) ON DELETE CASCADE,
-      itemId        TEXT,
-      qty           REAL DEFAULT 0,
-      price         REAL DEFAULT 0,
-      total         REAL DEFAULT 0,
-      unitType      TEXT DEFAULT 'unit'
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      returnNumber TEXT REFERENCES returns(number) ON DELETE CASCADE,
+      itemId       TEXT,
+      qty          REAL DEFAULT 0,
+      price        REAL DEFAULT 0,
+      total        REAL DEFAULT 0,
+      unitType     TEXT DEFAULT 'unit'
     );
 
     CREATE TABLE IF NOT EXISTS customer_payments (
       id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      receiptNum   TEXT DEFAULT '',
       customerName TEXT,
       amount       REAL DEFAULT 0,
+      paymentMethod TEXT DEFAULT 'cash',
+      chequeNum    TEXT DEFAULT '',
+      description  TEXT DEFAULT '',
+      discountOnPayment REAL DEFAULT 0,
       note         TEXT,
       date         TEXT
     );
 
     CREATE TABLE IF NOT EXISTS supplier_payments (
       id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      receiptNum   TEXT DEFAULT '',
       supplierName TEXT,
       amount       REAL DEFAULT 0,
+      paymentMethod TEXT DEFAULT 'cash',
+      chequeNum    TEXT DEFAULT '',
+      description  TEXT DEFAULT '',
       note         TEXT,
       date         TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS books (
+      id   TEXT PRIMARY KEY,
+      name TEXT
     );
   `);
 }
 
 // ============================================================
-// ✅ ترقية الـ schema — يضيف الأعمدة الناقصة لقواعد البيانات القديمة
+// ترقية الـ Schema — آمن على البيانات القديمة
 // ============================================================
 function migrateSchema() {
   const migrations = [
-    { table: 'items',          column: 'barcode',       def: "TEXT DEFAULT ''" },
-    { table: 'items',          column: 'priceCurrency', def: "TEXT DEFAULT 'USD'" },
-    { table: 'sales_lines',    column: 'unitType',      def: "TEXT DEFAULT 'unit'" },
-    { table: 'purchase_lines', column: 'unitType',      def: "TEXT DEFAULT 'unit'" },
-    { table: 'return_lines',   column: 'unitType',      def: "TEXT DEFAULT 'unit'" },
+    // items — حقول جديدة
+    { table: 'items', column: 'barcode',          def: "TEXT DEFAULT ''" },
+    { table: 'items', column: 'priceCurrency',    def: "TEXT DEFAULT 'USD'" },
+    { table: 'items', column: 'price2',           def: "REAL DEFAULT 0" },
+    { table: 'items', column: 'price3',           def: "REAL DEFAULT 0" },
+    { table: 'items', column: 'barcode2',         def: "TEXT DEFAULT ''" },
+    { table: 'items', column: 'taxRate',          def: "REAL DEFAULT 0" },
+    { table: 'items', column: 'maxStock',         def: "REAL DEFAULT 0" },
+    { table: 'items', column: 'brand',            def: "TEXT DEFAULT ''" },
+    { table: 'items', column: 'defaultSupplier',  def: "TEXT DEFAULT ''" },
+    // sales_invoices
+    { table: 'sales_invoices', column: 'time',        def: "TEXT DEFAULT ''" },
+    { table: 'sales_invoices', column: 'paidAmount',  def: "REAL DEFAULT 0" },
+    { table: 'sales_invoices', column: 'paymentType', def: "TEXT DEFAULT 'cash'" },
+    { table: 'sales_invoices', column: 'priceType',   def: "TEXT DEFAULT 'retail'" },
+    { table: 'sales_invoices', column: 'taxRate',     def: "REAL DEFAULT 0" },
+    { table: 'sales_invoices', column: 'taxAmount',   def: "REAL DEFAULT 0" },
+    { table: 'sales_invoices', column: 'note',        def: "TEXT DEFAULT ''" },
+    // sales_lines
+    { table: 'sales_lines', column: 'unitType', def: "TEXT DEFAULT 'unit'" },
+    { table: 'sales_lines', column: 'note',     def: "TEXT DEFAULT ''" },
+    // purchase_invoices
+    { table: 'purchase_invoices', column: 'time',               def: "TEXT DEFAULT ''" },
+    { table: 'purchase_invoices', column: 'supplierInvoiceNum', def: "TEXT DEFAULT ''" },
+    { table: 'purchase_invoices', column: 'subtotal',           def: "REAL DEFAULT 0" },
+    { table: 'purchase_invoices', column: 'discount',           def: "REAL DEFAULT 0" },
+    { table: 'purchase_invoices', column: 'paidAmount',         def: "REAL DEFAULT 0" },
+    { table: 'purchase_invoices', column: 'paymentType',        def: "TEXT DEFAULT 'cash'" },
+    { table: 'purchase_invoices', column: 'shippingCost',       def: "REAL DEFAULT 0" },
+    { table: 'purchase_invoices', column: 'shippingAccount',    def: "TEXT DEFAULT ''" },
+    { table: 'purchase_invoices', column: 'usdToOld',           def: "REAL DEFAULT 0" },
+    { table: 'purchase_invoices', column: 'note',               def: "TEXT DEFAULT ''" },
+    // purchase_lines
+    { table: 'purchase_lines', column: 'unitType', def: "TEXT DEFAULT 'unit'" },
+    { table: 'purchase_lines', column: 'note',     def: "TEXT DEFAULT ''" },
+    // return_lines
+    { table: 'return_lines', column: 'unitType', def: "TEXT DEFAULT 'unit'" },
+    // customer_payments — إيصال قبض
+    { table: 'customer_payments', column: 'receiptNum',         def: "TEXT DEFAULT ''" },
+    { table: 'customer_payments', column: 'paymentMethod',      def: "TEXT DEFAULT 'cash'" },
+    { table: 'customer_payments', column: 'chequeNum',          def: "TEXT DEFAULT ''" },
+    { table: 'customer_payments', column: 'description',        def: "TEXT DEFAULT ''" },
+    { table: 'customer_payments', column: 'discountOnPayment',  def: "REAL DEFAULT 0" },
+    // supplier_payments
+    { table: 'supplier_payments', column: 'receiptNum',    def: "TEXT DEFAULT ''" },
+    { table: 'supplier_payments', column: 'paymentMethod', def: "TEXT DEFAULT 'cash'" },
+    { table: 'supplier_payments', column: 'chequeNum',     def: "TEXT DEFAULT ''" },
+    { table: 'supplier_payments', column: 'description',   def: "TEXT DEFAULT ''" },
+    // customers / suppliers — رصيد
+    { table: 'customers', column: 'balance', def: "REAL DEFAULT 0" },
+    { table: 'suppliers', column: 'balance', def: "REAL DEFAULT 0" },
   ];
 
   for (const m of migrations) {
@@ -187,40 +276,37 @@ function loadAll() {
 
   const exchRows = db.prepare('SELECT key, value FROM exchange').all();
   const exchange = {};
-  exchRows.forEach(r => {
-    exchange[r.key] = r.key === 'usdToOld' ? parseFloat(r.value) : r.value;
-  });
+  exchRows.forEach(r => { exchange[r.key] = r.value; });
 
   const cntRows = db.prepare('SELECT key, value FROM invoice_counters').all();
-  const invoiceCounters = { sale: 0, purchase: 0, returnSale: 0, returnPurchase: 0 };
+  const invoiceCounters = { sale: 0, purchase: 0, receipt: 0 };
   cntRows.forEach(r => { invoiceCounters[r.key] = r.value; });
 
   const items = db.prepare('SELECT * FROM items').all();
-
   const customers = db.prepare('SELECT * FROM customers').all();
-  const suppliers  = db.prepare('SELECT * FROM suppliers').all();
+  const suppliers = db.prepare('SELECT * FROM suppliers').all();
+  const books = db.prepare('SELECT * FROM books').all();
 
-  const salesInvoices = db.prepare('SELECT * FROM sales_invoices ORDER BY number').all();
-  const getSalesLines = db.prepare('SELECT * FROM sales_lines WHERE invoiceNumber = ?');
-  salesInvoices.forEach(inv => { inv.lines = getSalesLines.all(inv.number); });
+  const salesInvoices = db.prepare('SELECT * FROM sales_invoices ORDER BY date DESC').all().map(inv => ({
+    ...inv,
+    lines: db.prepare('SELECT * FROM sales_lines WHERE invoiceNumber = ?').all(inv.number)
+  }));
 
-  const purchaseInvoices = db.prepare('SELECT * FROM purchase_invoices ORDER BY number').all();
-  const getPurLines = db.prepare('SELECT * FROM purchase_lines WHERE invoiceNumber = ?');
-  purchaseInvoices.forEach(inv => { inv.lines = getPurLines.all(inv.number); });
+  const purchaseInvoices = db.prepare('SELECT * FROM purchase_invoices ORDER BY date DESC').all().map(inv => ({
+    ...inv,
+    lines: db.prepare('SELECT * FROM purchase_lines WHERE invoiceNumber = ?').all(inv.number)
+  }));
 
-  const returns = db.prepare('SELECT * FROM returns ORDER BY number').all();
-  const getRetLines = db.prepare('SELECT * FROM return_lines WHERE returnNumber = ?');
-  returns.forEach(r => { r.lines = getRetLines.all(r.number); });
+  const returns = db.prepare('SELECT * FROM returns ORDER BY date DESC').all().map(r => ({
+    ...r,
+    lines: db.prepare('SELECT * FROM return_lines WHERE returnNumber = ?').all(r.number)
+  }));
 
-  const customerPayments = db.prepare('SELECT * FROM customer_payments ORDER BY id').all();
-  const supplierPayments  = db.prepare('SELECT * FROM supplier_payments ORDER BY id').all();
+  const customerPayments = db.prepare('SELECT * FROM customer_payments ORDER BY date DESC').all();
+  const supplierPayments = db.prepare('SELECT * FROM supplier_payments ORDER BY date DESC').all();
 
-  return {
-    company, exchange, invoiceCounters,
-    items, customers, suppliers,
-    salesInvoices, purchaseInvoices,
-    returns, customerPayments, supplierPayments,
-  };
+  return { company, exchange, invoiceCounters, items, customers, suppliers, books,
+           salesInvoices, purchaseInvoices, returns, customerPayments, supplierPayments };
 }
 
 // ============================================================
@@ -244,134 +330,161 @@ function saveAll(data) {
     const cnt = data.invoiceCounters || {};
     Object.entries(cnt).forEach(([k, v]) => upsertCnt.run(k, v));
 
-    // ✅ items — مع barcode و priceCurrency
+    // books
+    db.prepare('DELETE FROM books').run();
+    const insBook = db.prepare('INSERT INTO books (id, name) VALUES (@id, @name)');
+    (data.books || []).forEach(b => insBook.run({ id: b.id || '', name: b.name || '' }));
+
+    // items — مع كل الحقول الجديدة
     db.prepare('DELETE FROM items').run();
     const insItem = db.prepare(`
-      INSERT INTO items (id, name, type, unit, unit2, factor, cost, price, minStock, barcode, priceCurrency)
-      VALUES (@id, @name, @type, @unit, @unit2, @factor, @cost, @price, @minStock, @barcode, @priceCurrency)
+      INSERT INTO items (id, name, type, unit, unit2, factor, cost, price, price2, price3,
+                         minStock, maxStock, barcode, barcode2, taxRate, brand, defaultSupplier, priceCurrency)
+      VALUES (@id, @name, @type, @unit, @unit2, @factor, @cost, @price, @price2, @price3,
+              @minStock, @maxStock, @barcode, @barcode2, @taxRate, @brand, @defaultSupplier, @priceCurrency)
     `);
     (data.items || []).forEach(item => insItem.run({
-      id:            item.id            || '',
-      name:          item.name          || '',
-      type:          item.type          || '',
-      unit:          item.unit          || '',
-      unit2:         item.unit2         || '',
-      factor:        item.factor        || 1,
-      cost:          item.cost          || 0,
-      price:         item.price         || 0,
-      minStock:      item.minStock      || 0,
-      barcode:       item.barcode       || '',
-      priceCurrency: item.priceCurrency || 'USD',
+      id:              item.id            || '',
+      name:            item.name          || '',
+      type:            item.type          || '',
+      unit:            item.unit          || '',
+      unit2:           item.unit2         || '',
+      factor:          item.factor        || 1,
+      cost:            item.cost          || 0,
+      price:           item.price         || 0,
+      price2:          item.price2        || 0,
+      price3:          item.price3        || 0,
+      minStock:        item.minStock      || 0,
+      maxStock:        item.maxStock      || 0,
+      barcode:         item.barcode       || '',
+      barcode2:        item.barcode2      || '',
+      taxRate:         item.taxRate       || 0,
+      brand:           item.brand         || '',
+      defaultSupplier: item.defaultSupplier || '',
+      priceCurrency:   item.priceCurrency || 'USD',
     }));
 
     // customers
     db.prepare('DELETE FROM customers').run();
-    const insCus = db.prepare('INSERT INTO customers (id, name, phone, address) VALUES (@id, @name, @phone, @address)');
+    const insCus = db.prepare('INSERT INTO customers (id, name, phone, address, balance) VALUES (@id, @name, @phone, @address, @balance)');
     (data.customers || []).forEach(c => insCus.run({
       id: c.id || ('CUS-' + Date.now() + Math.random()),
-      name: c.name || '', phone: c.phone || '', address: c.address || ''
+      name: c.name || '', phone: c.phone || '', address: c.address || '', balance: c.balance || 0
     }));
 
     // suppliers
     db.prepare('DELETE FROM suppliers').run();
-    const insSup = db.prepare('INSERT INTO suppliers (id, name, phone, address) VALUES (@id, @name, @phone, @address)');
+    const insSup = db.prepare('INSERT INTO suppliers (id, name, phone, address, balance) VALUES (@id, @name, @phone, @address, @balance)');
     (data.suppliers || []).forEach(s => insSup.run({
       id: s.id || ('SUP-' + Date.now() + Math.random()),
-      name: s.name || '', phone: s.phone || '', address: s.address || ''
+      name: s.name || '', phone: s.phone || '', address: s.address || '', balance: s.balance || 0
     }));
 
-    // ✅ sales invoices — مع unitType في السطور
+    // sales invoices
     db.prepare('DELETE FROM sales_lines').run();
     db.prepare('DELETE FROM sales_invoices').run();
     const insSaleInv = db.prepare(`
-      INSERT INTO sales_invoices (number, date, customerName, subtotal, discount, total, currency, usdToOld)
-      VALUES (@number, @date, @customerName, @subtotal, @discount, @total, @currency, @usdToOld)
+      INSERT INTO sales_invoices
+        (number, date, time, customerName, subtotal, discount, total, paidAmount,
+         paymentType, priceType, currency, usdToOld, taxRate, taxAmount, note)
+      VALUES
+        (@number, @date, @time, @customerName, @subtotal, @discount, @total, @paidAmount,
+         @paymentType, @priceType, @currency, @usdToOld, @taxRate, @taxAmount, @note)
     `);
     const insSaleLine = db.prepare(`
-      INSERT INTO sales_lines (invoiceNumber, itemId, qty, price, total, unitType)
-      VALUES (@invoiceNumber, @itemId, @qty, @price, @total, @unitType)
+      INSERT INTO sales_lines (invoiceNumber, itemId, qty, price, total, unitType, note)
+      VALUES (@invoiceNumber, @itemId, @qty, @price, @total, @unitType, @note)
     `);
     (data.salesInvoices || []).forEach(inv => {
       insSaleInv.run({
-        number: inv.number, date: inv.date || '',
+        number: inv.number, date: inv.date || '', time: inv.time || '',
         customerName: inv.customerName || '',
         subtotal: inv.subtotal || 0, discount: inv.discount || 0,
-        total: inv.total || 0, currency: inv.currency || 'USD',
-        usdToOld: inv.usdToOld || 0
+        total: inv.total || 0, paidAmount: inv.paidAmount || 0,
+        paymentType: inv.paymentType || 'cash',
+        priceType: inv.priceType || 'retail',
+        currency: inv.currency || 'USD', usdToOld: inv.usdToOld || 0,
+        taxRate: inv.taxRate || 0, taxAmount: inv.taxAmount || 0,
+        note: inv.note || ''
       });
       (inv.lines || []).forEach(l => insSaleLine.run({
         invoiceNumber: inv.number, itemId: l.itemId || '',
         qty: l.qty || 0, price: l.price || 0, total: l.total || 0,
-        unitType: l.unitType || 'unit'
+        unitType: l.unitType || 'unit', note: l.note || ''
       }));
     });
 
-    // ✅ purchase invoices — مع unitType
+    // purchase invoices
     db.prepare('DELETE FROM purchase_lines').run();
     db.prepare('DELETE FROM purchase_invoices').run();
     const insPurInv = db.prepare(`
-      INSERT INTO purchase_invoices (number, date, supplierName, total)
-      VALUES (@number, @date, @supplierName, @total)
+      INSERT INTO purchase_invoices
+        (number, date, time, supplierName, supplierInvoiceNum, subtotal, discount, total,
+         paidAmount, paymentType, shippingCost, shippingAccount, currency, usdToOld, note)
+      VALUES
+        (@number, @date, @time, @supplierName, @supplierInvoiceNum, @subtotal, @discount, @total,
+         @paidAmount, @paymentType, @shippingCost, @shippingAccount, @currency, @usdToOld, @note)
     `);
     const insPurLine = db.prepare(`
-      INSERT INTO purchase_lines (invoiceNumber, itemId, qty, price, total, unitType)
-      VALUES (@invoiceNumber, @itemId, @qty, @price, @total, @unitType)
+      INSERT INTO purchase_lines (invoiceNumber, itemId, qty, price, total, unitType, note)
+      VALUES (@invoiceNumber, @itemId, @qty, @price, @total, @unitType, @note)
     `);
     (data.purchaseInvoices || []).forEach(inv => {
       insPurInv.run({
-        number: inv.number, date: inv.date || '',
-        supplierName: inv.supplierName || '', total: inv.total || 0
+        number: inv.number, date: inv.date || '', time: inv.time || '',
+        supplierName: inv.supplierName || '',
+        supplierInvoiceNum: inv.supplierInvoiceNum || '',
+        subtotal: inv.subtotal || 0, discount: inv.discount || 0,
+        total: inv.total || 0, paidAmount: inv.paidAmount || 0,
+        paymentType: inv.paymentType || 'cash',
+        shippingCost: inv.shippingCost || 0,
+        shippingAccount: inv.shippingAccount || '',
+        currency: inv.currency || 'USD', usdToOld: inv.usdToOld || 0,
+        note: inv.note || ''
       });
       (inv.lines || []).forEach(l => insPurLine.run({
         invoiceNumber: inv.number, itemId: l.itemId || '',
         qty: l.qty || 0, price: l.price || 0, total: l.total || 0,
-        unitType: l.unitType || 'unit'
+        unitType: l.unitType || 'unit', note: l.note || ''
       }));
     });
 
     // returns
     db.prepare('DELETE FROM return_lines').run();
     db.prepare('DELETE FROM returns').run();
-    const insRet = db.prepare(`
-      INSERT INTO returns (number, type, date, party, total, note)
-      VALUES (@number, @type, @date, @party, @total, @note)
-    `);
-    const insRetLine = db.prepare(`
-      INSERT INTO return_lines (returnNumber, itemId, qty, price, total, unitType)
-      VALUES (@returnNumber, @itemId, @qty, @price, @total, @unitType)
-    `);
+    const insRet = db.prepare(`INSERT INTO returns (number, type, date, party, total, note) VALUES (@number, @type, @date, @party, @total, @note)`);
+    const insRetLine = db.prepare(`INSERT INTO return_lines (returnNumber, itemId, qty, price, total, unitType) VALUES (@returnNumber, @itemId, @qty, @price, @total, @unitType)`);
     (data.returns || []).forEach(r => {
-      insRet.run({
-        number: r.number, type: r.type || '',
-        date: r.date || '', party: r.party || '',
-        total: r.total || 0, note: r.note || ''
-      });
-      (r.lines || []).forEach(l => insRetLine.run({
-        returnNumber: r.number, itemId: l.itemId || '',
-        qty: l.qty || 0, price: l.price || 0, total: l.total || 0,
-        unitType: l.unitType || 'unit'
-      }));
+      insRet.run({ number: r.number, type: r.type || '', date: r.date || '', party: r.party || '', total: r.total || 0, note: r.note || '' });
+      (r.lines || []).forEach(l => insRetLine.run({ returnNumber: r.number, itemId: l.itemId || '', qty: l.qty || 0, price: l.price || 0, total: l.total || 0, unitType: l.unitType || 'unit' }));
     });
 
-    // customer payments
+    // customer payments — إيصالات القبض
     db.prepare('DELETE FROM customer_payments').run();
     const insCusPay = db.prepare(`
-      INSERT INTO customer_payments (customerName, amount, note, date)
-      VALUES (@customerName, @amount, @note, @date)
+      INSERT INTO customer_payments
+        (receiptNum, customerName, amount, paymentMethod, chequeNum, description, discountOnPayment, note, date)
+      VALUES (@receiptNum, @customerName, @amount, @paymentMethod, @chequeNum, @description, @discountOnPayment, @note, @date)
     `);
     (data.customerPayments || []).forEach(p => insCusPay.run({
-      customerName: p.customerName || '', amount: p.amount || 0,
+      receiptNum: p.receiptNum || '', customerName: p.customerName || '',
+      amount: p.amount || 0, paymentMethod: p.paymentMethod || 'cash',
+      chequeNum: p.chequeNum || '', description: p.description || '',
+      discountOnPayment: p.discountOnPayment || 0,
       note: p.note || '', date: p.date || ''
     }));
 
     // supplier payments
     db.prepare('DELETE FROM supplier_payments').run();
     const insSupPay = db.prepare(`
-      INSERT INTO supplier_payments (supplierName, amount, note, date)
-      VALUES (@supplierName, @amount, @note, @date)
+      INSERT INTO supplier_payments
+        (receiptNum, supplierName, amount, paymentMethod, chequeNum, description, note, date)
+      VALUES (@receiptNum, @supplierName, @amount, @paymentMethod, @chequeNum, @description, @note, @date)
     `);
     (data.supplierPayments || []).forEach(p => insSupPay.run({
-      supplierName: p.supplierName || '', amount: p.amount || 0,
+      receiptNum: p.receiptNum || '', supplierName: p.supplierName || '',
+      amount: p.amount || 0, paymentMethod: p.paymentMethod || 'cash',
+      chequeNum: p.chequeNum || '', description: p.description || '',
       note: p.note || '', date: p.date || ''
     }));
   });
@@ -387,52 +500,20 @@ function migrateFromJSON(jsonData) {
     const data = typeof jsonData === 'string' ? JSON.parse(jsonData) : jsonData;
     saveAll(data);
     return { success: true };
-  } catch (e) {
+  } catch(e) {
     return { success: false, error: e.message };
   }
 }
 
-// ============================================================
-// التحقق من وجود بيانات
-// ============================================================
 function hasData() {
   try {
-    const row = db.prepare('SELECT COUNT(*) as cnt FROM items').get();
-    return row.cnt > 0;
-  } catch(e) {
-    return false;
-  }
+    const count = db.prepare('SELECT COUNT(*) as c FROM items').get();
+    return count.c > 0;
+  } catch(e) { return false; }
 }
 
-// ============================================================
-// تصدير قاعدة البيانات
-// ============================================================
 function backupTo(destPath) {
-  if (db) {
-    try { db.pragma('wal_checkpoint(TRUNCATE)'); } catch(e) {}
-    const srcPath = db.name;
-    if (srcPath && fs.existsSync(srcPath)) {
-      fs.copyFileSync(srcPath, destPath);
-      return;
-    }
-  }
-
-  const { app } = require('electron');
-  const candidates = [
-    path.join(app.getPath('userData'), 'data.db'),
-    path.join(app.getPath('appData'), 'AccountingWarehouse', 'data.db'),
-    path.join(app.getPath('appData'), 'accounting-warehouse', 'data.db'),
-  ];
-
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) {
-      if (db) { try { db.pragma('wal_checkpoint(TRUNCATE)'); } catch(e) {} }
-      fs.copyFileSync(candidate, destPath);
-      return;
-    }
-  }
-
-  throw new Error('لم يتم العثور على ملف قاعدة البيانات');
+  db.backup(destPath);
 }
 
 module.exports = { openDatabase, loadAll, saveAll, migrateFromJSON, hasData, backupTo };
