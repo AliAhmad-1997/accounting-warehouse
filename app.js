@@ -2362,72 +2362,68 @@ function renderDeferredCustomers() {
   const el = document.getElementById('rec-deferred-customers');
   if(!el) return;
 
-  const debtors = db.customers
+  const debtors = (db.customers||[])
     .map(c => ({ ...c, acc: getCustomerAccount(c.name) }))
     .filter(c => c.acc.remaining > 0)
     .sort((a,b) => b.acc.remaining - a.acc.remaining);
 
   if(debtors.length === 0) {
-    el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:16px;text-align:center;background:#f0fdf4;border-radius:8px;">✅ لا توجد ديون مستحقة</div>';
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);background:#f0fdf4;border-radius:8px;font-size:13px;">✅ لا توجد ديون مستحقة على الزبائن</div>';
     return;
   }
 
   el.innerHTML = debtors.map(c => {
-    // فواتير الآجل لهذا الزبون
     const deferredInvs = c.acc.deferredInvoices || [];
-    const invoicesHTML = deferredInvs.map(inv => {
-      // كل الدفعات المرتبطة بهذه الفاتورة (مع الإنشاء + اللاحقة)
-      const allPaymentsForInv = (db.customerPayments||[])
+    const rowsHTML = deferredInvs.map(inv => {
+      const paidOnInv = (db.customerPayments||[])
         .filter(p => p.customerName === c.name &&
-          (p.linkedInvoice === inv.number || p.description === 'دفعة مع الفاتورة ' + inv.number))
+          (p.linkedInvoice === inv.number ||
+           (p.description||'') === ('دفعة مع الفاتورة ' + inv.number)))
         .reduce((s,p) => s + (p.amount||0) + (p.discountOnPayment||0), 0);
-      const paid = allPaymentsForInv;
-      const remaining = Math.max(0, inv.total - paid);
-      if(remaining <= 0) return '';
-      return `<tr style="font-size:12px;border-bottom:1px solid #e2e8f0;">
-        <td style="padding:6px 8px;font-weight:600;color:#1F3864">${inv.number}</td>
-        <td style="padding:6px 8px;color:var(--text-muted)">${inv.date}</td>
-        <td style="padding:6px 8px;text-align:left">${fmtUSD(inv.total)}</td>
-        <td style="padding:6px 8px;text-align:left;color:#16a34a">${fmtUSD(paid + extraPaid)}</td>
-        <td style="padding:6px 8px;text-align:left;color:#dc2626;font-weight:700">${fmtUSD(remaining)}</td>
-        <td style="padding:6px 8px;text-align:center">
-          <button onclick="payInvoiceAmount('${c.name}','${inv.number}',${remaining})"
-            style="padding:3px 10px;font-size:11px;background:#2E75B6;color:white;border:none;border-radius:6px;cursor:pointer;">
-            دفع
-          </button>
-        </td>
-      </tr>`;
+      const invRemaining = Math.max(0, inv.total - paidOnInv);
+      if(invRemaining <= 0) return '';
+      return '<tr style="border-bottom:1px solid #e2e8f0;">' +
+        '<td style="padding:7px 10px;font-weight:600;color:#1F3864;font-size:12px;">' + inv.number + '</td>' +
+        '<td style="padding:7px 10px;color:var(--text-muted);font-size:12px;">' + inv.date + '</td>' +
+        '<td style="padding:7px 10px;font-size:12px;">' + fmtUSD(inv.total) + '</td>' +
+        '<td style="padding:7px 10px;color:#16a34a;font-size:12px;">' + fmtUSD(paidOnInv) + '</td>' +
+        '<td style="padding:7px 10px;color:#dc2626;font-weight:700;font-size:12px;">' + fmtUSD(invRemaining) + '</td>' +
+        '<td style="padding:7px 10px;text-align:center;">' +
+          '<button onclick="payInvoiceAmount('' + c.name + '','' + inv.number + '',' + invRemaining + ')" ' +
+            'style="padding:4px 12px;font-size:11px;background:#2E75B6;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;">دفع</button>' +
+        '</td>' +
+        '</tr>';
     }).filter(r => r !== '').join('');
 
-    return `<div style="margin-bottom:12px;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
-      <div style="background:#1F3864;color:white;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer"
-           onclick="selectDeferredCustomer('${c.name}',${c.acc.remaining})">
-        <span style="font-weight:700;font-size:14px">👤 ${c.name}</span>
-        <div style="display:flex;gap:16px;align-items:center;font-size:12px">
-          <span>إجمالي الآجل: ${fmtUSD(c.acc.totalDeferred)}</span>
-          <span style="background:#dc2626;padding:3px 10px;border-radius:12px;font-weight:700">
-            المتبقي: ${fmtUSD(c.acc.remaining)}
-          </span>
-        </div>
-      </div>
-      ${invoicesHTML ? `
-      <table style="width:100%;border-collapse:collapse;">
-        <thead>
-          <tr style="background:#EBF3FB;font-size:11px;color:#64748b;">
-            <th style="padding:6px 8px;text-align:right;font-weight:600">رقم الفاتورة</th>
-            <th style="padding:6px 8px;text-align:right;font-weight:600">التاريخ</th>
-            <th style="padding:6px 8px;text-align:left;font-weight:600">الإجمالي</th>
-            <th style="padding:6px 8px;text-align:left;font-weight:600">المدفوع</th>
-            <th style="padding:6px 8px;text-align:left;font-weight:600">المتبقي</th>
-            <th style="padding:6px 8px;text-align:center;font-weight:600">دفع مباشر</th>
-          </tr>
-        </thead>
-        <tbody>${invoicesHTML}</tbody>
-      </table>` : '<div style="padding:10px;color:var(--text-muted);font-size:12px;text-align:center">لا توجد فواتير آجل نشطة</div>'}
-    </div>`;
-  }).join('');
-}
+    if(!rowsHTML) return '';
 
+    return '<div style="margin-bottom:10px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">' +
+      '<div style="background:#1F3864;color:white;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;" ' +
+           'onclick="selectDeferredCustomer('' + c.name + '',' + c.acc.remaining + ')">' +
+        '<span style="font-weight:700;font-size:13px;">👤 ' + c.name + '</span>' +
+        '<div style="display:flex;gap:12px;align-items:center;font-size:12px;">' +
+          '<span>إجمالي الآجل: ' + fmtUSD(c.acc.totalDeferred) + '</span>' +
+          '<span style="background:#dc2626;padding:3px 10px;border-radius:10px;font-weight:700;">المتبقي: ' + fmtUSD(c.acc.remaining) + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<table style="width:100%;border-collapse:collapse;">' +
+        '<thead><tr style="background:#EBF3FB;">' +
+          '<th style="padding:6px 10px;text-align:right;font-size:11px;color:#64748b;font-weight:600;">رقم الفاتورة</th>' +
+          '<th style="padding:6px 10px;text-align:right;font-size:11px;color:#64748b;font-weight:600;">التاريخ</th>' +
+          '<th style="padding:6px 10px;text-align:right;font-size:11px;color:#64748b;font-weight:600;">الإجمالي</th>' +
+          '<th style="padding:6px 10px;text-align:right;font-size:11px;color:#64748b;font-weight:600;">المدفوع</th>' +
+          '<th style="padding:6px 10px;text-align:right;font-size:11px;color:#64748b;font-weight:600;">المتبقي</th>' +
+          '<th style="padding:6px 10px;text-align:center;font-size:11px;color:#64748b;font-weight:600;">دفع</th>' +
+        '</tr></thead>' +
+        '<tbody>' + rowsHTML + '</tbody>' +
+      '</table>' +
+    '</div>';
+  }).filter(r => r !== '').join('');
+
+  if(!el.innerHTML) {
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);background:#f0fdf4;border-radius:8px;font-size:13px;">✅ لا توجد ديون مستحقة</div>';
+  }
+}
 // دفع مبلغ مباشرة على فاتورة محددة
 function payInvoiceAmount(customerName, invoiceNumber, remaining) {
   const nameEl = document.getElementById('rec-cust-name');
@@ -2529,64 +2525,62 @@ function renderDeferredSuppliers() {
     .sort((a,b) => b.acc.remaining - a.acc.remaining);
 
   if(debtors.length === 0) {
-    el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:16px;text-align:center;background:#f0fdf4;border-radius:8px;">✅ لا توجد مستحقات للموردين</div>';
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);background:#f0fdf4;border-radius:8px;font-size:13px;">✅ لا توجد مستحقات للموردين</div>';
     return;
   }
 
   el.innerHTML = debtors.map(s => {
     const deferredInvs = s.acc.deferredInvoices || [];
-    const invoicesHTML = deferredInvs.map(inv => {
-      const allPaymentsForInv = (db.supplierPayments||[])
+    const rowsHTML = deferredInvs.map(inv => {
+      const paidOnInv = (db.supplierPayments||[])
         .filter(p => p.supplierName === s.name &&
-          (p.linkedInvoice === inv.number || p.description === 'دفعة مع الفاتورة ' + inv.number))
-        .reduce((sum,p) => sum + (p.amount||0), 0);
-      const paid = allPaymentsForInv;
-      const remaining = Math.max(0, inv.total - paid);
-      if(remaining <= 0) return '';
-      return `<tr style="font-size:12px;border-bottom:1px solid #e2e8f0;">
-        <td style="padding:6px 8px;font-weight:600;color:#15803d">${inv.number}</td>
-        <td style="padding:6px 8px;color:var(--text-muted)">${inv.date}</td>
-        <td style="padding:6px 8px;text-align:left">${fmtUSD(inv.total)}</td>
-        <td style="padding:6px 8px;text-align:left;color:#16a34a">${fmtUSD(paid + extraPaid)}</td>
-        <td style="padding:6px 8px;text-align:left;color:#dc2626;font-weight:700">${fmtUSD(remaining)}</td>
-        <td style="padding:6px 8px;text-align:center">
-          <button onclick="paySupplierInvoiceAmount('${s.name}','${inv.number}',${remaining})"
-            style="padding:3px 10px;font-size:11px;background:#15803d;color:white;border:none;border-radius:6px;cursor:pointer;">
-            دفع
-          </button>
-        </td>
-      </tr>`;
+          (p.linkedInvoice === inv.number ||
+           (p.description||'') === ('دفعة مع الفاتورة ' + inv.number)))
+        .reduce((s,p) => s + (p.amount||0), 0);
+      const invRemaining = Math.max(0, inv.total - paidOnInv);
+      if(invRemaining <= 0) return '';
+      return '<tr style="border-bottom:1px solid #e2e8f0;">' +
+        '<td style="padding:7px 10px;font-weight:600;color:#15803d;font-size:12px;">' + inv.number + '</td>' +
+        '<td style="padding:7px 10px;color:var(--text-muted);font-size:12px;">' + inv.date + '</td>' +
+        '<td style="padding:7px 10px;font-size:12px;">' + fmtUSD(inv.total) + '</td>' +
+        '<td style="padding:7px 10px;color:#16a34a;font-size:12px;">' + fmtUSD(paidOnInv) + '</td>' +
+        '<td style="padding:7px 10px;color:#dc2626;font-weight:700;font-size:12px;">' + fmtUSD(invRemaining) + '</td>' +
+        '<td style="padding:7px 10px;text-align:center;">' +
+          '<button onclick="paySupplierInvoiceAmount('' + s.name + '','' + inv.number + '',' + invRemaining + ')" ' +
+            'style="padding:4px 12px;font-size:11px;background:#15803d;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;">دفع</button>' +
+        '</td>' +
+        '</tr>';
     }).filter(r => r !== '').join('');
 
-    return `<div style="margin-bottom:12px;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
-      <div style="background:#15803d;color:white;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer"
-           onclick="selectDeferredSupplier('${s.name}',${s.acc.remaining})">
-        <span style="font-weight:700;font-size:14px">🏭 ${s.name}</span>
-        <div style="display:flex;gap:16px;align-items:center;font-size:12px">
-          <span>إجمالي الآجل: ${fmtUSD(s.acc.totalDeferred)}</span>
-          <span style="background:#dc2626;padding:3px 10px;border-radius:12px;font-weight:700">
-            المتبقي: ${fmtUSD(s.acc.remaining)}
-          </span>
-        </div>
-      </div>
-      ${invoicesHTML ? `
-      <table style="width:100%;border-collapse:collapse;">
-        <thead>
-          <tr style="background:#f0fdf4;font-size:11px;color:#64748b;">
-            <th style="padding:6px 8px;text-align:right;font-weight:600">رقم الفاتورة</th>
-            <th style="padding:6px 8px;text-align:right;font-weight:600">التاريخ</th>
-            <th style="padding:6px 8px;text-align:left;font-weight:600">الإجمالي</th>
-            <th style="padding:6px 8px;text-align:left;font-weight:600">المدفوع</th>
-            <th style="padding:6px 8px;text-align:left;font-weight:600">المتبقي</th>
-            <th style="padding:6px 8px;text-align:center;font-weight:600">دفع مباشر</th>
-          </tr>
-        </thead>
-        <tbody>${invoicesHTML}</tbody>
-      </table>` : '<div style="padding:10px;color:var(--text-muted);font-size:12px;text-align:center">لا توجد فواتير آجل نشطة</div>'}
-    </div>`;
-  }).join('');
-}
+    if(!rowsHTML) return '';
 
+    return '<div style="margin-bottom:10px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">' +
+      '<div style="background:#15803d;color:white;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;" ' +
+           'onclick="selectDeferredSupplier('' + s.name + '',' + s.acc.remaining + ')">' +
+        '<span style="font-weight:700;font-size:13px;">🏭 ' + s.name + '</span>' +
+        '<div style="display:flex;gap:12px;align-items:center;font-size:12px;">' +
+          '<span>إجمالي الآجل: ' + fmtUSD(s.acc.totalDeferred) + '</span>' +
+          '<span style="background:#dc2626;padding:3px 10px;border-radius:10px;font-weight:700;">المتبقي: ' + fmtUSD(s.acc.remaining) + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<table style="width:100%;border-collapse:collapse;">' +
+        '<thead><tr style="background:#f0fdf4;">' +
+          '<th style="padding:6px 10px;text-align:right;font-size:11px;color:#64748b;font-weight:600;">رقم الفاتورة</th>' +
+          '<th style="padding:6px 10px;text-align:right;font-size:11px;color:#64748b;font-weight:600;">التاريخ</th>' +
+          '<th style="padding:6px 10px;text-align:right;font-size:11px;color:#64748b;font-weight:600;">الإجمالي</th>' +
+          '<th style="padding:6px 10px;text-align:right;font-size:11px;color:#64748b;font-weight:600;">المدفوع</th>' +
+          '<th style="padding:6px 10px;text-align:right;font-size:11px;color:#64748b;font-weight:600;">المتبقي</th>' +
+          '<th style="padding:6px 10px;text-align:center;font-size:11px;color:#64748b;font-weight:600;">دفع</th>' +
+        '</tr></thead>' +
+        '<tbody>' + rowsHTML + '</tbody>' +
+      '</table>' +
+    '</div>';
+  }).filter(r => r !== '').join('');
+
+  if(!el.innerHTML) {
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);background:#f0fdf4;border-radius:8px;font-size:13px;">✅ لا توجد مستحقات للموردين</div>';
+  }
+}
 function paySupplierInvoiceAmount(supplierName, invoiceNumber, remaining) {
   const nameEl = document.getElementById('rec-sup-name');
   const amtEl  = document.getElementById('rec-sup-amount');
