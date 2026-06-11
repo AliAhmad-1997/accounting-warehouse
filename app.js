@@ -135,7 +135,7 @@ const defaultData = {
   suppliers: [],
   salesInvoices: [],
   purchaseInvoices: [],
-  invoiceCounters: { sale:0, purchase:0, returnSale:0, returnPurchase:0 }
+  invoiceCounters: { sale:0, purchase:0, returnSale:0, returnPurchase:0, receipt:0 }
 };
 
 // ============================================================
@@ -252,7 +252,7 @@ function fmt(n) { return fmtOld(n); }
 // ============================================================
 // ROUTER
 // ============================================================
-const pages = ['dashboard','invoice-sale','invoice-purchase','items','customers','suppliers','settings','reports','returns'];
+const pages = ['dashboard','invoice-sale','invoice-purchase','items','customers','suppliers','settings','reports','returns','receipt-customer','receipt-supplier'];
 let currentPage = 'dashboard';
 
 function navigate(page) {
@@ -277,6 +277,8 @@ function render(page) {
     case 'settings': renderSettings(); break;
     case 'reports': renderReports(); break;
     case 'returns': renderReturns(); break;
+    case 'receipt-customer': renderReceiptCustomer(); break;
+    case 'receipt-supplier': renderReceiptSupplier(); break;
   }
 }
 
@@ -465,8 +467,15 @@ function renderSaleLines() {
 function onSaleItemChange(i,itemId) {
   const item = db.items.find(it=>it.id===itemId);
   saleLines[i].itemId = itemId;
-  saleLines[i].unitType = 'unit'; // reset للوحدة الأساسية
-  saleLines[i].price = item ? item.price : 0;
+  saleLines[i].unitType = 'unit';
+  if(item) {
+    const priceType = document.getElementById('sale-price-type')?.value || 'retail';
+    if(priceType === 'wholesale' && item.price2 > 0) saleLines[i].price = item.price2;
+    else if(priceType === 'special' && item.price3 > 0) saleLines[i].price = item.price3;
+    else saleLines[i].price = item.price;
+  } else {
+    saleLines[i].price = 0;
+  }
   saleLines[i].total = saleLines[i].price * saleLines[i].qty;
   renderSaleLines(); renderSaleTotal();
 }
@@ -513,30 +522,63 @@ function saveSaleInvoice() {
   const lines = saleLines.filter(l=>l.itemId&&l.qty>0);
   if(lines.length===0){showToast('أضف مادة واحدة على الأقل','error');return;}
   const subtotal = lines.reduce((s,l)=>s+l.total,0);
-  const discount = parseFloat(document.getElementById('sale-discount').value||0);
-  const total = subtotal*(1-discount/100);
+  const discount  = parseFloat(document.getElementById('sale-discount')?.value||0);
+  const taxRate   = parseFloat(document.getElementById('sale-tax-rate')?.value||0);
+  const taxAmount = subtotal * (1 - discount/100) * (taxRate/100);
+  const total     = subtotal * (1 - discount/100) + taxAmount;
+  const paidAmount  = parseFloat(document.getElementById('sale-paid-amount')?.value||total);
+  const paymentType = document.getElementById('sale-payment-type')?.value || 'cash';
+  const priceType   = document.getElementById('sale-price-type')?.value   || 'retail';
+  const saleNote    = document.getElementById('sale-note')?.value || '';
   const customerName = document.getElementById('sale-customer-input').value.trim();
+  const now = new Date();
+  const timeStr = now.toTimeString().slice(0,5);
 
-  // ✅ إضافة الزبون تلقائياً إذا ما كان موجود
+  // إضافة الزبون تلقائياً
   if(customerName && !db.customers.find(c=>c.name===customerName)) {
     const newId = 'CUS-' + String(db.customers.length+1).padStart(3,'0');
-    db.customers.push({id:newId, name:customerName, phone:'', address:''});
+    db.customers.push({id:newId, name:customerName, phone:'', address:'', balance:0});
     showToast(`✅ تم إضافة الزبون "${customerName}" تلقائياً`,'success');
+  }
+
+  // تحديث رصيد الزبون (الآجل فقط)
+  if(paymentType === 'deferred') {
+    const cust = db.customers.find(c=>c.name===customerName);
+    if(cust) cust.balance = (cust.balance||0) + (total - paidAmount);
   }
 
   db.invoiceCounters.sale++;
   const inv = {
     number: 'INV-'+String(db.invoiceCounters.sale).padStart(3,'0'),
     date: document.getElementById('sale-date').value,
+    time: timeStr,
     customerName,
     lines, subtotal, discount, total,
+    paidAmount, paymentType, priceType,
+    taxRate, taxAmount,
+    note: saleNote,
     currency: 'USD',
     usdToOld: getRate()
   };
   db.salesInvoices.push(inv);
+
+  // إيصال قبض تلقائي لو دفع جزئي
+  if(paidAmount > 0 && paidAmount < total) {
+    db.invoiceCounters.receipt = (db.invoiceCounters.receipt||0) + 1;
+    db.customerPayments.push({
+      receiptNum: 'REC-'+String(db.invoiceCounters.receipt).padStart(3,'0'),
+      customerName, amount: paidAmount, paymentMethod: 'cash',
+      chequeNum:'', description:'دفعة مع الفاتورة '+inv.number,
+      discountOnPayment:0, note:'', date: inv.date
+    });
+  }
+
   saveData(db);
   saleLines = [{itemId:'',qty:1,price:0,total:0}];
   document.getElementById('sale-customer-input').value = '';
+  if(document.getElementById('sale-tax-rate'))    document.getElementById('sale-tax-rate').value = '0';
+  if(document.getElementById('sale-paid-amount')) document.getElementById('sale-paid-amount').value = '';
+  if(document.getElementById('sale-note'))        document.getElementById('sale-note').value = '';
   showToast('✅ تم حفظ الفاتورة '+inv.number,'success');
   navigate('dashboard');
 }
@@ -763,25 +805,57 @@ function renderPurchaseRecentInvoices() {
 function savePurchaseInvoice() {
   const lines = purchaseLines.filter(l=>l.itemId&&l.qty>0);
   if(lines.length===0){showToast('أضف مادة واحدة على الأقل','error');return;}
-  const total = lines.reduce((s,l)=>s+l.total,0);
+  const subtotal     = lines.reduce((s,l)=>s+l.total,0);
+  const discount     = parseFloat(document.getElementById('pur-discount')?.value||0);
+  const shippingCost = parseFloat(document.getElementById('pur-shipping')?.value||0);
+  const total        = subtotal*(1-discount/100) + shippingCost;
+  const paidAmount   = parseFloat(document.getElementById('pur-paid-amount')?.value||total);
+  const paymentType  = document.getElementById('pur-payment-type')?.value || 'cash';
+  const supplierInvoiceNum = document.getElementById('pur-supplier-invoice')?.value || '';
+  const purNote      = document.getElementById('pur-note')?.value || '';
   const supplierName = document.getElementById('pur-supplier-input').value.trim();
+  const now = new Date();
+  const timeStr = now.toTimeString().slice(0,5);
+
+  if(!supplierName){showToast('أدخل اسم المورد','error');return;}
 
   // إضافة المورد تلقائياً
-  if(supplierName && !db.suppliers.find(s=>s.name===supplierName)) {
+  if(!db.suppliers.find(s=>s.name===supplierName)) {
     const newId = 'SUP-'+String(db.suppliers.length+1).padStart(3,'0');
-    db.suppliers.push({id:newId, name:supplierName, phone:'', address:''});
+    db.suppliers.push({id:newId, name:supplierName, phone:'', address:'', balance:0});
+  }
+
+  // تحديث تكلفة المادة بسعر الشراء الجديد
+  lines.forEach(l => {
+    const item = db.items.find(it=>it.id===l.itemId);
+    if(item) item.cost = l.price;
+  });
+
+  // تحديث رصيد المورد (آجل)
+  if(paymentType === 'deferred') {
+    const sup = db.suppliers.find(s=>s.name===supplierName);
+    if(sup) sup.balance = (sup.balance||0) + (total - paidAmount);
   }
 
   db.invoiceCounters.purchase++;
   const inv = {
     number: 'PUR-'+String(db.invoiceCounters.purchase).padStart(3,'0'),
     date: document.getElementById('pur-date').value,
-    supplierName, lines, total
+    time: timeStr,
+    supplierName, supplierInvoiceNum,
+    lines, subtotal, discount, total,
+    paidAmount, paymentType,
+    shippingCost, shippingAccount:'',
+    note: purNote,
+    currency:'USD', usdToOld: getRate()
   };
   db.purchaseInvoices.push(inv);
   saveData(db);
   purchaseLines = [{itemId:'',qty:1,price:0,total:0}];
   document.getElementById('pur-supplier-input').value = '';
+  ['pur-discount','pur-shipping','pur-paid-amount','pur-supplier-invoice','pur-note'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value = id.includes('discount')||id.includes('shipping') ? '0' : '';
+  });
   showToast('✅ تم حفظ فاتورة الشراء '+inv.number,'success');
   navigate('dashboard');
 }
@@ -838,22 +912,35 @@ function editItem(id) {
   document.getElementById('modal-item-id').value = item.id;
   document.getElementById('modal-item-name').value = item.name;
   document.getElementById('modal-item-type').value = item.type;
-  // الوحدات
   document.getElementById('modal-item-unit').value = item.unit || '';
   document.getElementById('modal-item-unit2').value = item.unit2 || '';
   document.getElementById('modal-item-factor').value = item.factor || 1;
   document.getElementById('modal-item-barcode').value = item.barcode || '';
+  // حقول جديدة
+  const el2 = document.getElementById('modal-item-barcode2'); if(el2) el2.value = item.barcode2||'';
+  const elTax = document.getElementById('modal-item-tax'); if(elTax) elTax.value = item.taxRate||0;
+  const elMax = document.getElementById('modal-item-maxstock'); if(elMax) elMax.value = item.maxStock||0;
+  const elBrand = document.getElementById('modal-item-brand'); if(elBrand) elBrand.value = item.brand||'';
+  const elDefsup = document.getElementById('modal-item-defsup'); if(elDefsup) elDefsup.value = item.defaultSupplier||'';
   // العملة والأسعار
   const currency = item.priceCurrency || 'USD';
   document.getElementById('modal-price-currency').value = currency;
-  // تحويل الأسعار للعملة المختارة للعرض
   const rate = getRate();
   let costDisplay = item.cost;
   let priceDisplay = item.price;
-  if(currency === 'OLD') { costDisplay = item.cost * rate; priceDisplay = item.price * rate; }
-  else if(currency === 'NEW') { costDisplay = item.cost * rate / 100; priceDisplay = item.price * rate / 100; }
+  let price2Display = item.price2||0;
+  let price3Display = item.price3||0;
+  if(currency === 'OLD') {
+    costDisplay *= rate; priceDisplay *= rate;
+    price2Display *= rate; price3Display *= rate;
+  } else if(currency === 'NEW') {
+    costDisplay *= rate/100; priceDisplay *= rate/100;
+    price2Display *= rate/100; price3Display *= rate/100;
+  }
   document.getElementById('modal-item-cost').value = Math.round(costDisplay * 100) / 100;
   document.getElementById('modal-item-price').value = Math.round(priceDisplay * 100) / 100;
+  const elP2 = document.getElementById('modal-item-price2'); if(elP2) elP2.value = Math.round(price2Display*100)/100;
+  const elP3 = document.getElementById('modal-item-price3'); if(elP3) elP3.value = Math.round(price3Display*100)/100;
   updateModalCurrencyLabel();
   document.getElementById('item-modal').classList.remove('hidden');
 }
@@ -874,18 +961,28 @@ function saveItemModal() {
   item.unit2 = document.getElementById('modal-item-unit2').value;
   item.factor = parseFloat(document.getElementById('modal-item-factor').value) || 1;
   item.barcode = document.getElementById('modal-item-barcode').value.trim();
-  // تحويل السعر المُدخل إلى دولار للتخزين
+  // حقول جديدة
+  const el2 = document.getElementById('modal-item-barcode2'); if(el2) item.barcode2 = el2.value.trim();
+  const elTax = document.getElementById('modal-item-tax'); if(elTax) item.taxRate = parseFloat(elTax.value)||0;
+  const elMax = document.getElementById('modal-item-maxstock'); if(elMax) item.maxStock = parseFloat(elMax.value)||0;
+  const elBrand = document.getElementById('modal-item-brand'); if(elBrand) item.brand = elBrand.value.trim();
+  const elDefsup = document.getElementById('modal-item-defsup'); if(elDefsup) item.defaultSupplier = elDefsup.value.trim();
+  // تحويل الأسعار للدولار
   const currency = document.getElementById('modal-price-currency').value;
   const rate = getRate();
-  let costInput = parseFloat(document.getElementById('modal-item-cost').value) || 0;
-  let priceInput = parseFloat(document.getElementById('modal-item-price').value) || 0;
-  if(currency === 'OLD') { costInput = costInput / rate; priceInput = priceInput / rate; }
-  else if(currency === 'NEW') { costInput = costInput / (rate/100); priceInput = priceInput / (rate/100); }
-  item.cost = Math.round(costInput * 10000) / 10000;
-  item.price = Math.round(priceInput * 10000) / 10000;
+  const toUSD = (v) => {
+    if(currency === 'OLD') return v / rate;
+    if(currency === 'NEW') return v / (rate/100);
+    return v;
+  };
+  item.cost  = Math.round(toUSD(parseFloat(document.getElementById('modal-item-cost').value)||0) * 10000) / 10000;
+  item.price = Math.round(toUSD(parseFloat(document.getElementById('modal-item-price').value)||0) * 10000) / 10000;
+  const elP2 = document.getElementById('modal-item-price2');
+  const elP3 = document.getElementById('modal-item-price3');
+  if(elP2) item.price2 = Math.round(toUSD(parseFloat(elP2.value)||0) * 10000) / 10000;
+  if(elP3) item.price3 = Math.round(toUSD(parseFloat(elP3.value)||0) * 10000) / 10000;
   item.priceCurrency = currency;
-  // حذف minStock
-  item.minStock = 0;
+  item.minStock = parseFloat(document.getElementById('modal-item-minstock')?.value)||0;
   saveData(db);
   document.getElementById('item-modal').classList.add('hidden');
   renderItems();
@@ -2183,6 +2280,125 @@ function handleBarcodeScan(page, value) {
   if (el) el.value = '';
 }
 
+
+
+// ============================================================
+// إيصالات القبض والدفع
+// ============================================================
+function renderReceiptCustomer() {
+  const nextNum = 'REC-'+String((db.invoiceCounters.receipt||0)+1).padStart(3,'0');
+  const el = document.getElementById('rec-cust-num');
+  if(el) el.textContent = nextNum;
+  const dateEl = document.getElementById('rec-cust-date');
+  if(dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+  const datalist = document.getElementById('rec-cust-datalist');
+  if(datalist) datalist.innerHTML = db.customers.filter(c=>c.name).map(c=>`<option value="${c.name}">`).join('');
+  renderReceiptCustomerList();
+}
+
+function renderReceiptCustomerList() {
+  const el = document.getElementById('rec-cust-list');
+  if(!el) return;
+  const list = (db.customerPayments||[]).slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,20);
+  if(list.length===0){ el.innerHTML='<div class="empty-state">لا توجد إيصالات قبض بعد</div>'; return; }
+  el.innerHTML = list.map(p=>`
+    <div class="invoice-row">
+      <span class="inv-num">${p.receiptNum||'—'}</span>
+      <span class="inv-customer">${p.customerName||'—'}</span>
+      <span class="inv-type type-sale">قبض</span>
+      <span class="inv-total">${fmtUSD(p.amount)}</span>
+      <span class="inv-date">${p.date||''}</span>
+    </div>`).join('');
+}
+
+function saveReceiptCustomer() {
+  const customerName = document.getElementById('rec-cust-name')?.value?.trim();
+  const amount = parseFloat(document.getElementById('rec-cust-amount')?.value||0);
+  if(!customerName){showToast('اختر اسم الزبون','error');return;}
+  if(amount<=0){showToast('أدخل مبلغ صحيح','error');return;}
+  const paymentMethod = document.getElementById('rec-cust-method')?.value||'cash';
+  const chequeNum     = document.getElementById('rec-cust-cheque')?.value||'';
+  const description   = document.getElementById('rec-cust-desc')?.value||'';
+  const discountOnPayment = parseFloat(document.getElementById('rec-cust-discount')?.value||0);
+  const note          = document.getElementById('rec-cust-note')?.value||'';
+  const date          = document.getElementById('rec-cust-date')?.value||new Date().toISOString().split('T')[0];
+
+  db.invoiceCounters.receipt = (db.invoiceCounters.receipt||0)+1;
+  const receiptNum = 'REC-'+String(db.invoiceCounters.receipt).padStart(3,'0');
+
+  // تحديث رصيد الزبون
+  const cust = db.customers.find(c=>c.name===customerName);
+  if(cust) cust.balance = Math.max(0,(cust.balance||0)-(amount+discountOnPayment));
+
+  db.customerPayments = db.customerPayments||[];
+  db.customerPayments.push({ receiptNum, customerName, amount, paymentMethod, chequeNum, description, discountOnPayment, note, date });
+  saveData(db);
+
+  // reset الحقول
+  ['rec-cust-name','rec-cust-amount','rec-cust-cheque','rec-cust-desc','rec-cust-note'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  if(document.getElementById('rec-cust-discount')) document.getElementById('rec-cust-discount').value='0';
+
+  showToast('✅ تم حفظ الإيصال '+receiptNum+' — الرصيد بعد الإيصال: '+fmtUSD(cust?cust.balance:0),'success');
+  renderReceiptCustomer();
+}
+
+function renderReceiptSupplier() {
+  const nextNum = 'PAY-'+String((db.invoiceCounters.receipt||0)+1).padStart(3,'0');
+  const el = document.getElementById('rec-sup-num');
+  if(el) el.textContent = nextNum;
+  const dateEl = document.getElementById('rec-sup-date');
+  if(dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+  const datalist = document.getElementById('rec-sup-datalist');
+  if(datalist) datalist.innerHTML = db.suppliers.filter(s=>s.name).map(s=>`<option value="${s.name}">`).join('');
+  renderReceiptSupplierList();
+}
+
+function renderReceiptSupplierList() {
+  const el = document.getElementById('rec-sup-list');
+  if(!el) return;
+  const list = (db.supplierPayments||[]).slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,20);
+  if(list.length===0){ el.innerHTML='<div class="empty-state">لا توجد إيصالات دفع بعد</div>'; return; }
+  el.innerHTML = list.map(p=>`
+    <div class="invoice-row">
+      <span class="inv-num">${p.receiptNum||'—'}</span>
+      <span class="inv-customer">${p.supplierName||'—'}</span>
+      <span class="inv-type type-purchase">دفع</span>
+      <span class="inv-total">${fmtUSD(p.amount)}</span>
+      <span class="inv-date">${p.date||''}</span>
+    </div>`).join('');
+}
+
+function saveReceiptSupplier() {
+  const supplierName = document.getElementById('rec-sup-name')?.value?.trim();
+  const amount = parseFloat(document.getElementById('rec-sup-amount')?.value||0);
+  if(!supplierName){showToast('اختر اسم المورد','error');return;}
+  if(amount<=0){showToast('أدخل مبلغ صحيح','error');return;}
+  const paymentMethod = document.getElementById('rec-sup-method')?.value||'cash';
+  const chequeNum     = document.getElementById('rec-sup-cheque')?.value||'';
+  const description   = document.getElementById('rec-sup-desc')?.value||'';
+  const note          = document.getElementById('rec-sup-note')?.value||'';
+  const date          = document.getElementById('rec-sup-date')?.value||new Date().toISOString().split('T')[0];
+
+  db.invoiceCounters.receipt = (db.invoiceCounters.receipt||0)+1;
+  const receiptNum = 'PAY-'+String(db.invoiceCounters.receipt).padStart(3,'0');
+
+  // تحديث رصيد المورد
+  const sup = db.suppliers.find(s=>s.name===supplierName);
+  if(sup) sup.balance = Math.max(0,(sup.balance||0)-amount);
+
+  db.supplierPayments = db.supplierPayments||[];
+  db.supplierPayments.push({ receiptNum, supplierName, amount, paymentMethod, chequeNum, description, note, date });
+  saveData(db);
+
+  ['rec-sup-name','rec-sup-amount','rec-sup-cheque','rec-sup-desc','rec-sup-note'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+
+  showToast('✅ تم حفظ إيصال الدفع '+receiptNum+' — رصيد المورد: '+fmtUSD(sup?sup.balance:0),'success');
+  renderReceiptSupplier();
+}
 // ============================================================
 // النسخ الاحتياطية
 // ============================================================
