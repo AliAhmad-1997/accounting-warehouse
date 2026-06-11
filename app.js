@@ -2359,47 +2359,49 @@ function renderReceiptCustomer() {
 }
 
 function renderDeferredCustomers() {
-  const el = document.getElementById('rec-deferred-customers');
+  var el = document.getElementById('rec-deferred-customers');
   if(!el) return;
 
-  const debtors = (db.customers||[])
-    .map(c => ({ ...c, acc: getCustomerAccount(c.name) }))
-    .filter(c => c.acc.remaining > 0)
-    .sort((a,b) => b.acc.remaining - a.acc.remaining);
+  var debtors = (db.customers||[])
+    .map(function(c){ return Object.assign({}, c, {acc: getCustomerAccount(c.name)}); })
+    .filter(function(c){ return c.acc.remaining > 0; })
+    .sort(function(a,b){ return b.acc.remaining - a.acc.remaining; });
 
   if(debtors.length === 0) {
     el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);background:#f0fdf4;border-radius:8px;font-size:13px;">✅ لا توجد ديون مستحقة على الزبائن</div>';
     return;
   }
 
-  el.innerHTML = debtors.map(c => {
-    const deferredInvs = c.acc.deferredInvoices || [];
-    const rowsHTML = deferredInvs.map(inv => {
-      const paidOnInv = (db.customerPayments||[])
-        .filter(p => p.customerName === c.name &&
-          (p.linkedInvoice === inv.number ||
-           (p.description||'') === ('دفعة مع الفاتورة ' + inv.number)))
-        .reduce((s,p) => s + (p.amount||0) + (p.discountOnPayment||0), 0);
-      const invRemaining = Math.max(0, inv.total - paidOnInv);
-      if(invRemaining <= 0) return '';
-      return '<tr style="border-bottom:1px solid #e2e8f0;">' +
+  var html = '';
+  debtors.forEach(function(c) {
+    var deferredInvs = c.acc.deferredInvoices || [];
+    var rowsHTML = '';
+    deferredInvs.forEach(function(inv) {
+      var paidOnInv = (db.customerPayments||[])
+        .filter(function(p){
+          return p.customerName === c.name &&
+            (p.linkedInvoice === inv.number || (p.description||'') === ('دفعة مع الفاتورة ' + inv.number));
+        })
+        .reduce(function(s,p){ return s + (p.amount||0) + (p.discountOnPayment||0); }, 0);
+      var invRem = Math.max(0, inv.total - paidOnInv);
+      if(invRem <= 0) return;
+      rowsHTML += '<tr style="border-bottom:1px solid #e2e8f0;">' +
         '<td style="padding:7px 10px;font-weight:600;color:#1F3864;font-size:12px;">' + inv.number + '</td>' +
         '<td style="padding:7px 10px;color:var(--text-muted);font-size:12px;">' + inv.date + '</td>' +
         '<td style="padding:7px 10px;font-size:12px;">' + fmtUSD(inv.total) + '</td>' +
         '<td style="padding:7px 10px;color:#16a34a;font-size:12px;">' + fmtUSD(paidOnInv) + '</td>' +
-        '<td style="padding:7px 10px;color:#dc2626;font-weight:700;font-size:12px;">' + fmtUSD(invRemaining) + '</td>' +
+        '<td style="padding:7px 10px;color:#dc2626;font-weight:700;font-size:12px;">' + fmtUSD(invRem) + '</td>' +
         '<td style="padding:7px 10px;text-align:center;">' +
-          '<button onclick="payInvoiceAmount('' + c.name + '','' + inv.number + '',' + invRemaining + ')" ' +
+          '<button data-cname="' + c.name + '" data-invnum="' + inv.number + '" data-invrem="' + invRem + '" ' +
+            'onclick="payInvoiceAmountBtn(this)" ' +
             'style="padding:4px 12px;font-size:11px;background:#2E75B6;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;">دفع</button>' +
         '</td>' +
         '</tr>';
-    }).filter(r => r !== '').join('');
-
-    if(!rowsHTML) return '';
-
-    return '<div style="margin-bottom:10px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">' +
-      '<div style="background:#1F3864;color:white;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;" ' +
-           'onclick="selectDeferredCustomer('' + c.name + '',' + c.acc.remaining + ')">' +
+    });
+    if(!rowsHTML) return;
+    html += '<div style="margin-bottom:10px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">' +
+      '<div data-cname="' + c.name + '" data-crem="' + c.acc.remaining + '" onclick="selectDeferredCustomerBtn(this)" ' +
+        'style="background:#1F3864;color:white;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">' +
         '<span style="font-weight:700;font-size:13px;">👤 ' + c.name + '</span>' +
         '<div style="display:flex;gap:12px;align-items:center;font-size:12px;">' +
           '<span>إجمالي الآجل: ' + fmtUSD(c.acc.totalDeferred) + '</span>' +
@@ -2418,145 +2420,60 @@ function renderDeferredCustomers() {
         '<tbody>' + rowsHTML + '</tbody>' +
       '</table>' +
     '</div>';
-  }).filter(r => r !== '').join('');
-
-  if(!el.innerHTML) {
-    el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);background:#f0fdf4;border-radius:8px;font-size:13px;">✅ لا توجد ديون مستحقة</div>';
-  }
-}
-// دفع مبلغ مباشرة على فاتورة محددة
-function payInvoiceAmount(customerName, invoiceNumber, remaining) {
-  const nameEl = document.getElementById('rec-cust-name');
-  const amtEl  = document.getElementById('rec-cust-amount');
-  const descEl = document.getElementById('rec-cust-desc');
-  if(nameEl) nameEl.value = customerName;
-  if(amtEl)  amtEl.value  = Math.round(remaining * 100) / 100;
-  if(descEl) descEl.value = 'سداد فاتورة ' + invoiceNumber;
-  // حفظ رقم الفاتورة المرتبطة مؤقتاً
-  document.getElementById('rec-cust-amount').dataset.linkedInvoice = invoiceNumber;
-  document.getElementById('rec-cust-name')?.scrollIntoView({ behavior:'smooth', block:'center' });
-}
-
-function selectDeferredCustomer(name, remaining) {
-  const nameEl = document.getElementById('rec-cust-name');
-  const amtEl  = document.getElementById('rec-cust-amount');
-  if(nameEl) nameEl.value = name;
-  if(amtEl)  { amtEl.value = Math.round(remaining * 100) / 100; amtEl.dataset.linkedInvoice = ''; }
-  document.getElementById('rec-cust-name')?.scrollIntoView({ behavior:'smooth', block:'center' });
-}
-
-function renderReceiptCustomerList() {
-  const el = document.getElementById('rec-cust-list');
-  if(!el) return;
-  const list = (db.customerPayments||[]).slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,20);
-  if(list.length===0){ el.innerHTML='<div class="empty-state">لا توجد إيصالات قبض بعد</div>'; return; }
-  el.innerHTML = list.map(p=>`
-    <div class="invoice-row">
-      <span class="inv-num">${p.receiptNum||'—'}</span>
-      <span class="inv-customer">${p.customerName||'—'}</span>
-      <span class="inv-type type-sale">قبض</span>
-      <span class="inv-total">${fmtUSD(p.amount)}</span>
-      <span class="inv-date">${p.date||''}</span>
-      ${p.linkedInvoice ? `<span style="font-size:11px;color:#2E75B6;background:#EBF3FB;padding:2px 6px;border-radius:10px">${p.linkedInvoice}</span>` : ''}
-    </div>`).join('');
-}
-
-function saveReceiptCustomer() {
-  const customerName = document.getElementById('rec-cust-name')?.value?.trim();
-  const amount = parseFloat(document.getElementById('rec-cust-amount')?.value||0);
-  if(!customerName){showToast('اختر اسم الزبون','error');return;}
-  if(amount<=0){showToast('أدخل مبلغ صحيح','error');return;}
-  const paymentMethod = document.getElementById('rec-cust-method')?.value||'cash';
-  const chequeNum     = document.getElementById('rec-cust-cheque')?.value||'';
-  const description   = document.getElementById('rec-cust-desc')?.value||'';
-  const discountOnPayment = parseFloat(document.getElementById('rec-cust-discount')?.value||0);
-  const note          = document.getElementById('rec-cust-note')?.value||'';
-  const date          = document.getElementById('rec-cust-date')?.value||new Date().toISOString().split('T')[0];
-  const linkedInvoice = document.getElementById('rec-cust-amount')?.dataset?.linkedInvoice || '';
-
-  db.invoiceCounters.receipt = (db.invoiceCounters.receipt||0)+1;
-  const receiptNum = 'REC-'+String(db.invoiceCounters.receipt).padStart(3,'0');
-
-  // تحديث رصيد الزبون
-  const cust = db.customers.find(c=>c.name===customerName);
-  if(cust) cust.balance = Math.max(0,(cust.balance||0)-(amount+discountOnPayment));
-
-  // الدفعات تتتبع عبر customerPayments فقط — لا نعدّل paidAmount الفاتورة لتفادي الازدواجية
-
-  db.customerPayments = db.customerPayments||[];
-  db.customerPayments.push({ receiptNum, customerName, amount, paymentMethod, chequeNum, description, discountOnPayment, note, date, linkedInvoice });
-  saveData(db);
-
-  // reset الحقول
-  ['rec-cust-name','rec-cust-amount','rec-cust-cheque','rec-cust-desc','rec-cust-note'].forEach(id=>{
-    const el=document.getElementById(id); if(el) { el.value=''; if(el.dataset) el.dataset.linkedInvoice=''; }
   });
-  if(document.getElementById('rec-cust-discount')) document.getElementById('rec-cust-discount').value='0';
-
-  const acc = getCustomerAccount(customerName);
-  showToast('✅ تم حفظ الإيصال '+receiptNum+' — المتبقي: '+fmtUSD(acc.remaining),'success');
-  renderReceiptCustomer();
+  el.innerHTML = html || '<div style="padding:20px;text-align:center;color:var(--text-muted);background:#f0fdf4;border-radius:8px;font-size:13px;">✅ كل الفواتير مسددة</div>';
 }
 
-
-// ============================================================
-// إيصالات الدفع للموردين — مع جدول الفواتير الآجل
-// ============================================================
-
-function renderReceiptSupplier() {
-  const nextNum = 'PAY-'+String((db.invoiceCounters.receipt||0)+1).padStart(3,'0');
-  const el = document.getElementById('rec-sup-num');
-  if(el) el.textContent = nextNum;
-  const dateEl = document.getElementById('rec-sup-date');
-  if(dateEl) dateEl.value = new Date().toISOString().split('T')[0];
-  const datalist = document.getElementById('rec-sup-datalist');
-  if(datalist) datalist.innerHTML = (db.suppliers||[]).filter(s=>s.name).map(s=>`<option value="${s.name}">`).join('');
-  renderDeferredSuppliers();
-  renderReceiptSupplierList();
+function payInvoiceAmountBtn(btn) {
+  payInvoiceAmount(btn.dataset.cname, btn.dataset.invnum, parseFloat(btn.dataset.invrem));
 }
-
+function selectDeferredCustomerBtn(el) {
+  selectDeferredCustomer(el.dataset.cname, parseFloat(el.dataset.crem));
+}
 function renderDeferredSuppliers() {
-  const el = document.getElementById('rec-deferred-suppliers');
+  var el = document.getElementById('rec-deferred-suppliers');
   if(!el) return;
 
-  const debtors = (db.suppliers||[])
-    .map(s => ({ ...s, acc: getSupplierAccount(s.name) }))
-    .filter(s => s.acc.remaining > 0)
-    .sort((a,b) => b.acc.remaining - a.acc.remaining);
+  var debtors = (db.suppliers||[])
+    .map(function(s){ return Object.assign({}, s, {acc: getSupplierAccount(s.name)}); })
+    .filter(function(s){ return s.acc.remaining > 0; })
+    .sort(function(a,b){ return b.acc.remaining - a.acc.remaining; });
 
   if(debtors.length === 0) {
     el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);background:#f0fdf4;border-radius:8px;font-size:13px;">✅ لا توجد مستحقات للموردين</div>';
     return;
   }
 
-  el.innerHTML = debtors.map(s => {
-    const deferredInvs = s.acc.deferredInvoices || [];
-    const rowsHTML = deferredInvs.map(inv => {
-      const paidOnInv = (db.supplierPayments||[])
-        .filter(p => p.supplierName === s.name &&
-          (p.linkedInvoice === inv.number ||
-           (p.description||'') === ('دفعة مع الفاتورة ' + inv.number)))
-        .reduce((s,p) => s + (p.amount||0), 0);
-      const invRemaining = Math.max(0, inv.total - paidOnInv);
-      if(invRemaining <= 0) return '';
-      return '<tr style="border-bottom:1px solid #e2e8f0;">' +
+  var html = '';
+  debtors.forEach(function(s) {
+    var deferredInvs = s.acc.deferredInvoices || [];
+    var rowsHTML = '';
+    deferredInvs.forEach(function(inv) {
+      var paidOnInv = (db.supplierPayments||[])
+        .filter(function(p){
+          return p.supplierName === s.name &&
+            (p.linkedInvoice === inv.number || (p.description||'') === ('دفعة مع الفاتورة ' + inv.number));
+        })
+        .reduce(function(sum,p){ return sum + (p.amount||0); }, 0);
+      var invRem = Math.max(0, inv.total - paidOnInv);
+      if(invRem <= 0) return;
+      rowsHTML += '<tr style="border-bottom:1px solid #e2e8f0;">' +
         '<td style="padding:7px 10px;font-weight:600;color:#15803d;font-size:12px;">' + inv.number + '</td>' +
         '<td style="padding:7px 10px;color:var(--text-muted);font-size:12px;">' + inv.date + '</td>' +
         '<td style="padding:7px 10px;font-size:12px;">' + fmtUSD(inv.total) + '</td>' +
         '<td style="padding:7px 10px;color:#16a34a;font-size:12px;">' + fmtUSD(paidOnInv) + '</td>' +
-        '<td style="padding:7px 10px;color:#dc2626;font-weight:700;font-size:12px;">' + fmtUSD(invRemaining) + '</td>' +
+        '<td style="padding:7px 10px;color:#dc2626;font-weight:700;font-size:12px;">' + fmtUSD(invRem) + '</td>' +
         '<td style="padding:7px 10px;text-align:center;">' +
-          '<button onclick="paySupplierInvoiceAmount('' + s.name + '','' + inv.number + '',' + invRemaining + ')" ' +
+          '<button data-sname="' + s.name + '" data-invnum="' + inv.number + '" data-invrem="' + invRem + '" ' +
+            'onclick="paySupplierInvoiceAmountBtn(this)" ' +
             'style="padding:4px 12px;font-size:11px;background:#15803d;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;">دفع</button>' +
         '</td>' +
         '</tr>';
-    }).filter(r => r !== '').join('');
-
-    if(!rowsHTML) return '';
-
-    return '<div style="margin-bottom:10px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">' +
-      '<div style="background:#15803d;color:white;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;" ' +
-           'onclick="selectDeferredSupplier('' + s.name + '',' + s.acc.remaining + ')">' +
+    });
+    if(!rowsHTML) return;
+    html += '<div style="margin-bottom:10px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">' +
+      '<div data-sname="' + s.name + '" data-srem="' + s.acc.remaining + '" onclick="selectDeferredSupplierBtn(this)" ' +
+        'style="background:#15803d;color:white;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;">' +
         '<span style="font-weight:700;font-size:13px;">🏭 ' + s.name + '</span>' +
         '<div style="display:flex;gap:12px;align-items:center;font-size:12px;">' +
           '<span>إجمالي الآجل: ' + fmtUSD(s.acc.totalDeferred) + '</span>' +
@@ -2575,11 +2492,15 @@ function renderDeferredSuppliers() {
         '<tbody>' + rowsHTML + '</tbody>' +
       '</table>' +
     '</div>';
-  }).filter(r => r !== '').join('');
+  });
+  el.innerHTML = html || '<div style="padding:20px;text-align:center;color:var(--text-muted);background:#f0fdf4;border-radius:8px;font-size:13px;">✅ كل الفواتير مسددة</div>';
+}
 
-  if(!el.innerHTML) {
-    el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);background:#f0fdf4;border-radius:8px;font-size:13px;">✅ لا توجد مستحقات للموردين</div>';
-  }
+function paySupplierInvoiceAmountBtn(btn) {
+  paySupplierInvoiceAmount(btn.dataset.sname, btn.dataset.invnum, parseFloat(btn.dataset.invrem));
+}
+function selectDeferredSupplierBtn(el) {
+  selectDeferredSupplier(el.dataset.sname, parseFloat(el.dataset.srem));
 }
 function paySupplierInvoiceAmount(supplierName, invoiceNumber, remaining) {
   const nameEl = document.getElementById('rec-sup-name');
