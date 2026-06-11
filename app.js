@@ -135,7 +135,7 @@ const defaultData = {
   suppliers: [],
   salesInvoices: [],
   purchaseInvoices: [],
-  invoiceCounters: { sale:0, purchase:0, returnSale:0, returnPurchase:0 }
+  invoiceCounters: { sale:0, purchase:0, returnSale:0, returnPurchase:0, receipt:0 }
 };
 
 // ============================================================
@@ -252,7 +252,7 @@ function fmt(n) { return fmtOld(n); }
 // ============================================================
 // ROUTER
 // ============================================================
-const pages = ['dashboard','invoice-sale','invoice-purchase','items','customers','suppliers','settings','reports','returns'];
+const pages = ['dashboard','invoice-sale','invoice-purchase','items','customers','suppliers','settings','reports','returns','receipt-customer','receipt-supplier'];
 let currentPage = 'dashboard';
 
 function navigate(page) {

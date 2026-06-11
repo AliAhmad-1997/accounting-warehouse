@@ -722,6 +722,15 @@
         </span>
         المرتجعات
       </div>
+      <div class="nav-section-label" style="padding:12px 8px 4px;font-weight:700;letter-spacing:1px;">الإيصالات</div>
+      <div class="nav-item" data-page="receipt-customer" onclick="navigate('receipt-customer')">
+        <span class="icon" style="width:20px;display:flex;align-items:center;justify-content:center;">🧾</span>
+        <span>قبض من زبون</span>
+      </div>
+      <div class="nav-item" data-page="receipt-supplier" onclick="navigate('receipt-supplier')">
+        <span class="icon" style="width:20px;display:flex;align-items:center;justify-content:center;">💸</span>
+        <span>دفع لمورد</span>
+      </div>
       <div class="nav-item" data-page="reports" onclick="navigate('reports')">
         <span class="icon" style="width:20px;display:flex;align-items:center;justify-content:center;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -889,11 +898,44 @@
         <button class="btn btn-secondary" onclick="addSaleLine()">+ إضافة سطر</button>
       </div>
       <div class="invoice-totals">
-        <div>
-          <div class="subtotal-line">المجموع: <strong id="sale-subtotal">0</strong></div>
-          <div class="total-label">الإجمالي النهائي</div>
-          <div class="total-value"><span id="sale-total">0</span></div>
-          <div id="sale-total-equiv" style="margin-top:var(--space-1)"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);align-items:start;margin-bottom:var(--space-3)">
+          <div>
+            <div class="subtotal-line">المجموع: <strong id="sale-subtotal">0</strong></div>
+            <div style="margin-top:var(--space-2);display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+              <label style="font-size:13px;color:var(--text-muted)">خصم %</label>
+              <input type="number" id="sale-discount" class="input" style="width:75px" value="0" min="0" max="100" onchange="renderSaleTotal()">
+              <label style="font-size:13px;color:var(--text-muted)">ضريبة %</label>
+              <input type="number" id="sale-tax-rate" class="input" style="width:75px" value="0" min="0" onchange="renderSaleTotal()">
+            </div>
+            <div class="total-label" style="margin-top:var(--space-2)">الإجمالي النهائي</div>
+            <div class="total-value"><span id="sale-total">0</span></div>
+            <div id="sale-total-equiv" style="margin-top:var(--space-1)"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:var(--space-2)">
+            <div style="display:flex;gap:8px;align-items:center">
+              <label style="font-size:13px;color:var(--text-muted);min-width:72px">نوع السعر</label>
+              <select id="sale-price-type" class="input input-sm" style="flex:1" onchange="renderSaleLines()">
+                <option value="retail">مستهلك</option>
+                <option value="wholesale">جملة</option>
+                <option value="special">خاص</option>
+              </select>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <label style="font-size:13px;color:var(--text-muted);min-width:72px">الدفع</label>
+              <select id="sale-payment-type" class="input input-sm" style="flex:1">
+                <option value="cash">نقداً</option>
+                <option value="deferred">آجل</option>
+              </select>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <label style="font-size:13px;color:var(--text-muted);min-width:72px">مدفوع $</label>
+              <input type="number" id="sale-paid-amount" class="input input-sm" style="flex:1" placeholder="الكامل إن فارغ" min="0" step="0.01">
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <label style="font-size:13px;color:var(--text-muted);min-width:72px">ملاحظة</label>
+              <input type="text" id="sale-note" class="input input-sm" style="flex:1" placeholder="ملاحظة اختيارية">
+            </div>
+          </div>
         </div>
         <div class="flex gap-3">
           <button class="btn btn-secondary btn-lg" onclick="printCurrentInvoice()">🖨️ طباعة / PDF</button>
@@ -986,6 +1028,33 @@
           <div class="total-label">إجمالي الفاتورة</div>
           <div class="total-value"><span id="pur-total">0</span></div>
           <div id="pur-total-equiv" style="margin-top:var(--space-1)"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:var(--space-2);min-width:280px">
+          <div style="display:flex;gap:8px;align-items:center">
+            <label style="font-size:13px;color:var(--text-muted);min-width:80px">رقم الوثيقة</label>
+            <input type="text" id="pur-supplier-invoice" class="input input-sm" style="flex:1" placeholder="رقم فاتورة المورد">
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <label style="font-size:13px;color:var(--text-muted);min-width:80px">خصم %</label>
+            <input type="number" id="pur-discount" class="input input-sm" style="width:75px" value="0" min="0">
+            <label style="font-size:13px;color:var(--text-muted)">شحن $</label>
+            <input type="number" id="pur-shipping" class="input input-sm" style="width:90px" value="0" min="0" step="0.01">
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <label style="font-size:13px;color:var(--text-muted);min-width:80px">الدفع</label>
+            <select id="pur-payment-type" class="input input-sm" style="flex:1">
+              <option value="cash">نقداً</option>
+              <option value="deferred">آجل</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <label style="font-size:13px;color:var(--text-muted);min-width:80px">مدفوع $</label>
+            <input type="number" id="pur-paid-amount" class="input input-sm" style="flex:1" placeholder="الكامل إن فارغ" min="0" step="0.01">
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <label style="font-size:13px;color:var(--text-muted);min-width:80px">ملاحظة</label>
+            <input type="text" id="pur-note" class="input input-sm" style="flex:1" placeholder="ملاحظة اختيارية">
+          </div>
         </div>
         <button class="btn btn-success btn-lg" onclick="savePurchaseInvoice()">💾 حفظ الفاتورة</button>
       </div>
@@ -1839,4 +1908,121 @@
 <script src="app.js"></script>
 
 
-</body></html>
+
+    <!-- ============================================================ -->
+    <!-- صفحة إيصال القبض من الزبائن -->
+    <!-- ============================================================ -->
+    <div id="page-receipt-customer" class="hidden">
+      <div class="page-header">
+        <h1 class="page-title">🧾 إيصال القبض</h1>
+        <span style="color:var(--text-muted);font-size:14px">سند رقم: <strong id="rec-cust-num">REC-001</strong></span>
+      </div>
+      <div class="card">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4)">
+          <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+            <div style="display:flex;gap:8px;align-items:center">
+              <label class="label" style="min-width:90px">التاريخ</label>
+              <input type="date" id="rec-cust-date" class="input" style="flex:1">
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <label class="label" style="min-width:90px">اسم الزبون</label>
+              <input type="text" id="rec-cust-name" class="input" style="flex:1" list="rec-cust-datalist" placeholder="اسم الزبون">
+              <datalist id="rec-cust-datalist"></datalist>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <label class="label" style="min-width:90px">المبلغ $</label>
+              <input type="number" id="rec-cust-amount" class="input" style="flex:1" min="0" step="0.01" placeholder="0.00">
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <label class="label" style="min-width:90px">طريقة الدفع</label>
+              <select id="rec-cust-method" class="input" style="flex:1">
+                <option value="cash">نقداً</option>
+                <option value="cheque">شيك</option>
+                <option value="transfer">حوالة</option>
+              </select>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <label class="label" style="min-width:90px">رقم الشيك</label>
+              <input type="text" id="rec-cust-cheque" class="input" style="flex:1" placeholder="اختياري">
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+            <div style="display:flex;gap:8px;align-items:center">
+              <label class="label" style="min-width:90px">البيان</label>
+              <input type="text" id="rec-cust-desc" class="input" style="flex:1" placeholder="سبب الدفعة">
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <label class="label" style="min-width:90px">حسم مع الدفعة $</label>
+              <input type="number" id="rec-cust-discount" class="input" style="flex:1" value="0" min="0" step="0.01">
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <label class="label" style="min-width:90px">ملاحظة</label>
+              <input type="text" id="rec-cust-note" class="input" style="flex:1" placeholder="اختياري">
+            </div>
+            <button class="btn btn-success btn-lg" onclick="saveReceiptCustomer()" style="margin-top:var(--space-2)">💾 حفظ الإيصال</button>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:var(--space-4)">
+        <div class="card-title">آخر إيصالات القبض</div>
+        <div id="rec-cust-list"></div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- صفحة إيصال الدفع للموردين -->
+    <!-- ============================================================ -->
+    <div id="page-receipt-supplier" class="hidden">
+      <div class="page-header">
+        <h1 class="page-title">💸 إيصال الدفع للمورد</h1>
+        <span style="color:var(--text-muted);font-size:14px">سند رقم: <strong id="rec-sup-num">PAY-001</strong></span>
+      </div>
+      <div class="card">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4)">
+          <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+            <div style="display:flex;gap:8px;align-items:center">
+              <label class="label" style="min-width:90px">التاريخ</label>
+              <input type="date" id="rec-sup-date" class="input" style="flex:1">
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <label class="label" style="min-width:90px">اسم المورد</label>
+              <input type="text" id="rec-sup-name" class="input" style="flex:1" list="rec-sup-datalist" placeholder="اسم المورد">
+              <datalist id="rec-sup-datalist"></datalist>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <label class="label" style="min-width:90px">المبلغ $</label>
+              <input type="number" id="rec-sup-amount" class="input" style="flex:1" min="0" step="0.01" placeholder="0.00">
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <label class="label" style="min-width:90px">طريقة الدفع</label>
+              <select id="rec-sup-method" class="input" style="flex:1">
+                <option value="cash">نقداً</option>
+                <option value="cheque">شيك</option>
+                <option value="transfer">حوالة</option>
+              </select>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <label class="label" style="min-width:90px">رقم الشيك</label>
+              <input type="text" id="rec-sup-cheque" class="input" style="flex:1" placeholder="اختياري">
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+            <div style="display:flex;gap:8px;align-items:center">
+              <label class="label" style="min-width:90px">البيان</label>
+              <input type="text" id="rec-sup-desc" class="input" style="flex:1" placeholder="سبب الدفعة">
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <label class="label" style="min-width:90px">ملاحظة</label>
+              <input type="text" id="rec-sup-note" class="input" style="flex:1" placeholder="اختياري">
+            </div>
+            <button class="btn btn-success btn-lg" onclick="saveReceiptSupplier()" style="margin-top:var(--space-2)">💾 حفظ إيصال الدفع</button>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:var(--space-4)">
+        <div class="card-title">آخر إيصالات الدفع</div>
+        <div id="rec-sup-list"></div>
+      </div>
+    </div>
+
+  </body></html>
