@@ -1304,9 +1304,8 @@ function showToast(msg,type='success') {
 function renderReports() {
   const filterType = document.getElementById('report-filter-type')?.value || 'monthly';
   const filterMonth = document.getElementById('report-filter-month')?.value || '';
-  const filterYear = document.getElementById('report-filter-year')?.value || new Date().getFullYear();
+  const filterYear  = document.getElementById('report-filter-year')?.value  || new Date().getFullYear();
 
-  // فلترة الفواتير حسب الفترة
   function matchPeriod(inv) {
     const d = new Date(inv.date);
     if (filterType === 'daily') {
@@ -1318,66 +1317,169 @@ function renderReports() {
       return d.getFullYear() === parseInt(filterYear);
     } else if (filterType === 'custom') {
       const from = document.getElementById('report-from')?.value;
-      const to = document.getElementById('report-to')?.value;
+      const to   = document.getElementById('report-to')?.value;
       if (from && to) return inv.date >= from && inv.date <= to;
       return true;
     }
     return true;
   }
 
-  const sales = db.salesInvoices.filter(matchPeriod);
+  const sales     = db.salesInvoices.filter(matchPeriod);
   const purchases = db.purchaseInvoices.filter(matchPeriod);
+  const returns   = (db.returns || []).filter(matchPeriod);
 
-  const totalSales = sales.reduce((s, i) => s + (i.total || 0), 0);
+  const totalSales     = sales.reduce((s, i) => s + (i.total || 0), 0);
   const totalPurchases = purchases.reduce((s, i) => s + (i.total || 0), 0);
-  const profit = totalSales - totalPurchases;
-  const margin = totalSales > 0 ? ((profit / totalSales) * 100).toFixed(1) : 0;
+  const totalReturns   = returns.reduce((s, r) => s + (r.total || 0), 0);
+  const profit  = totalSales - totalPurchases;
+  const margin  = totalSales > 0 ? ((profit / totalSales) * 100).toFixed(1) : 0;
+  const avgInv  = sales.length > 0 ? totalSales / sales.length : 0;
+  const activeCusts = [...new Set(sales.map(i => i.customerName).filter(Boolean))].length;
 
-  // KPI
-  document.getElementById('rep-total-sales').textContent = fmtUSD(totalSales);
-  document.getElementById('rep-sales-sub').textContent = sales.length + ' فاتورة';
+  // ── KPI بطاقات رئيسية ──
+  document.getElementById('rep-total-sales').textContent     = fmtUSD(totalSales);
+  document.getElementById('rep-sales-sub').textContent       = sales.length + ' فاتورة';
+  document.getElementById('rep-sales-count').textContent     = fmtOld(usdToOld(totalSales));
   document.getElementById('rep-total-purchases').textContent = fmtUSD(totalPurchases);
-  document.getElementById('rep-purchases-sub').textContent = purchases.length + ' فاتورة';
-  const profitEl = document.getElementById('rep-profit');
-  profitEl.textContent = fmtUSD(profit);
-  profitEl.style.color = profit >= 0 ? 'var(--green-700)' : 'var(--red-600)';
-  document.getElementById('rep-margin').textContent = 'هامش: ' + margin + '%';
-  document.getElementById('rep-sales-count').textContent = fmtOld(usdToOld(totalSales));
+  document.getElementById('rep-purchases-sub').textContent   = purchases.length + ' فاتورة';
   document.getElementById('rep-purchases-count').textContent = fmtOld(usdToOld(totalPurchases));
-  document.getElementById('rep-profit-old').textContent = fmtOld(usdToOld(profit));
+  document.getElementById('rep-profit').textContent          = fmtUSD(profit);
+  document.getElementById('rep-margin').textContent          = 'هامش الربح: ' + margin + '%';
+  document.getElementById('rep-profit-old').textContent      = fmtOld(usdToOld(profit));
 
-  // جدول المبيعات
+  // لون بطاقة الربح
+  const profitCard = document.getElementById('rep-profit-card');
+  if (profitCard) {
+    profitCard.style.background = profit >= 0
+      ? 'linear-gradient(135deg,#10b981,#059669)'
+      : 'linear-gradient(135deg,#ef4444,#dc2626)';
+    profitCard.style.boxShadow = profit >= 0
+      ? '0 4px 16px rgba(16,185,129,.3)'
+      : '0 4px 16px rgba(239,68,68,.3)';
+  }
+
+  // ── بطاقات ثانوية ──
+  const retEl = document.getElementById('rep-returns-total');
+  const retCnt = document.getElementById('rep-returns-count');
+  const avgEl  = document.getElementById('rep-avg-invoice');
+  const custEl = document.getElementById('rep-active-customers');
+  const salesBadge = document.getElementById('rep-sales-badge');
+  const purBadge   = document.getElementById('rep-pur-badge');
+  if (retEl)  retEl.textContent  = fmtUSD(totalReturns);
+  if (retCnt) retCnt.textContent = returns.length + ' مرتجع';
+  if (avgEl)  avgEl.textContent  = fmtUSD(avgInv);
+  if (custEl) custEl.textContent = activeCusts;
+  if (salesBadge) salesBadge.textContent = sales.length + ' فاتورة';
+  if (purBadge)   purBadge.textContent   = purchases.length + ' فاتورة';
+
+  // ── أعلى الزبائن ──
+  const custMap = {};
+  sales.forEach(inv => {
+    const n = inv.customerName || '—';
+    custMap[n] = (custMap[n] || 0) + (inv.total || 0);
+  });
+  const topCusts = Object.entries(custMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const topCustsEl = document.getElementById('rep-top-customers');
+  if (topCustsEl) {
+    if (topCusts.length === 0) {
+      topCustsEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px">لا توجد بيانات</div>';
+    } else {
+      const maxVal = topCusts[0][1];
+      topCustsEl.innerHTML = topCusts.map(([name, val], i) => {
+        const pct = maxVal > 0 ? Math.round((val/maxVal)*100) : 0;
+        const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+        return `<div style="padding:10px 16px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;gap:12px">
+          <span style="font-size:18px">${medals[i]||''}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
+            <div style="background:#e5e7eb;border-radius:999px;height:5px;margin-top:5px;overflow:hidden">
+              <div style="background:linear-gradient(90deg,#0ea5e9,#3b82f6);height:5px;width:${pct}%;border-radius:999px"></div>
+            </div>
+          </div>
+          <span style="font-size:13px;font-weight:700;color:#0ea5e9;white-space:nowrap">${fmtUSD(val)}</span>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // ── أعلى المواد مبيعاً ──
+  const itemMap = {};
+  sales.forEach(inv => {
+    (inv.lines||[]).forEach(l => {
+      const it = db.items.find(i=>i.id===l.itemId);
+      const name = it ? it.name : (l.itemId||'—');
+      itemMap[name] = (itemMap[name]||0) + (parseFloat(l.qty)||0);
+    });
+  });
+  const topItems = Object.entries(itemMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const topItemsEl = document.getElementById('rep-top-items');
+  if (topItemsEl) {
+    if (topItems.length === 0) {
+      topItemsEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px">لا توجد بيانات</div>';
+    } else {
+      const maxQty = topItems[0][1];
+      topItemsEl.innerHTML = topItems.map(([name, qty], i) => {
+        const pct = maxQty > 0 ? Math.round((qty/maxQty)*100) : 0;
+        const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+        const it = db.items.find(it=>it.name===name);
+        const unit = it ? it.unit : '';
+        return `<div style="padding:10px 16px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;gap:12px">
+          <span style="font-size:18px">${medals[i]||''}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
+            <div style="background:#e5e7eb;border-radius:999px;height:5px;margin-top:5px;overflow:hidden">
+              <div style="background:linear-gradient(90deg,#8b5cf6,#6d28d9);height:5px;width:${pct}%;border-radius:999px"></div>
+            </div>
+          </div>
+          <span style="font-size:13px;font-weight:700;color:#8b5cf6;white-space:nowrap">${qty} ${unit}</span>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // ── جدول المبيعات ──
   const salesTbody = document.getElementById('rep-sales-tbody');
-  if (sales.length === 0) {
-    salesTbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--text-muted)">لا توجد فواتير في هذه الفترة</td></tr>';
-  } else {
-    salesTbody.innerHTML = sales.map(inv =>
-      '<tr onclick="openInvoiceDetail(\'' + inv.number + '\')" style="cursor:pointer">' +
-      '<td><span class="inv-num">' + inv.number + '</span></td>' +
-      '<td>' + (inv.customerName || '—') + '</td>' +
-      '<td>' + inv.date + '</td>' +
-      '<td>' + (inv.discount > 0 ? inv.discount + '%' : '—') + '</td>' +
-      '<td><strong>' + fmtUSD(inv.total) + '</strong></td>' +
-      '</tr>'
-    ).join('');
+  if (salesTbody) {
+    if (sales.length === 0) {
+      salesTbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted)">لا توجد فواتير بيع في هذه الفترة</td></tr>';
+    } else {
+      salesTbody.innerHTML = sales.map(inv => {
+        const payBadge = inv.paymentType === 'cash'
+          ? '<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600">نقداً</span>'
+          : '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600">آجل</span>';
+        return `<tr onclick="openInvoiceDetail('${inv.number}')" style="cursor:pointer">
+          <td><span class="inv-num">${inv.number}</span></td>
+          <td style="font-weight:500">${inv.customerName || '—'}</td>
+          <td style="color:var(--text-muted)">${inv.date}</td>
+          <td style="text-align:center">${inv.discount > 0 ? `<span style="color:#f59e0b;font-weight:600">${inv.discount}%</span>` : '—'}</td>
+          <td style="text-align:center">${payBadge}</td>
+          <td style="text-align:left"><strong style="color:#0ea5e9">${fmtUSD(inv.total)}</strong></td>
+        </tr>`;
+      }).join('');
+    }
   }
 
-  // جدول المشتريات
+  // ── جدول المشتريات ──
   const purTbody = document.getElementById('rep-purchases-tbody');
-  if (purchases.length === 0) {
-    purTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--text-muted)">لا توجد فواتير في هذه الفترة</td></tr>';
-  } else {
-    purTbody.innerHTML = purchases.map(inv =>
-      '<tr onclick="openInvoiceDetail(\'' + inv.number + '\')" style="cursor:pointer">' +
-      '<td><span class="inv-num">' + inv.number + '</span></td>' +
-      '<td>' + (inv.supplierName || '—') + '</td>' +
-      '<td>' + inv.date + '</td>' +
-      '<td><strong>' + fmtUSD(inv.total) + '</strong></td>' +
-      '</tr>'
-    ).join('');
+  if (purTbody) {
+    if (purchases.length === 0) {
+      purTbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-muted)">لا توجد فواتير شراء في هذه الفترة</td></tr>';
+    } else {
+      purTbody.innerHTML = purchases.map(inv => {
+        const payBadge = inv.paymentType === 'cash'
+          ? '<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600">نقداً</span>'
+          : '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600">آجل</span>';
+        return `<tr onclick="openInvoiceDetail('${inv.number}')" style="cursor:pointer">
+          <td><span class="inv-num">${inv.number}</span></td>
+          <td style="font-weight:500">${inv.supplierName || '—'}</td>
+          <td style="color:var(--text-muted)">${inv.date}</td>
+          <td style="text-align:center">${payBadge}</td>
+          <td style="text-align:left"><strong style="color:#f59e0b">${fmtUSD(inv.total)}</strong></td>
+        </tr>`;
+      }).join('');
+    }
   }
 
-  // تحديث عنوان التقرير
   updateReportTitle(filterType, filterMonth, filterYear);
 }
 
