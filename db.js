@@ -9,6 +9,29 @@ const fs   = require('fs');
 let db = null; // better-sqlite3 instance
 
 // ============================================================
+// المواد الافتراضية — تُستخدم عند إنشاء قاعدة بيانات جديدة أو فارغة
+// ============================================================
+const DEFAULT_ITEMS = [
+  { id:'NUM-001', name:'إسمنت بورتلاندي عادي 42.5', type:'مواد بناء', unit:'كيس', unit2:'طن', factor:20, cost:2.33, price:2.67, minStock:10 },
+  { id:'NUM-002', name:'إسمنت أبيض', type:'مواد بناء', unit:'كيس', unit2:'طن', factor:20, cost:3.50, price:4.00, minStock:10 },
+  { id:'NUM-003', name:'حديد تسليح 10mm', type:'حديد وصلب', unit:'كيلو', unit2:'طن', factor:1000, cost:0.35, price:0.40, minStock:500 },
+  { id:'NUM-004', name:'حديد تسليح 12mm', type:'حديد وصلب', unit:'كيلو', unit2:'طن', factor:1000, cost:0.35, price:0.40, minStock:500 },
+  { id:'NUM-005', name:'حديد تسليح 16mm', type:'حديد وصلب', unit:'كيلو', unit2:'طن', factor:1000, cost:0.35, price:0.40, minStock:500 },
+  { id:'NUM-006', name:'رمل ناعم للبناء', type:'مواد بناء', unit:'م3', unit2:'طن', factor:1.5, cost:10.00, price:12.08, minStock:5 },
+  { id:'NUM-007', name:'رمل خشن للخرسانة', type:'مواد بناء', unit:'م3', unit2:'طن', factor:1.6, cost:8.33, price:10.42, minStock:5 },
+  { id:'NUM-008', name:'حجارة بازلت 20-40mm', type:'مواد بناء', unit:'م3', unit2:'طن', factor:1.7, cost:10.83, price:13.33, minStock:5 },
+  { id:'NUM-019', name:'أنابيب PVC 2 بوصة', type:'سباكة', unit:'متر', unit2:'طرد', factor:6, cost:1.00, price:1.25, minStock:20 },
+  { id:'NUM-020', name:'أنابيب PVC 4 بوصة', type:'سباكة', unit:'متر', unit2:'طرد', factor:6, cost:1.83, price:2.25, minStock:20 },
+  { id:'NUM-027', name:'كابل كهربائي 2.5mm²', type:'كهربائيات', unit:'متر', unit2:'لفة', factor:100, cost:0.71, price:0.88, minStock:50 },
+  { id:'NUM-028', name:'كابل كهربائي 4mm²', type:'كهربائيات', unit:'متر', unit2:'لفة', factor:100, cost:1.08, price:1.33, minStock:50 },
+  { id:'NUM-037', name:'دهان بلاستيك داخلي 17L', type:'دهانات', unit:'علبة', unit2:'كرتون', factor:4, cost:23.33, price:28.33, minStock:5 },
+  { id:'NUM-038', name:'دهان بلاستيك خارجي 17L', type:'دهانات', unit:'علبة', unit2:'كرتون', factor:4, cost:31.67, price:38.33, minStock:5 },
+  { id:'NUM-046', name:'سيراميك أرضيات 60×60', type:'مواد بناء', unit:'م2', unit2:'كرتون', factor:1.44, cost:10.00, price:12.33, minStock:20 },
+];
+
+
+
+// ============================================================
 // فتح / إنشاء قاعدة البيانات
 // ============================================================
 function openDatabase(userDataPath) {
@@ -282,7 +305,28 @@ function loadAll() {
   const invoiceCounters = { sale: 0, purchase: 0, receipt: 0 };
   cntRows.forEach(r => { invoiceCounters[r.key] = r.value; });
 
-  const items = db.prepare('SELECT * FROM items').all();
+  let items = db.prepare('SELECT * FROM items').all();
+  // ✅ لو items فاضية — أضف الافتراضيين تلقائياً واحفظهم
+  if (items.length === 0) {
+    const insItem = db.prepare(`
+      INSERT INTO items (id, name, type, unit, unit2, factor, cost, price, price2, price3,
+                         minStock, maxStock, barcode, barcode2, taxRate, brand, defaultSupplier, priceCurrency)
+      VALUES (@id, @name, @type, @unit, @unit2, @factor, @cost, @price, @price2, @price3,
+              @minStock, @maxStock, @barcode, @barcode2, @taxRate, @brand, @defaultSupplier, @priceCurrency)
+    `);
+    const insertDefaults = db.transaction(() => {
+      DEFAULT_ITEMS.forEach(item => insItem.run({
+        id: item.id, name: item.name, type: item.type,
+        unit: item.unit || '', unit2: item.unit2 || '',
+        factor: item.factor || 1, cost: item.cost || 0, price: item.price || 0,
+        price2: 0, price3: 0, minStock: item.minStock || 0, maxStock: 0,
+        barcode: '', barcode2: '', taxRate: 0, brand: '', defaultSupplier: '',
+        priceCurrency: 'USD'
+      }));
+    });
+    insertDefaults();
+    items = db.prepare('SELECT * FROM items').all();
+  }
   const customers = db.prepare('SELECT * FROM customers').all();
   const suppliers = db.prepare('SELECT * FROM suppliers').all();
   const books = db.prepare('SELECT * FROM books').all();
@@ -507,8 +551,13 @@ function migrateFromJSON(jsonData) {
 
 function hasData() {
   try {
-    const count = db.prepare('SELECT COUNT(*) as c FROM items').get();
-    return count.c > 0;
+    // يعتبر في بيانات لو في فواتير أو زبائن أو موردين — مش items فقط
+    const items    = db.prepare('SELECT COUNT(*) as c FROM items').get().c;
+    const sales    = db.prepare('SELECT COUNT(*) as c FROM sales_invoices').get().c;
+    const purchases= db.prepare('SELECT COUNT(*) as c FROM purchase_invoices').get().c;
+    const customers= db.prepare('SELECT COUNT(*) as c FROM customers').get().c;
+    const suppliers= db.prepare('SELECT COUNT(*) as c FROM suppliers').get().c;
+    return (items + sales + purchases + customers + suppliers) > 0;
   } catch(e) { return false; }
 }
 
