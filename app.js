@@ -190,6 +190,9 @@ async function initDB() {
   if (!db.salesInvoices)    db.salesInvoices = [];
   if (!db.purchaseInvoices) db.purchaseInvoices = [];
   if (!db.returns)          db.returns = [];
+  if (!db.warehouses)       db.warehouses = [];
+  if (!db.transfers)        db.transfers = [];
+  if (!db.damages)          db.damages = [];
   if (!db.customerPayments) db.customerPayments = [];
   if (!db.supplierPayments) db.supplierPayments = [];
 }
@@ -279,7 +282,7 @@ function fmt(n) { return fmtOld(n); }
 // ============================================================
 // ROUTER
 // ============================================================
-const pages = ['dashboard','invoice-sale','invoice-purchase','items','customers','suppliers','settings','reports','returns','receipt-customer','receipt-supplier'];
+const pages = ['dashboard','invoice-sale','invoice-purchase','items','customers','suppliers','settings','reports','returns','receipt-customer','receipt-supplier','warehouses','damages'];
 let currentPage = 'dashboard';
 
 function navigate(page) {
@@ -306,6 +309,8 @@ function render(page) {
     case 'returns': renderReturns(); break;
     case 'receipt-customer': renderReceiptCustomer(); break;
     case 'receipt-supplier': renderReceiptSupplier(); break;
+    case 'warehouses': renderWarehouses(); updateWarehouseSelects(); break;
+    case 'damages': renderDamages(); updateWarehouseSelects(); break;
   }
 }
 
@@ -3041,4 +3046,490 @@ async function showBackupsList() {
       '<span>📄 ' + f + '</span>' +
       '</div>'
     ).join('');
+}
+
+
+// ============================================================
+// نظام المستودعات — Warehouses
+// ============================================================
+
+function renderWarehouses() {
+  const inv = calcInventoryByWarehouse();
+  const search = document.getElementById('wh-search')?.value?.toLowerCase() || '';
+
+  // بطاقات المستودعات
+  const whGrid = document.getElementById('wh-cards');
+  if (whGrid) {
+    const whs = (db.warehouses || []).filter(w =>
+      !search || w.name.toLowerCase().includes(search) || (w.location||'').toLowerCase().includes(search)
+    );
+    if (whs.length === 0) {
+      whGrid.innerHTML = '<div class="empty-state">لا توجد مستودعات — أضف مستودعاً جديداً</div>';
+    } else {
+      whGrid.innerHTML = whs.map(w => {
+        const whInv = inv[w.id] || {};
+        const itemCount = Object.values(whInv).filter(q => q > 0).length;
+        const totalVal = db.items.reduce((s, item) => s + (whInv[item.id] || 0) * item.cost, 0);
+        return `<div class="wh-card" onclick="openWarehouseDetail('${w.id}')">
+          <div class="wh-card-header">
+            <span class="wh-icon">🏭</span>
+            <div>
+              <div class="wh-name">${w.name}</div>
+              <div class="wh-loc">${w.location || '—'}</div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();deleteWarehouse('${w.id}')" style="color:var(--red-600);margin-right:auto">🗑️</button>
+          </div>
+          <div class="wh-stats">
+            <div><span class="wh-stat-val">${itemCount}</span><span class="wh-stat-lbl">مادة</span></div>
+            <div><span class="wh-stat-val">${fmtUSD(totalVal)}</span><span class="wh-stat-lbl">قيمة المخزون</span></div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // جدول نقل البضاعة — آخر العمليات
+  renderTransfersList();
+}
+
+function calcInventoryByWarehouse() {
+  // inv[warehouseId][itemId] = qty
+  const inv = {};
+  const defaultWh = getDefaultWarehouse();
+
+  (db.warehouses || []).forEach(w => { inv[w.id] = {}; });
+  if (defaultWh) {
+    if (!inv[defaultWh]) inv[defaultWh] = {};
+  }
+
+  // فواتير الشراء تضيف للمستودع المحدد (أو الافتراضي)
+  (db.purchaseInvoices || []).forEach(pinv => {
+    const whId = pinv.warehouseId || defaultWh;
+    if (!whId) return;
+    if (!inv[whId]) inv[whId] = {};
+    (pinv.lines || []).forEach(l => {
+      inv[whId][l.itemId] = (inv[whId][l.itemId] || 0) + (parseFloat(l.qty) || 0);
+    });
+  });
+
+  // فواتير البيع تنقص من المستودع المحدد (أو الافتراضي)
+  (db.salesInvoices || []).forEach(sinv => {
+    const whId = sinv.warehouseId || defaultWh;
+    if (!whId) return;
+    if (!inv[whId]) inv[whId] = {};
+    (sinv.lines || []).forEach(l => {
+      inv[whId][l.itemId] = (inv[whId][l.itemId] || 0) - (parseFloat(l.qty) || 0);
+    });
+  });
+
+  // المرتجعات
+  (db.returns || []).forEach(ret => {
+    const whId = ret.warehouseId || defaultWh;
+    if (!whId) return;
+    if (!inv[whId]) inv[whId] = {};
+    (ret.lines || []).forEach(l => {
+      if (ret.type === 'sale') inv[whId][l.itemId] = (inv[whId][l.itemId] || 0) + (parseFloat(l.qty) || 0);
+      else inv[whId][l.itemId] = (inv[whId][l.itemId] || 0) - (parseFloat(l.qty) || 0);
+    });
+  });
+
+  // عمليات النقل
+  (db.transfers || []).forEach(t => {
+    if (!inv[t.fromWh]) inv[t.fromWh] = {};
+    if (!inv[t.toWh]) inv[t.toWh] = {};
+    inv[t.fromWh][t.itemId] = (inv[t.fromWh][t.itemId] || 0) - (parseFloat(t.qty) || 0);
+    inv[t.toWh][t.itemId] = (inv[t.toWh][t.itemId] || 0) + (parseFloat(t.qty) || 0);
+  });
+
+  // التالف يخصم من المستودع
+  (db.damages || []).forEach(d => {
+    const whId = d.warehouseId || defaultWh;
+    if (!whId) return;
+    if (!inv[whId]) inv[whId] = {};
+    inv[whId][d.itemId] = (inv[whId][d.itemId] || 0) - (parseFloat(d.qty) || 0);
+  });
+
+  return inv;
+}
+
+function getDefaultWarehouse() {
+  if (!db.warehouses || db.warehouses.length === 0) return null;
+  return db.warehouses[0].id;
+}
+
+function addWarehouse() {
+  const name = document.getElementById('wh-new-name')?.value?.trim();
+  const loc  = document.getElementById('wh-new-loc')?.value?.trim();
+  if (!name) { showToast('أدخل اسم المستودع', 'error'); return; }
+  if (!db.warehouses) db.warehouses = [];
+  if (db.warehouses.find(w => w.name === name)) { showToast('المستودع موجود مسبقاً', 'error'); return; }
+  const id = 'WH-' + String(db.warehouses.length + 1).padStart(3, '0');
+  db.warehouses.push({ id, name, location: loc || '' });
+  saveData(db);
+  document.getElementById('wh-new-name').value = '';
+  if (document.getElementById('wh-new-loc')) document.getElementById('wh-new-loc').value = '';
+  showToast('✅ تم إضافة المستودع: ' + name, 'success');
+  renderWarehouses();
+  updateWarehouseSelects();
+}
+
+function deleteWarehouse(id) {
+  const wh = (db.warehouses || []).find(w => w.id === id);
+  if (!wh) return;
+  if (!confirm('هل تريد حذف المستودع "' + wh.name + '"؟\nسيتم حذف كل عمليات النقل المرتبطة به.')) return;
+  db.warehouses = db.warehouses.filter(w => w.id !== id);
+  saveData(db);
+  showToast('🗑️ تم حذف المستودع', 'success');
+  renderWarehouses();
+  updateWarehouseSelects();
+}
+
+function openWarehouseDetail(whId) {
+  const wh = (db.warehouses || []).find(w => w.id === whId);
+  if (!wh) return;
+  const inv = calcInventoryByWarehouse();
+  const whInv = inv[whId] || {};
+
+  const modal = document.getElementById('wh-detail-modal');
+  document.getElementById('wh-detail-name').textContent = wh.name;
+  document.getElementById('wh-detail-loc').textContent = wh.location || '—';
+
+  const tbody = document.getElementById('wh-detail-tbody');
+  const items = db.items.filter(item => (whInv[item.id] || 0) !== 0);
+  if (items.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--text-muted)">لا يوجد مخزون في هذا المستودع</td></tr>';
+  } else {
+    tbody.innerHTML = items.map(item => {
+      const qty = whInv[item.id] || 0;
+      const val = qty * item.cost;
+      const isLow = qty < item.minStock;
+      return `<tr class="${isLow ? 'row-warning' : ''}">
+        <td><span class="item-id">${item.id}</span></td>
+        <td><strong>${item.name}</strong></td>
+        <td><span class="stock-num ${isLow ? 'badge-warning' : ''}">${qty} ${item.unit}</span></td>
+        <td>${fmtUSD(val)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  modal.classList.remove('hidden');
+  modal.style.display = 'flex';
+}
+
+function closeWhDetailModal() {
+  const modal = document.getElementById('wh-detail-modal');
+  if (modal) { modal.classList.add('hidden'); modal.style.display = 'none'; }
+}
+
+// نقل بضاعة بين مستودعات
+function updateTransferItems() {
+  const fromWh = document.getElementById('tr-from-wh')?.value;
+  const inv = calcInventoryByWarehouse();
+  const whInv = fromWh ? (inv[fromWh] || {}) : {};
+  const sel = document.getElementById('tr-item');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">-- اختر مادة --</option>';
+  db.items.forEach(item => {
+    const qty = whInv[item.id] || 0;
+    if (qty > 0) {
+      const opt = document.createElement('option');
+      opt.value = item.id;
+      opt.textContent = item.name + '  (متاح: ' + qty + ' ' + item.unit + ')';
+      sel.appendChild(opt);
+    }
+  });
+}
+
+function updateTransferMaxQty() {
+  const fromWh = document.getElementById('tr-from-wh')?.value;
+  const itemId = document.getElementById('tr-item')?.value;
+  if (!fromWh || !itemId) return;
+  const inv = calcInventoryByWarehouse();
+  const available = (inv[fromWh] || {})[itemId] || 0;
+  const qtyEl = document.getElementById('tr-qty');
+  if (qtyEl) { qtyEl.max = available; qtyEl.placeholder = 'الحد الأقصى: ' + available; }
+}
+
+function saveTransfer() {
+  const fromWh = document.getElementById('tr-from-wh')?.value;
+  const toWh   = document.getElementById('tr-to-wh')?.value;
+  const itemId = document.getElementById('tr-item')?.value;
+  const qty    = parseFloat(document.getElementById('tr-qty')?.value || 0);
+  const date   = document.getElementById('tr-date')?.value || new Date().toISOString().split('T')[0];
+  const note   = document.getElementById('tr-note')?.value || '';
+
+  if (!fromWh) { showToast('اختر مستودع المصدر', 'error'); return; }
+  if (!toWh)   { showToast('اختر مستودع الوجهة', 'error'); return; }
+  if (fromWh === toWh) { showToast('المستودعان متماثلان!', 'error'); return; }
+  if (!itemId) { showToast('اختر المادة', 'error'); return; }
+  if (!qty || qty <= 0) { showToast('أدخل كمية صحيحة', 'error'); return; }
+
+  // تحقق من الكمية المتاحة
+  const inv = calcInventoryByWarehouse();
+  const available = (inv[fromWh] || {})[itemId] || 0;
+  if (qty > available) { showToast('الكمية المطلوبة أكبر من المتاح (' + available + ')', 'error'); return; }
+
+  if (!db.transfers) db.transfers = [];
+  const id = 'TRF-' + String(db.transfers.length + 1).padStart(3, '0');
+  const fromName = (db.warehouses || []).find(w => w.id === fromWh)?.name || fromWh;
+  const toName   = (db.warehouses || []).find(w => w.id === toWh)?.name || toWh;
+  const item = db.items.find(i => i.id === itemId);
+
+  db.transfers.push({ id, fromWh, toWh, fromName, toName, itemId, itemName: item?.name || itemId, qty, date, note });
+  saveData(db);
+
+  // مسح الحقول
+  ['tr-item','tr-qty','tr-note'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  showToast('✅ تم نقل ' + qty + ' ' + (item?.unit||'') + ' من ' + fromName + ' إلى ' + toName, 'success');
+  renderWarehouses();
+}
+
+function renderTransfersList() {
+  const el = document.getElementById('transfers-list');
+  if (!el) return;
+  const transfers = (db.transfers || []).slice().reverse();
+  if (transfers.length === 0) {
+    el.innerHTML = '<div class="empty-state">لا توجد عمليات نقل بعد</div>';
+    return;
+  }
+  el.innerHTML = transfers.map(t => {
+    const item = db.items.find(i => i.id === t.itemId);
+    return `<div class="invoice-row">
+      <span class="item-id">${t.id}</span>
+      <span>${t.itemName || t.itemId}</span>
+      <span style="color:var(--red-600)">من: ${t.fromName}</span>
+      <span style="color:var(--green-700)">إلى: ${t.toName}</span>
+      <span class="stock-num">${t.qty} ${item?.unit||''}</span>
+      <span class="inv-date">${t.date}</span>
+    </div>`;
+  }).join('');
+}
+
+function updateWarehouseSelects() {
+  const whs = db.warehouses || [];
+  ['tr-from-wh', 'tr-to-wh', 'sale-warehouse', 'pur-warehouse'].forEach(selId => {
+    const sel = document.getElementById(selId);
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">-- اختر مستودع --</option>';
+    whs.forEach(w => {
+      const opt = document.createElement('option');
+      opt.value = w.id;
+      opt.textContent = w.name;
+      if (w.id === cur) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  });
+}
+
+
+// ============================================================
+// نظام التالف — Damages
+// ============================================================
+
+function renderDamages() {
+  const search = document.getElementById('dmg-search')?.value?.toLowerCase() || '';
+  renderDamagesList(search);
+  renderDamageStats();
+
+  // تحديث تاريخ اليوم
+  const dateEl = document.getElementById('dmg-date');
+  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+
+  // رقم سجل التالف التالي
+  const nextNum = 'DMG-' + String((db.damages || []).length + 1).padStart(3, '0');
+  const numEl = document.getElementById('dmg-num');
+  if (numEl) numEl.textContent = nextNum;
+}
+
+function renderDamageStats() {
+  const damages = db.damages || [];
+  const totalLoss = damages.reduce((s, d) => {
+    const item = db.items.find(i => i.id === d.itemId);
+    return s + (parseFloat(d.qty) || 0) * (item?.cost || d.cost || 0);
+  }, 0);
+  const el = document.getElementById('dmg-total-loss');
+  if (el) el.textContent = fmtUSD(totalLoss);
+  const el2 = document.getElementById('dmg-count');
+  if (el2) el2.textContent = damages.length + ' سجل';
+}
+
+function renderDamagesList(search) {
+  const el = document.getElementById('damages-list');
+  if (!el) return;
+  const damages = (db.damages || []).slice().reverse();
+  const filtered = search
+    ? damages.filter(d => (d.itemName || '').toLowerCase().includes(search) || (d.reason || '').toLowerCase().includes(search) || (d.number || '').toLowerCase().includes(search))
+    : damages;
+
+  if (filtered.length === 0) {
+    el.innerHTML = search ? '<div class="empty-state">🔍 لا توجد نتائج</div>' : '<div class="empty-state">لا توجد سجلات تالف بعد</div>';
+    return;
+  }
+
+  el.innerHTML = filtered.map(d => {
+    const item = db.items.find(i => i.id === d.itemId);
+    const loss = (parseFloat(d.qty) || 0) * (item?.cost || d.cost || 0);
+    const whName = d.warehouseId ? ((db.warehouses || []).find(w => w.id === d.warehouseId)?.name || d.warehouseId) : '—';
+    return `<div class="invoice-row">
+      <span class="item-id">${d.number || '—'}</span>
+      <span><strong>${d.itemName || d.itemId}</strong></span>
+      <span class="badge-warning">${d.qty} ${item?.unit || ''}</span>
+      <span style="color:var(--text-muted);font-size:12px">${d.reason || '—'}</span>
+      <span style="color:var(--red-600);font-weight:600">${fmtUSD(loss)}</span>
+      <span style="color:var(--text-muted);font-size:12px">🏭 ${whName}</span>
+      <span class="inv-date">${d.date}</span>
+      <button class="btn btn-ghost btn-sm" onclick="deleteDamage('${d.number}')" style="color:var(--red-600)">🗑️</button>
+    </div>`;
+  }).join('');
+}
+
+function saveDamage() {
+  const itemId = document.getElementById('dmg-item')?.value;
+  const qty    = parseFloat(document.getElementById('dmg-qty')?.value || 0);
+  const reason = document.getElementById('dmg-reason')?.value?.trim() || '';
+  const date   = document.getElementById('dmg-date')?.value || new Date().toISOString().split('T')[0];
+  const note   = document.getElementById('dmg-note')?.value?.trim() || '';
+  const whId   = document.getElementById('dmg-warehouse')?.value || getDefaultWarehouse() || '';
+
+  if (!itemId) { showToast('اختر المادة', 'error'); return; }
+  if (!qty || qty <= 0) { showToast('أدخل كمية صحيحة', 'error'); return; }
+  if (!reason) { showToast('اذكر سبب التالف', 'error'); return; }
+
+  // تحقق من المخزون المتاح
+  const inv = calcInventoryByWarehouse();
+  const defaultWh = whId || getDefaultWarehouse();
+  const available = defaultWh ? ((inv[defaultWh] || {})[itemId] || 0) : (calcInventory()[itemId] || 0);
+  if (qty > available + 0.001) {
+    showToast('الكمية التالفة (' + qty + ') أكبر من المخزون المتاح (' + available + ')', 'error');
+    return;
+  }
+
+  if (!db.damages) db.damages = [];
+  const item = db.items.find(i => i.id === itemId);
+  const number = 'DMG-' + String(db.damages.length + 1).padStart(3, '0');
+  const cost = item?.cost || 0;
+
+  db.damages.push({
+    number, itemId, itemName: item?.name || itemId,
+    qty, reason, date, note,
+    cost,
+    warehouseId: whId || ''
+  });
+
+  saveData(db);
+
+  // مسح الحقول
+  ['dmg-item', 'dmg-qty', 'dmg-reason', 'dmg-note'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { if (el.tagName === 'SELECT') el.value = ''; else el.value = ''; }
+  });
+  const dateEl = document.getElementById('dmg-date');
+  if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+
+  const loss = qty * cost;
+  showToast('✅ تم تسجيل التالف: ' + item?.name + ' — خسارة: ' + fmtUSD(loss), 'success');
+  renderDamages();
+}
+
+function deleteDamage(number) {
+  if (!confirm('هل تريد حذف هذا السجل؟')) return;
+  db.damages = (db.damages || []).filter(d => d.number !== number);
+  saveData(db);
+  showToast('🗑️ تم حذف السجل', 'success');
+  renderDamages();
+}
+
+function printDamagesReport() {
+  const damages = db.damages || [];
+  const totalLoss = damages.reduce((s, d) => {
+    const item = db.items.find(i => i.id === d.itemId);
+    return s + (parseFloat(d.qty) || 0) * (item?.cost || d.cost || 0);
+  }, 0);
+
+  const rows = damages.map((d, i) => {
+    const item = db.items.find(it => it.id === d.itemId);
+    const loss = (parseFloat(d.qty) || 0) * (item?.cost || d.cost || 0);
+    return `<tr>
+      <td>${i+1}</td>
+      <td>${d.number}</td>
+      <td>${d.itemName || d.itemId}</td>
+      <td>${d.qty} ${item?.unit||''}</td>
+      <td>${d.reason || '—'}</td>
+      <td>${d.date}</td>
+      <td style="color:#dc2626;font-weight:700">${fmtUSD(loss)}</td>
+    </tr>`;
+  }).join('');
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head><meta charset="UTF-8"><title>تقرير المواد التالفة</title>
+<style>
+  body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;margin:0;padding:20px;color:#1a1a1a;}
+  .header{background:#dc2626;color:white;padding:20px;border-radius:8px;margin-bottom:20px;text-align:center;}
+  .header h1{margin:0;font-size:22px;}
+  .header p{margin:4px 0;font-size:12px;opacity:.85;}
+  .kpi{display:inline-block;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 24px;margin-bottom:20px;text-align:center;}
+  .kpi-val{font-size:22px;font-weight:700;color:#dc2626;}
+  .kpi-lbl{font-size:12px;color:#64748b;}
+  table{width:100%;border-collapse:collapse;}
+  thead th{background:#dc2626;color:white;padding:8px;font-size:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  tbody td{padding:7px 8px;border-bottom:1px solid #e2e8f0;font-size:12px;}
+  tbody tr:nth-child(even){background:#fef2f2;}
+  .footer{text-align:center;margin-top:20px;font-size:11px;color:#94a3b8;border-top:1px solid #eee;padding-top:8px;}
+  @media print{body{padding:10px;}}
+</style></head><body>
+<div class="header">
+  <h1>${db.company.name}</h1>
+  <p>تقرير المواد التالفة — ${new Date().toLocaleDateString('ar-SY')}</p>
+</div>
+<div class="kpi">
+  <div class="kpi-val">${fmtUSD(totalLoss)}</div>
+  <div class="kpi-lbl">إجمالي الخسائر من التالف</div>
+</div>
+<table>
+  <thead><tr><th>#</th><th>رقم السجل</th><th>المادة</th><th>الكمية</th><th>السبب</th><th>التاريخ</th><th>الخسارة</th></tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<div class="footer">تم إنشاء التقرير بواسطة برنامج المحاسبة والمستودعات</div>
+<script>window.onload=()=>window.print();<\/script>
+</body></html>`);
+  win.document.close();
+}
+
+// تحديث حساب المخزون الأصلي ليشمل التالف
+const _origCalcInventory = calcInventory;
+function calcInventory() {
+  const inv = _origCalcInventory();
+  // خصم التالف
+  (db.damages || []).forEach(d => {
+    if (!inv[d.itemId]) inv[d.itemId] = 0;
+    inv[d.itemId] -= parseFloat(d.qty) || 0;
+  });
+  return inv;
+}
+
+// تحديث قوائم المواد في صفحة التالف
+function populateDamageItems() {
+  const sel = document.getElementById('dmg-item');
+  if (!sel) return;
+  const inv = calcInventory();
+  sel.innerHTML = '<option value="">-- اختر مادة --</option>';
+  db.items.forEach(item => {
+    const qty = inv[item.id] || 0;
+    if (qty > 0) {
+      const opt = document.createElement('option');
+      opt.value = item.id;
+      opt.textContent = item.name + '  (مخزون: ' + qty + ' ' + item.unit + ')';
+      sel.appendChild(opt);
+    }
+  });
+}
+
+// override renderDamages لتضمين populate
+const _origRenderDamages = renderDamages;
+function renderDamages() {
+  _origRenderDamages();
+  populateDamageItems();
 }

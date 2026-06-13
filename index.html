@@ -357,7 +357,24 @@
     .detail-modal { background:var(--surface-primary); border-radius:var(--radius-xl); padding:var(--space-6); width:700px; max-width:95vw; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.2); }
     .detail-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--space-5); padding-bottom:var(--space-4); border-bottom:1px solid var(--border-subtle); }
     .detail-meta { display:grid; grid-template-columns:1fr 1fr 1fr; gap:var(--space-3); margin-bottom:var(--space-4); }
-  </style>
+  /* ===== مستودعات ===== */
+    .btn-danger{background:var(--red-600);color:white;border:none;padding:8px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;}
+    .btn-danger:hover{background:#b91c1c;}
+    .wh-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:var(--space-4);cursor:pointer;transition:box-shadow .15s;}
+    .wh-card:hover{box-shadow:var(--shadow-md);}
+    .wh-card-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+    .wh-icon{font-size:28px;}
+    .wh-name{font-weight:700;font-size:15px;color:var(--text-primary);}
+    .wh-loc{font-size:12px;color:var(--text-muted);}
+    .wh-stats{display:flex;gap:16px;}
+    .wh-stat-val{font-size:16px;font-weight:700;color:var(--blue-link);margin-left:4px;}
+    .wh-stat-lbl{font-size:11px;color:var(--text-muted);}
+    .wh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:24px;}
+    /* ===== تالف ===== */
+    .dmg-stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;}
+    .dmg-stat-val{font-size:20px;font-weight:700;color:var(--red-600);}
+    .dmg-stat-lbl{font-size:12px;color:var(--text-muted);}
+    </style>
 </head>
 <body>
 
@@ -620,7 +637,24 @@
   from { opacity:0; transform:translateY(24px); }
   to   { opacity:1; transform:translateY(0); }
 }
-</style>
+/* ===== مستودعات ===== */
+    .btn-danger{background:var(--red-600);color:white;border:none;padding:8px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;}
+    .btn-danger:hover{background:#b91c1c;}
+    .wh-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:var(--space-4);cursor:pointer;transition:box-shadow .15s;}
+    .wh-card:hover{box-shadow:var(--shadow-md);}
+    .wh-card-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+    .wh-icon{font-size:28px;}
+    .wh-name{font-weight:700;font-size:15px;color:var(--text-primary);}
+    .wh-loc{font-size:12px;color:var(--text-muted);}
+    .wh-stats{display:flex;gap:16px;}
+    .wh-stat-val{font-size:16px;font-weight:700;color:var(--blue-link);margin-left:4px;}
+    .wh-stat-lbl{font-size:11px;color:var(--text-muted);}
+    .wh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:24px;}
+    /* ===== تالف ===== */
+    .dmg-stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;}
+    .dmg-stat-val{font-size:20px;font-weight:700;color:var(--red-600);}
+    .dmg-stat-lbl{font-size:12px;color:var(--text-muted);}
+    </style>
 
 <script>
   // togglePass فقط — checkLogin و initApp معرّفتان في app.js
@@ -730,6 +764,12 @@
       <div class="nav-item" data-page="receipt-supplier" onclick="navigate('receipt-supplier')">
         <span class="icon" style="width:20px;display:flex;align-items:center;justify-content:center;">💸</span>
         <span>دفع لمورد</span>
+      </div>
+      <div class="nav-item" data-page="warehouses" onclick="navigate('warehouses')">
+        <span class="icon">🏭</span><span>المستودعات</span>
+      </div>
+      <div class="nav-item" data-page="damages" onclick="navigate('damages')">
+        <span class="icon">⚠️</span><span>التالف</span>
       </div>
       <div class="nav-item" data-page="reports" onclick="navigate('reports')">
         <span class="icon" style="width:20px;display:flex;align-items:center;justify-content:center;">
@@ -2126,6 +2166,166 @@
   </div>
 </div>
 
+<!-- ===== صفحة المستودعات ===== -->
+<div id="page-warehouses" class="hidden">
+  <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div><div class="page-title">🏭 المستودعات</div><div class="page-subtitle">إدارة المستودعات ونقل البضاعة</div></div>
+  </div>
+
+  <!-- إضافة مستودع جديد -->
+  <div class="card" style="margin-bottom:20px;">
+    <div style="font-weight:600;font-size:14px;margin-bottom:12px;color:var(--blue-link)">➕ إضافة مستودع جديد</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+      <div class="form-group" style="flex:1;min-width:160px;margin-bottom:0">
+        <label class="form-label">اسم المستودع *</label>
+        <input type="text" id="wh-new-name" class="input" placeholder="مثال: المستودع الرئيسي">
+      </div>
+      <div class="form-group" style="flex:1;min-width:160px;margin-bottom:0">
+        <label class="form-label">الموقع</label>
+        <input type="text" id="wh-new-loc" class="input" placeholder="مثال: دمشق - المنطقة الصناعية">
+      </div>
+      <button class="btn btn-primary" onclick="addWarehouse()">✅ إضافة</button>
+    </div>
+  </div>
+
+  <!-- بحث -->
+  <div style="margin-bottom:16px;">
+    <input type="text" id="wh-search" class="input" placeholder="🔍 بحث في المستودعات..." oninput="renderWarehouses()" style="width:260px;">
+  </div>
+
+  <!-- بطاقات المستودعات -->
+  <div id="wh-cards" class="wh-grid"></div>
+
+  <!-- نقل بضاعة -->
+  <div class="card" style="margin-bottom:20px;">
+    <div style="font-weight:600;font-size:14px;margin-bottom:14px;color:var(--blue-link)">🔄 نقل بضاعة بين مستودعات</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">من مستودع *</label>
+        <select id="tr-from-wh" class="input" onchange="updateTransferItems()"><option value="">-- اختر --</option></select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">إلى مستودع *</label>
+        <select id="tr-to-wh" class="input"><option value="">-- اختر --</option></select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">المادة *</label>
+        <select id="tr-item" class="input" onchange="updateTransferMaxQty()"><option value="">-- اختر --</option></select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">الكمية *</label>
+        <input type="number" id="tr-qty" class="input" min="0.01" step="0.01" placeholder="0">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">التاريخ</label>
+        <input type="date" id="tr-date" class="input">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">ملاحظة</label>
+        <input type="text" id="tr-note" class="input" placeholder="اختياري...">
+      </div>
+    </div>
+    <div style="margin-top:14px;">
+      <button class="btn btn-success" onclick="saveTransfer()">✅ تنفيذ النقل</button>
+    </div>
+  </div>
+
+  <!-- سجل عمليات النقل -->
+  <div class="card">
+    <div style="font-weight:600;font-size:14px;margin-bottom:12px;">📋 سجل عمليات النقل</div>
+    <div id="transfers-list"><div class="empty-state">لا توجد عمليات نقل بعد</div></div>
+  </div>
+</div>
+
+<!-- modal تفاصيل مستودع -->
+<div id="wh-detail-modal" class="modal-overlay hidden" style="display:none">
+  <div class="modal" style="width:600px;max-width:95vw;">
+    <div class="modal-header">
+      <h2 class="modal-title">🏭 <span id="wh-detail-name"></span></h2>
+      <button class="modal-close" onclick="closeWhDetailModal()">✕</button>
+    </div>
+    <div style="padding:4px 0 12px;font-size:13px;color:var(--text-muted)">📍 <span id="wh-detail-loc"></span></div>
+    <div class="invoice-table-wrap" style="max-height:400px;overflow-y:auto;">
+      <table>
+        <thead><tr><th>الكود</th><th>المادة</th><th>الكمية</th><th>القيمة</th></tr></thead>
+        <tbody id="wh-detail-tbody"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:16px;text-align:left;">
+      <button class="btn btn-ghost" onclick="closeWhDetailModal()">إغلاق</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== صفحة التالف ===== -->
+<div id="page-damages" class="hidden">
+  <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div><div class="page-title">⚠️ المواد التالفة</div><div class="page-subtitle">تسجيل وتتبع المواد التالفة وخسائرها</div></div>
+    <button class="btn btn-ghost" onclick="printDamagesReport()">🖨️ طباعة التقرير</button>
+  </div>
+
+  <!-- إحصائيات التالف -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:20px;">
+    <div class="dmg-stat-card"><div class="dmg-stat-val" id="dmg-total-loss">$ 0.00</div><div class="dmg-stat-lbl">إجمالي خسائر التالف</div></div>
+    <div class="dmg-stat-card"><div class="dmg-stat-val" style="color:var(--text-muted)" id="dmg-count">0 سجل</div><div class="dmg-stat-lbl">عدد سجلات التالف</div></div>
+  </div>
+
+  <!-- تسجيل تالف جديد -->
+  <div class="card" style="margin-bottom:20px;">
+    <div style="font-weight:600;font-size:14px;margin-bottom:14px;color:var(--red-600)">⚠️ تسجيل مادة تالفة — رقم: <span id="dmg-num" style="font-family:monospace;background:var(--surface-secondary);padding:2px 8px;border-radius:4px;">DMG-001</span></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">المادة *</label>
+        <select id="dmg-item" class="input">
+          <option value="">-- اختر مادة --</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">الكمية التالفة *</label>
+        <input type="number" id="dmg-qty" class="input" min="0.01" step="0.01" placeholder="0">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">سبب التالف *</label>
+        <select id="dmg-reason" class="input">
+          <option value="">-- اختر السبب --</option>
+          <option value="انتهاء الصلاحية">انتهاء الصلاحية</option>
+          <option value="كسر وتلف">كسر وتلف</option>
+          <option value="حريق">حريق</option>
+          <option value="رطوبة وفساد">رطوبة وفساد</option>
+          <option value="سرقة">سرقة</option>
+          <option value="عيب مصنعي">عيب مصنعي</option>
+          <option value="حوادث النقل">حوادث النقل</option>
+          <option value="أخرى">أخرى</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">المستودع</label>
+        <select id="dmg-warehouse" class="input"><option value="">-- الكل --</option></select>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">التاريخ</label>
+        <input type="date" id="dmg-date" class="input">
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">ملاحظة</label>
+        <input type="text" id="dmg-note" class="input" placeholder="تفاصيل إضافية...">
+      </div>
+    </div>
+    <div style="margin-top:14px;">
+      <button class="btn btn-danger" onclick="saveDamage()">⚠️ تسجيل التالف</button>
+    </div>
+  </div>
+
+  <!-- بحث وسجل التالف -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <div style="font-weight:600;font-size:14px;">📋 سجل المواد التالفة</div>
+      <input type="text" id="dmg-search" class="input input-sm" placeholder="🔍 بحث..." oninput="renderDamages()" style="width:220px;">
+    </div>
+    <div id="damages-list"><div class="empty-state">لا توجد سجلات تالف بعد</div></div>
+  </div>
+</div>
+
 <script src="theme.js"></script>
 <script src="app.js"></script>
 
@@ -2486,6 +2686,7 @@
   </div>
 </div>
 
+<!-- ===== صفحة المستودعات ===== -->
 <script src="theme.js"></script>
 <script src="app.js"></script>
 
