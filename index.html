@@ -2518,72 +2518,100 @@
 
 <!-- ===== صفحة المستودعات ===== -->
 <div id="page-warehouses" class="hidden">
-  <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-    <div><div class="page-title">🏭 المستودعات</div><div class="page-subtitle">إدارة المستودعات ونقل البضاعة</div></div>
-  </div>
 
-  <!-- إضافة مستودع جديد -->
-  <div class="card" style="margin-bottom:20px;">
-    <div style="font-weight:600;font-size:14px;margin-bottom:12px;color:var(--blue-link)">➕ إضافة مستودع جديد</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
-      <div class="form-group" style="flex:1;min-width:160px;margin-bottom:0">
-        <label class="form-label">اسم المستودع *</label>
-        <input type="text" id="wh-new-name" class="input" placeholder="مثال: المستودع الرئيسي">
-      </div>
-      <div class="form-group" style="flex:1;min-width:160px;margin-bottom:0">
-        <label class="form-label">الموقع</label>
-        <input type="text" id="wh-new-loc" class="input" placeholder="مثال: دمشق - المنطقة الصناعية">
-      </div>
-      <button class="btn btn-primary" onclick="addWarehouse()">✅ إضافة</button>
+  <!-- رأس الصفحة -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px">
+    <div>
+      <div class="page-title">🏭 المستودعات</div>
+      <div class="page-subtitle">إدارة المستودعات وتتبع المخزون ونقل البضاعة</div>
     </div>
-  </div>
-
-  <!-- بحث -->
-  <div style="margin-bottom:16px;">
-    <input type="text" id="wh-search" class="input" placeholder="🔍 بحث في المستودعات..." oninput="renderWarehouses()" style="width:260px;">
+    <div style="display:flex;gap:10px;align-items:center">
+      <input type="text" id="wh-search" class="input" placeholder="🔍 بحث في المستودعات..." oninput="renderWarehouses()" style="width:220px">
+    </div>
   </div>
 
   <!-- بطاقات المستودعات -->
-  <div id="wh-cards" class="wh-grid"></div>
+  <div id="wh-cards" class="wh-grid" style="margin-bottom:24px"></div>
 
-  <!-- نقل بضاعة -->
-  <div class="card" style="margin-bottom:20px;">
-    <div style="font-weight:600;font-size:14px;margin-bottom:14px;color:var(--blue-link)">🔄 نقل بضاعة بين مستودعات</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">من مستودع *</label>
-        <select id="tr-from-wh" class="input" onchange="updateTransferItems()"><option value="">-- اختر --</option></select>
+  <!-- صف: إضافة مستودع + نقل بضاعة -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+
+    <!-- إضافة مستودع جديد -->
+    <div style="background:var(--surface-primary);border-radius:16px;border:1px solid var(--border-subtle);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.05)">
+      <div style="padding:14px 20px;border-bottom:1px solid var(--border-subtle);background:var(--surface-secondary);display:flex;align-items:center;gap:10px">
+        <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#0ea5e9,#3b82f6);display:flex;align-items:center;justify-content:center;font-size:16px">🏭</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--text-primary)">إضافة مستودع جديد</div>
+          <div style="font-size:11px;color:var(--text-muted)">أنشئ مستودعاً جديداً لتتبع مخزونه</div>
+        </div>
       </div>
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">إلى مستودع *</label>
-        <select id="tr-to-wh" class="input"><option value="">-- اختر --</option></select>
-      </div>
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">المادة *</label>
-        <select id="tr-item" class="input" onchange="updateTransferMaxQty()"><option value="">-- اختر --</option></select>
-      </div>
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">الكمية *</label>
-        <input type="number" id="tr-qty" class="input" min="0.01" step="0.01" placeholder="0">
-      </div>
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">التاريخ</label>
-        <input type="date" id="tr-date" class="input">
-      </div>
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">ملاحظة</label>
-        <input type="text" id="tr-note" class="input" placeholder="اختياري...">
+      <div style="padding:18px 20px">
+        <div class="form-group" style="margin-bottom:12px">
+          <label class="form-label">اسم المستودع *</label>
+          <input type="text" id="wh-new-name" class="input" placeholder="مثال: المستودع الرئيسي">
+        </div>
+        <div class="form-group" style="margin-bottom:16px">
+          <label class="form-label">الموقع</label>
+          <input type="text" id="wh-new-loc" class="input" placeholder="مثال: دمشق - المنطقة الصناعية">
+        </div>
+        <button class="btn btn-primary btn-lg" onclick="addWarehouse()" style="width:100%;justify-content:center">
+          ➕ إضافة المستودع
+        </button>
       </div>
     </div>
-    <div style="margin-top:14px;">
-      <button class="btn btn-success" onclick="saveTransfer()">✅ تنفيذ النقل</button>
+
+    <!-- نقل بضاعة -->
+    <div style="background:var(--surface-primary);border-radius:16px;border:1px solid var(--border-subtle);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.05)">
+      <div style="padding:14px 20px;border-bottom:1px solid var(--border-subtle);background:var(--surface-secondary);display:flex;align-items:center;gap:10px">
+        <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);display:flex;align-items:center;justify-content:center;font-size:16px">🔄</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--text-primary)">نقل بضاعة بين المستودعات</div>
+          <div style="font-size:11px;color:var(--text-muted)">حرّك المواد من مستودع لآخر</div>
+        </div>
+      </div>
+      <div style="padding:18px 20px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">من مستودع *</label>
+            <select id="tr-from-wh" class="input" onchange="updateTransferItems()"><option value="">-- اختر --</option></select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">إلى مستودع *</label>
+            <select id="tr-to-wh" class="input"><option value="">-- اختر --</option></select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">المادة *</label>
+            <select id="tr-item" class="input" onchange="updateTransferMaxQty()"><option value="">-- اختر --</option></select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">الكمية *</label>
+            <input type="number" id="tr-qty" class="input" min="0.01" step="0.01" placeholder="0">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">التاريخ</label>
+            <input type="date" id="tr-date" class="input">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">ملاحظة</label>
+            <input type="text" id="tr-note" class="input" placeholder="اختياري...">
+          </div>
+        </div>
+        <button class="btn btn-success btn-lg" onclick="saveTransfer()" style="width:100%;justify-content:center">
+          🔄 تنفيذ النقل
+        </button>
+      </div>
     </div>
   </div>
 
   <!-- سجل عمليات النقل -->
-  <div class="card">
-    <div style="font-weight:600;font-size:14px;margin-bottom:12px;">📋 سجل عمليات النقل</div>
-    <div id="transfers-list"><div class="empty-state">لا توجد عمليات نقل بعد</div></div>
+  <div style="background:var(--surface-primary);border-radius:16px;border:1px solid var(--border-subtle);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.05)">
+    <div style="padding:14px 20px;border-bottom:1px solid var(--border-subtle);background:var(--surface-secondary);display:flex;align-items:center;gap:10px">
+      <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;font-size:16px">📋</div>
+      <div style="font-size:14px;font-weight:700;color:var(--text-primary)">سجل عمليات النقل</div>
+    </div>
+    <div style="padding:16px 20px">
+      <div id="transfers-list"><div class="empty-state" style="padding:28px">لا توجد عمليات نقل بعد</div></div>
+    </div>
   </div>
 </div>
 
@@ -2609,70 +2637,107 @@
 
 <!-- ===== صفحة التالف ===== -->
 <div id="page-damages" class="hidden">
-  <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-    <div><div class="page-title">⚠️ المواد التالفة</div><div class="page-subtitle">تسجيل وتتبع المواد التالفة وخسائرها</div></div>
-    <button class="btn btn-ghost" onclick="printDamagesReport()">🖨️ طباعة التقرير</button>
-  </div>
 
-  <!-- إحصائيات التالف -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;margin-bottom:20px;">
-    <div class="dmg-stat-card"><div class="dmg-stat-val" id="dmg-total-loss">$ 0.00</div><div class="dmg-stat-lbl">إجمالي خسائر التالف</div></div>
-    <div class="dmg-stat-card"><div class="dmg-stat-val" style="color:var(--text-muted)" id="dmg-count">0 سجل</div><div class="dmg-stat-lbl">عدد سجلات التالف</div></div>
-  </div>
-
-  <!-- تسجيل تالف جديد -->
-  <div class="card" style="margin-bottom:20px;">
-    <div style="font-weight:600;font-size:14px;margin-bottom:14px;color:var(--red-600)">⚠️ تسجيل مادة تالفة — رقم: <span id="dmg-num" style="font-family:monospace;background:var(--surface-secondary);padding:2px 8px;border-radius:4px;">DMG-001</span></div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;">
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">المادة *</label>
-        <select id="dmg-item" class="input">
-          <option value="">-- اختر مادة --</option>
-        </select>
-      </div>
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">الكمية التالفة *</label>
-        <input type="number" id="dmg-qty" class="input" min="0.01" step="0.01" placeholder="0">
-      </div>
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">سبب التالف *</label>
-        <select id="dmg-reason" class="input">
-          <option value="">-- اختر السبب --</option>
-          <option value="انتهاء الصلاحية">انتهاء الصلاحية</option>
-          <option value="كسر وتلف">كسر وتلف</option>
-          <option value="حريق">حريق</option>
-          <option value="رطوبة وفساد">رطوبة وفساد</option>
-          <option value="سرقة">سرقة</option>
-          <option value="عيب مصنعي">عيب مصنعي</option>
-          <option value="حوادث النقل">حوادث النقل</option>
-          <option value="أخرى">أخرى</option>
-        </select>
-      </div>
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">المستودع</label>
-        <select id="dmg-warehouse" class="input"><option value="">-- الكل --</option></select>
-      </div>
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">التاريخ</label>
-        <input type="date" id="dmg-date" class="input">
-      </div>
-      <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">ملاحظة</label>
-        <input type="text" id="dmg-note" class="input" placeholder="تفاصيل إضافية...">
-      </div>
+  <!-- رأس الصفحة -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px">
+    <div>
+      <div class="page-title">⚠️ المواد التالفة</div>
+      <div class="page-subtitle">تسجيل وتتبع المواد التالفة وحساب الخسائر</div>
     </div>
-    <div style="margin-top:14px;">
-      <button class="btn btn-danger" onclick="saveDamage()">⚠️ تسجيل التالف</button>
+    <button class="btn btn-secondary" onclick="printDamagesReport()" style="gap:8px">
+      🖨️ طباعة التقرير
+    </button>
+  </div>
+
+  <!-- بطاقات إحصائية -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+    <div style="background:linear-gradient(135deg,#ef4444,#dc2626);border-radius:16px;padding:20px;color:white;box-shadow:0 4px 16px rgba(239,68,68,.3);position:relative;overflow:hidden">
+      <div style="position:absolute;top:-8px;left:-8px;font-size:60px;opacity:.1">💸</div>
+      <div style="font-size:11px;font-weight:700;opacity:.8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">إجمالي خسائر التالف</div>
+      <div style="font-size:28px;font-weight:800" id="dmg-total-loss">$ 0.00</div>
+    </div>
+    <div style="background:var(--surface-primary);border-radius:16px;border:1px solid var(--border-subtle);padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.05)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="width:36px;height:36px;border-radius:10px;background:#fee2e2;display:flex;align-items:center;justify-content:center;font-size:18px">📋</div>
+        <span style="font-size:12px;font-weight:700;color:var(--text-muted)">سجلات التالف</span>
+      </div>
+      <div style="font-size:24px;font-weight:800;color:var(--text-primary)" id="dmg-count">0 سجل</div>
     </div>
   </div>
 
-  <!-- بحث وسجل التالف -->
-  <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-      <div style="font-weight:600;font-size:14px;">📋 سجل المواد التالفة</div>
-      <input type="text" id="dmg-search" class="input input-sm" placeholder="🔍 بحث..." oninput="renderDamages()" style="width:220px;">
+  <!-- صف: تسجيل تالف جديد + السجل -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+
+    <!-- تسجيل تالف جديد -->
+    <div style="background:var(--surface-primary);border-radius:16px;border:1px solid var(--border-subtle);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.05)">
+      <div style="padding:14px 20px;border-bottom:1px solid var(--border-subtle);background:linear-gradient(135deg,#fef2f2,#fee2e2);display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;font-size:16px">⚠️</div>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#7f1d1d">تسجيل مادة تالفة</div>
+            <div style="font-size:11px;color:#b91c1c">سيُخصم من المخزون تلقائياً</div>
+          </div>
+        </div>
+        <span style="font-family:monospace;background:white;color:#dc2626;padding:4px 12px;border-radius:8px;font-size:13px;font-weight:700;border:1.5px solid #fca5a5" id="dmg-num">DMG-001</span>
+      </div>
+      <div style="padding:18px 20px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+          <div class="form-group" style="margin:0;grid-column:span 2">
+            <label class="form-label">المادة *</label>
+            <select id="dmg-item" class="input">
+              <option value="">-- اختر مادة --</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">الكمية التالفة *</label>
+            <input type="number" id="dmg-qty" class="input" min="0.01" step="0.01" placeholder="0">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">التاريخ</label>
+            <input type="date" id="dmg-date" class="input">
+          </div>
+          <div class="form-group" style="margin:0;grid-column:span 2">
+            <label class="form-label">سبب التالف *</label>
+            <select id="dmg-reason" class="input">
+              <option value="">-- اختر السبب --</option>
+              <option value="انتهاء الصلاحية">⏰ انتهاء الصلاحية</option>
+              <option value="كسر وتلف">💔 كسر وتلف</option>
+              <option value="حريق">🔥 حريق</option>
+              <option value="رطوبة وفساد">💧 رطوبة وفساد</option>
+              <option value="سرقة">🚨 سرقة</option>
+              <option value="عيب مصنعي">🔧 عيب مصنعي</option>
+              <option value="حوادث النقل">🚛 حوادث النقل</option>
+              <option value="أخرى">📝 أخرى</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">المستودع</label>
+            <select id="dmg-warehouse" class="input"><option value="">-- الكل --</option></select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">ملاحظة</label>
+            <input type="text" id="dmg-note" class="input" placeholder="تفاصيل إضافية...">
+          </div>
+        </div>
+        <button class="btn btn-danger btn-lg" onclick="saveDamage()" style="width:100%;justify-content:center;gap:8px">
+          ⚠️ تسجيل التالف
+        </button>
+      </div>
     </div>
-    <div id="damages-list"><div class="empty-state">لا توجد سجلات تالف بعد</div></div>
+
+    <!-- سجل المواد التالفة -->
+    <div style="background:var(--surface-primary);border-radius:16px;border:1px solid var(--border-subtle);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.05)">
+      <div style="padding:14px 20px;border-bottom:1px solid var(--border-subtle);background:var(--surface-secondary);display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,#64748b,#475569);display:flex;align-items:center;justify-content:center;font-size:16px">📋</div>
+          <div style="font-size:14px;font-weight:700;color:var(--text-primary)">سجل المواد التالفة</div>
+        </div>
+        <input type="text" id="dmg-search" class="input input-sm" placeholder="🔍 بحث..." oninput="renderDamages()" style="width:160px">
+      </div>
+      <div style="padding:16px 20px;max-height:480px;overflow-y:auto">
+        <div id="damages-list"><div class="empty-state" style="padding:40px">لا توجد سجلات تالف بعد</div></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2750,86 +2815,103 @@
     <div id="page-statements" class="hidden">
 
       <!-- رأس الصفحة -->
-      <div class="page-header" style="margin-bottom:24px">
+      <div style="margin-bottom:24px">
         <div class="page-title">📋 الكشوفات</div>
         <div class="page-subtitle">كشف حساب زبون أو مورد · كشف حركة مادة</div>
       </div>
 
       <!-- تابات التنقل -->
-      <div style="display:flex;gap:8px;margin-bottom:28px;background:var(--surface-secondary);padding:6px;border-radius:14px;width:fit-content">
+      <div style="display:flex;gap:6px;margin-bottom:28px;background:var(--surface-secondary);padding:5px;border-radius:14px;width:fit-content;box-shadow:0 1px 4px rgba(0,0,0,.06)">
         <button id="stmt-tab-account" onclick="switchStatementsTab('account')" style="
-          padding:10px 28px; border-radius:10px; border:none; cursor:pointer;
-          font-size:14px; font-weight:700; font-family:inherit;
-          background:linear-gradient(135deg,#0ea5e9,#3b82f6); color:#fff;
-          box-shadow:0 2px 10px rgba(14,165,233,.35); transition:all .2s;
+          padding:10px 28px;border-radius:10px;border:none;cursor:pointer;
+          font-size:14px;font-weight:700;font-family:inherit;
+          background:linear-gradient(135deg,#0ea5e9,#3b82f6);color:#fff;
+          box-shadow:0 2px 10px rgba(14,165,233,.35);transition:all .2s
         ">👤 كشف حساب</button>
         <button id="stmt-tab-item" onclick="switchStatementsTab('item')" style="
-          padding:10px 28px; border-radius:10px; border:none; cursor:pointer;
-          font-size:14px; font-weight:700; font-family:inherit;
-          background:transparent; color:var(--text-secondary); transition:all .2s;
+          padding:10px 28px;border-radius:10px;border:none;cursor:pointer;
+          font-size:14px;font-weight:700;font-family:inherit;
+          background:transparent;color:var(--text-secondary);transition:all .2s
         ">📦 كشف مادة</button>
       </div>
 
       <!-- ===== كشف حساب ===== -->
       <div id="stmt-account-section">
+
         <!-- بطاقة البحث -->
-        <div style="background:var(--surface-primary);border-radius:16px;border:1px solid var(--border-subtle);padding:24px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,.05)">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <div style="background:var(--surface-primary);border-radius:16px;border:1px solid var(--border-subtle);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:20px">
+          <div style="padding:14px 20px;border-bottom:1px solid var(--border-subtle);background:linear-gradient(135deg,#eff6ff,#dbeafe);display:flex;align-items:center;gap:10px">
             <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#0ea5e9,#3b82f6);display:flex;align-items:center;justify-content:center;font-size:18px">👤</div>
             <div>
-              <div style="font-size:15px;font-weight:700;color:var(--text-primary)">اختر زبون أو مورد</div>
-              <div style="font-size:12px;color:var(--text-muted)">ستظهر كل الفواتير والدفعات والرصيد المتبقي</div>
+              <div style="font-size:15px;font-weight:700;color:#1e40af">كشف حساب زبون أو مورد</div>
+              <div style="font-size:12px;color:#3b82f6">جميع الفواتير والدفعات والرصيد المتبقي</div>
             </div>
           </div>
-          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-            <input type="text" id="stmt-person-name" class="input" placeholder="اكتب اسم الزبون أو المورد..." list="stmt-person-datalist" style="flex:1;max-width:380px">
-            <datalist id="stmt-person-datalist"></datalist>
-            <button class="btn btn-primary btn-lg" onclick="loadAccountStatement()" style="white-space:nowrap">
-              🔍 عرض الكشف
-            </button>
+          <div style="padding:18px 20px">
+            <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+              <div style="flex:1;min-width:240px">
+                <label class="form-label">اسم الزبون أو المورد</label>
+                <input type="text" id="stmt-person-name" class="input" placeholder="اكتب الاسم للبحث..." list="stmt-person-datalist">
+                <datalist id="stmt-person-datalist"></datalist>
+              </div>
+              <button class="btn btn-primary btn-lg" onclick="loadAccountStatement()" style="white-space:nowrap;gap:8px">
+                🔍 عرض الكشف
+              </button>
+            </div>
           </div>
         </div>
+
         <!-- نتيجة كشف الحساب -->
-        <div id="stmt-account-result" style="background:var(--surface-primary);border-radius:16px;border:1px solid var(--border-subtle);padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.05)">
-          <div style="text-align:center;padding:32px 0;color:var(--text-muted)">
-            <div style="font-size:48px;margin-bottom:14px;opacity:.4">👤</div>
-            <div style="font-size:15px;font-weight:600">اكتب اسم زبون أو مورد واضغط "عرض الكشف"</div>
-            <div style="font-size:12px;margin-top:6px">ستظهر جميع الفواتير والدفعات والرصيد</div>
+        <div id="stmt-account-result" style="background:var(--surface-primary);border-radius:16px;border:1px solid var(--border-subtle);padding:36px;box-shadow:0 2px 8px rgba(0,0,0,.05)">
+          <div style="text-align:center;color:var(--text-muted)">
+            <div style="font-size:52px;margin-bottom:16px;opacity:.25">👤</div>
+            <div style="font-size:16px;font-weight:600;margin-bottom:6px">ابحث عن زبون أو مورد</div>
+            <div style="font-size:13px">اكتب الاسم في الحقل أعلاه واضغط "عرض الكشف"</div>
           </div>
         </div>
       </div>
 
       <!-- ===== كشف مادة ===== -->
       <div id="stmt-item-section" style="display:none">
+
         <!-- بطاقة البحث -->
-        <div style="background:var(--surface-primary);border-radius:16px;border:1px solid var(--border-subtle);padding:24px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,.05)">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <div style="background:var(--surface-primary);border-radius:16px;border:1px solid var(--border-subtle);overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:20px">
+          <div style="padding:14px 20px;border-bottom:1px solid var(--border-subtle);background:linear-gradient(135deg,#faf5ff,#ede9fe);display:flex;align-items:center;gap:10px">
             <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);display:flex;align-items:center;justify-content:center;font-size:18px">📦</div>
             <div>
-              <div style="font-size:15px;font-weight:700;color:var(--text-primary)">اختر مادة</div>
-              <div style="font-size:12px;color:var(--text-muted)">ستظهر كل حركات المادة والأرباح والمخزون الحالي</div>
+              <div style="font-size:15px;font-weight:700;color:#4c1d95">كشف حركة مادة</div>
+              <div style="font-size:12px;color:#7c3aed">جميع الحركات: شراء، بيع، مرتجعات، ربح، مخزون</div>
             </div>
           </div>
-          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-            <input type="text" id="stmt-item-name" class="input" placeholder="اكتب اسم المادة أو رقمها..." list="stmt-item-datalist" style="flex:1;max-width:380px">
-            <datalist id="stmt-item-datalist"></datalist>
-            <button class="btn btn-lg" onclick="loadItemStatement()" style="white-space:nowrap;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;border:none;padding:10px 24px;border-radius:10px;font-weight:700;cursor:pointer;font-size:14px;font-family:inherit">
-              🔍 عرض الكشف
-            </button>
+          <div style="padding:18px 20px">
+            <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+              <div style="flex:1;min-width:240px">
+                <label class="form-label">اسم المادة أو رقمها</label>
+                <input type="text" id="stmt-item-name" class="input" placeholder="اكتب اسم المادة..." list="stmt-item-datalist">
+                <datalist id="stmt-item-datalist"></datalist>
+              </div>
+              <button onclick="loadItemStatement()" style="
+                padding:10px 24px;border-radius:10px;border:none;cursor:pointer;white-space:nowrap;
+                background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;
+                font-size:14px;font-weight:700;font-family:inherit;
+                box-shadow:0 2px 10px rgba(139,92,246,.35);transition:all .2s;gap:8px;
+                display:inline-flex;align-items:center
+              ">🔍 عرض الكشف</button>
+            </div>
           </div>
         </div>
+
         <!-- نتيجة كشف المادة -->
-        <div id="stmt-item-result" style="background:var(--surface-primary);border-radius:16px;border:1px solid var(--border-subtle);padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.05)">
-          <div style="text-align:center;padding:32px 0;color:var(--text-muted)">
-            <div style="font-size:48px;margin-bottom:14px;opacity:.4">📦</div>
-            <div style="font-size:15px;font-weight:600">اكتب اسم المادة واضغط "عرض الكشف"</div>
-            <div style="font-size:12px;margin-top:6px">ستظهر جميع حركاتها: شراء، بيع، مرتجعات، ربح، مخزون</div>
+        <div id="stmt-item-result" style="background:var(--surface-primary);border-radius:16px;border:1px solid var(--border-subtle);padding:36px;box-shadow:0 2px 8px rgba(0,0,0,.05)">
+          <div style="text-align:center;color:var(--text-muted)">
+            <div style="font-size:52px;margin-bottom:16px;opacity:.25">📦</div>
+            <div style="font-size:16px;font-weight:600;margin-bottom:6px">ابحث عن مادة</div>
+            <div style="font-size:13px">اكتب اسم المادة واضغط "عرض الكشف"</div>
           </div>
         </div>
       </div>
 
     </div>
-
   </main>
 </div>
 
