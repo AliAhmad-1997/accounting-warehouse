@@ -234,6 +234,35 @@ html.dark,
     0px 1px 2px 0px rgba(255, 255, 255, 0.05), 0px 0px 1px 0px rgba(255, 255, 255, 0.05),
     0px 0px 0px 1px rgba(255, 255, 255, 0.08);
   --shadow-tooltip: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  /* ===== Semantic Tokens للـ Dark Mode ===== */
+
+  /* ألوان الخلفيات */
+  --surface-base:        #0f1923;
+  --surface-primary:     #162030;
+  --surface-secondary:   #1c2a3a;
+  --surface-elevated:    #1e2f42;
+  --surface-hover:       rgba(14,165,233,0.1);
+  --surface-active:      rgba(14,165,233,0.18);
+
+  /* ألوان النصوص */
+  --text-primary:        #e8f1fa;
+  --text-secondary:      #b8d0e8;
+  --text-tertiary:       #7fa8c8;
+  --text-muted:          #5a7a9a;
+  --text-inverse:        #0c1a2e;
+
+  /* الحدود */
+  --border:              rgba(14,165,233,0.25);
+  --border-subtle:       rgba(14,165,233,0.12);
+  --border-default:      rgba(14,165,233,0.25);
+  --border-strong:       rgba(14,165,233,0.5);
+  --border-focus:        #38bdf8;
+
+  /* Primary */
+  --primary:             #38bdf8;
+  --accent:              #38bdf8;
+  --accent-glow:         rgba(56,189,248,0.2);
+
 }
 
 /* =============================================================================
@@ -656,4 +685,134 @@ html:not(.dark) .theme-toggle .icon-moon {
 }
 html.dark .theme-toggle .icon-sun {
   display: none;
+}
+
+/* =============================================================================
+   DARK MODE — إصلاح وضوح النصوص في الحقول
+   ============================================================================= */
+
+html.dark .input,
+html.dark select.input,
+html.dark input.input,
+html.dark textarea.input {
+  background-color: var(--surface-secondary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-default) !important;
+}
+
+html.dark .input::placeholder {
+  color: var(--text-muted) !important;
+  opacity: 1;
+}
+
+html.dark select.input option {
+  background-color: #1c2a3a;
+  color: #e8f1fa;
+}
+
+html.dark .input:focus {
+  border-color: var(--border-focus) !important;
+  background-color: var(--surface-primary) !important;
+  box-shadow: 0 0 0 3px rgba(56,189,248,0.15) !important;
+}
+
+/* label وضوح */
+html.dark .label,
+html.dark .form-label,
+html.dark .receipt-label {
+  color: var(--text-secondary) !important;
+}
+
+/* card خلفية */
+html.dark .card,
+html.dark .receipt-card {
+  background-color: var(--surface-primary) !important;
+  border-color: var(--border-subtle) !important;
+}
+
+/* static display fields */
+html.dark .receipt-static,
+html.dark .receipt-equiv,
+html.dark .receipt-balance-preview {
+  background-color: var(--surface-secondary) !important;
+  border-color: var(--border-default) !important;
+  color: var(--text-primary) !important;
+}
+
+html.dark .receipt-static-blue  { color: #60c8ff !important; background: rgba(14,165,233,0.15) !important; }
+html.dark .receipt-static-green { color: #4ade80 !important; background: rgba(34,197,94,0.15) !important; }
+
+/* checkbox */
+html.dark input[type="checkbox"] {
+  accent-color: var(--primary);
+  width: 16px; height: 16px;
+}
+
+/* جدول */
+html.dark table thead th {
+  background-color: var(--surface-secondary) !important;
+  color: var(--text-secondary) !important;
+  border-color: var(--border-default) !important;
+}
+
+html.dark table tbody td {
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+}
+
+html.dark table tbody tr:hover {
+  background-color: var(--surface-hover) !important;
+}
+
+/* badge */
+html.dark .badge {
+  background-color: var(--surface-secondary) !important;
+  color: var(--text-secondary) !important;
+  border: 1px solid var(--border-default) !important;
+}
+
+/* nav */
+html.dark .nav-item {
+  color: var(--text-secondary) !important;
+}
+
+html.dark .nav-item:hover,
+html.dark .nav-item.active {
+  background-color: var(--surface-hover) !important;
+  color: var(--primary) !important;
+}
+
+/* modal */
+html.dark .modal {
+  background-color: var(--surface-primary) !important;
+  border-color: var(--border-default) !important;
+}
+
+html.dark .modal-header,
+html.dark .modal-title {
+  color: var(--text-primary) !important;
+  border-color: var(--border-subtle) !important;
+}
+
+/* page-title */
+html.dark .page-title { color: var(--text-primary) !important; }
+html.dark .page-subtitle { color: var(--text-muted) !important; }
+
+/* invoice rows */
+html.dark .invoice-row {
+  border-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+}
+html.dark .invoice-row:hover {
+  background-color: var(--surface-hover) !important;
+}
+
+/* deferred panels في الوضع الليلي */
+html.dark #cust-deferred-panel {
+  background: rgba(251,191,36,0.08) !important;
+  border-color: rgba(251,191,36,0.3) !important;
+}
+html.dark #sup-deferred-panel {
+  background: rgba(34,197,94,0.08) !important;
+  border-color: rgba(34,197,94,0.3) !important;
 }
