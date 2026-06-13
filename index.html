@@ -374,6 +374,159 @@
     .dmg-stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;}
     .dmg-stat-val{font-size:20px;font-weight:700;color:var(--red-600);}
     .dmg-stat-lbl{font-size:12px;color:var(--text-muted);}
+
+    /* ============================================================ */
+    /* تصميم موحد لصفحتي الإيصالات — قبض ودفع                     */
+    /* ============================================================ */
+    .receipt-page-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-radius: 16px;
+      padding: 20px 24px;
+      margin-bottom: 20px;
+      color: white;
+    }
+    .receipt-header-blue  { background: linear-gradient(135deg, #1d4ed8, #3b82f6); }
+    .receipt-header-green { background: linear-gradient(135deg, #15803d, #22c55e); }
+
+    .receipt-header-icon {
+      font-size: 32px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 12px;
+      width: 54px; height: 54px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .receipt-header-info { flex: 1; }
+    .receipt-header-title { font-size: 20px; font-weight: 800; }
+    .receipt-header-sub   { font-size: 13px; opacity: 0.85; margin-top: 2px; }
+
+    .receipt-num-badge {
+      background: rgba(255,255,255,0.2);
+      border: 1.5px solid rgba(255,255,255,0.4);
+      border-radius: 12px;
+      padding: 10px 18px;
+      text-align: center;
+      backdrop-filter: blur(4px);
+      min-width: 110px;
+    }
+    .receipt-num-label { display: block; font-size: 10px; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; }
+    .receipt-num-val   { display: block; font-size: 18px; font-weight: 800; font-family: monospace; margin-top: 2px; }
+
+    .receipt-card {
+      background: var(--surface-primary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    }
+
+    .receipt-section-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      display: inline-block;
+    }
+    .receipt-section-blue  { background: #eff6ff; color: #1d4ed8; }
+    .receipt-section-green { background: #f0fdf4; color: #15803d; }
+
+    .receipt-divider {
+      border: none;
+      border-top: 1px dashed var(--border);
+      margin: 20px 0;
+    }
+
+    .receipt-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .receipt-grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 700px) {
+      .receipt-grid-2, .receipt-grid-3 { grid-template-columns: 1fr; }
+    }
+
+    .receipt-field { display: flex; flex-direction: column; gap: 6px; }
+    .receipt-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .receipt-static {
+      padding: 9px 14px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-family: monospace;
+      font-size: 14px;
+      border: 1.5px solid;
+    }
+    .receipt-static-blue  { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+    .receipt-static-green { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+
+    .receipt-amount-input {
+      font-size: 18px !important;
+      font-weight: 700 !important;
+      text-align: center;
+    }
+
+    .receipt-equiv {
+      padding: 9px 14px;
+      background: var(--surface-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .receipt-balance-preview {
+      padding: 9px 14px;
+      background: #fef2f2;
+      border: 1.5px solid #fecaca;
+      border-radius: 8px;
+      font-weight: 700;
+      color: #dc2626;
+      font-size: 14px;
+    }
+    .receipt-balance-green {
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+      color: #15803d;
+    }
+
+    .receipt-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .receipt-save-btn {
+      padding: 10px 28px !important;
+      font-size: 14px !important;
+      font-weight: 700 !important;
+      border-radius: 10px !important;
+      border: none !important;
+      color: white !important;
+      cursor: pointer;
+    }
+    .receipt-save-blue  { background: linear-gradient(135deg, #1d4ed8, #3b82f6) !important; }
+    .receipt-save-green { background: linear-gradient(135deg, #15803d, #22c55e) !important; }
+
     </style>
 </head>
 <body>
@@ -1663,225 +1816,270 @@
     <!-- قبض من زبون -->
     <div id="page-receipt-customer" class="hidden">
 
-      <!-- عنوان الصفحة -->
-      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;">
-        <div>
-          <div class="page-title">🧾 إيصال قبض</div>
-          <div class="page-subtitle">تسجيل مدفوعات الزبائن وتسوية الفواتير الآجلة</div>
-        </div>
-        <div style="background:var(--surface-primary);border-radius:var(--radius-lg);padding:var(--space-2) var(--space-4);box-shadow:var(--shadow-sm);font-size:13px;color:var(--text-muted)">
-          سند رقم: <strong id="rec-cust-num" style="color:var(--primary);font-size:15px">REC-001</strong>
-        </div>
-      </div>
-
-      <!-- فورم الإيصال -->
-      <div class="card" style="margin-bottom:var(--space-4)">
-        <div class="card-title" style="margin-bottom:var(--space-4)">📋 بيانات الإيصال</div>
-
-        <!-- صف 1: رقم السند + التاريخ -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:var(--space-3);margin-bottom:var(--space-3);align-items:center">
-          <label class="label" style="text-align:left;color:var(--primary);font-weight:600">رقـم السنـد</label>
-          <div style="background:var(--surface-secondary);border:1px solid var(--border);border-radius:var(--radius-md);padding:8px 12px;font-weight:700;color:var(--primary)" id="rec-cust-num-display">جديد</div>
-          <label class="label" style="text-align:left;color:var(--primary);font-weight:600">التـاريـخ</label>
-          <input type="date" id="rec-cust-date" class="input">
-        </div>
-
-        <!-- خط فاصل -->
-        <hr style="border:none;border-top:1px solid var(--border);margin:var(--space-3) 0">
-
-        <!-- صف 2: اسم الزبون + المبلغ -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:var(--space-3);margin-bottom:var(--space-3);align-items:center">
-          <label class="label" style="text-align:left;color:var(--primary);font-weight:600">اسـم الزبـون</label>
-          <div style="position:relative;grid-column:span 1">
-            <input type="text" id="rec-cust-name" class="input" list="rec-cust-datalist" placeholder="اختر أو اكتب اسم الزبون" oninput="onCustNameInput(this.value);loadCustDeferredInvoices()" style="width:100%">
-            <datalist id="rec-cust-datalist"></datalist>
-          </div>
-          <label class="label" style="text-align:left;color:var(--primary);font-weight:600">المبلغ بالعملة الرئيسية</label>
-          <input type="number" id="rec-cust-amount" class="input" min="0" step="0.01" placeholder="0.00" oninput="updateCustBalance();updateCustCurrency()">
-        </div>
-
-        <!-- فواتير الزبون الآجلة — تظهر عند اختيار الزبون -->
-        <div id="cust-deferred-panel" style="display:none;margin-bottom:var(--space-3);background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px;">
-          <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:8px;">⏳ فواتير البيع الآجلة — اضغط لربط الإيصال بفاتورة</div>
-          <div id="cust-deferred-list" style="display:flex;flex-direction:column;gap:6px;"></div>
-          <div id="cust-linked-inv" style="margin-top:8px;display:none;">
-            <span style="font-size:12px;color:#15803d;font-weight:600;">✅ مربوط بالفاتورة: </span>
-            <span id="cust-linked-inv-num" style="font-family:monospace;background:#dcfce7;padding:2px 8px;border-radius:4px;font-weight:700;color:#15803d;"></span>
-            <button onclick="unlinkCustInvoice()" style="margin-right:8px;font-size:11px;background:none;border:none;color:#dc2626;cursor:pointer;">✕ إلغاء الربط</button>
-          </div>
-        </div>
-
-        <!-- صف 3: الحساب النقدي + الدفع -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:var(--space-3);margin-bottom:var(--space-3);align-items:center">
-          <label class="label" style="text-align:left;color:var(--primary);font-weight:600">رقـم الحسـاب</label>
-          <select id="rec-cust-method" class="input">
-            <option value="cash">💵 صندوق نقدي $</option>
-            <option value="cheque">🏦 شيك مصرفي</option>
-            <option value="transfer">📲 حوالة بنكية</option>
-          </select>
-          <label class="label" style="text-align:left;color:var(--primary);font-weight:600">الدفـع</label>
-          <select id="rec-cust-pay-type" class="input">
-            <option value="cash">نقداً</option>
-            <option value="cheque">شيك</option>
-            <option value="transfer">حوالة</option>
-          </select>
-        </div>
-
-        <!-- صف 4: رقم الشيك + البيان -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:var(--space-3);margin-bottom:var(--space-3);align-items:center">
-          <label class="label" style="text-align:left;color:var(--primary);font-weight:600">رقم الشيك/الحوالة</label>
-          <input type="text" id="rec-cust-cheque" class="input" placeholder="اختياري">
-          <label class="label" style="text-align:left;color:var(--primary);font-weight:600">البيـان</label>
-          <input type="text" id="rec-cust-desc" class="input" placeholder="سبب الدفعة">
-        </div>
-
-        <!-- صف 5: العملة + المعادل -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:var(--space-3);margin-bottom:var(--space-3);align-items:center">
-          <label class="label" style="text-align:left;color:var(--primary);font-weight:600">العملة</label>
-          <select id="rec-cust-currency" class="input" onchange="updateCustCurrency()">
-            <option value="USD">💵 دولار أمريكي ($)</option>
-            <option value="SYP_NEW">🇸🇾 ليرة سورية جديدة</option>
-            <option value="SYP_OLD">🇸🇾 ليرة سورية قديمة</option>
-          </select>
-          <label class="label" style="text-align:left;color:var(--primary);font-weight:600">المعادل بالدولار</label>
-          <div id="rec-cust-equiv" style="padding:8px 12px;background:var(--surface-secondary);border-radius:var(--radius-md);border:1px solid var(--border);font-size:12px;color:var(--text-muted)">—</div>
-        </div>
-
-        <hr style="border:none;border-top:1px solid var(--border);margin:var(--space-3) 0">
-
-        <!-- صف 6: الملاحظات -->
-        <div style="display:grid;grid-template-columns:1fr 3fr;gap:var(--space-3);margin-bottom:var(--space-3);align-items:center">
-          <label class="label" style="text-align:left;color:var(--primary);font-weight:600">ملاحظـات</label>
-          <input type="text" id="rec-cust-note" class="input" placeholder="ملاحظات إضافية (اختياري)">
-        </div>
-
-        <hr style="border:none;border-top:1px solid var(--border);margin:var(--space-3) 0">
-
-        <!-- صف 7: حسم + الرصيد بعد الإيصال -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:var(--space-3);align-items:center">
-          <label class="label" style="text-align:left;color:var(--primary);font-weight:600">حسم مع الدفعة $</label>
-          <input type="number" id="rec-cust-discount" class="input" value="0" min="0" step="0.01" oninput="updateCustBalance()">
-          <label class="label" style="text-align:left;color:var(--primary);font-weight:600">الرصيد بعد الإيصال</label>
-          <div id="rec-cust-balance-preview" style="padding:8px 12px;background:#fef2f2;border-radius:var(--radius-md);border:1px solid #fecaca;font-weight:700;color:#dc2626;font-size:15px">—</div>
-        </div>
-
-        <!-- أزرار الحفظ -->
-        <div style="display:flex;gap:var(--space-3);margin-top:var(--space-4);justify-content:flex-end">
-          <button class="btn btn-ghost" onclick="clearReceiptCustomerForm()">🗑️ مسح</button>
-          <button class="btn btn-primary" onclick="printReceiptCustomer()" style="background:var(--text-secondary)">🖨️ طباعة القيد</button>
-          <button class="btn btn-success btn-lg" onclick="saveReceiptCustomer()">💾 حفظ F5</button>
-        </div>
-      </div>
-
-      <!-- جدول الفواتير الآجلة المستحقة -->
-      <div class="card">
-        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3)">
-          <span>🔴 الفواتير الآجلة المستحقة</span>
-          <span style="font-size:12px;font-weight:400;color:var(--text-muted)">اضغط على فاتورة لربطها بالإيصال</span>
-        </div>
-        <div id="rec-deferred-customers"></div>
-      </div>
-
-      <!-- آخر الإيصالات -->
-      <div class="card" style="margin-top:var(--space-4)">
-        <div class="card-title">📄 آخر إيصالات القبض</div>
-        <div id="rec-cust-list"></div>
-      </div>
-
+  <!-- هيدر الصفحة -->
+  <div class="receipt-page-header receipt-header-blue">
+    <div class="receipt-header-icon">🧾</div>
+    <div class="receipt-header-info">
+      <div class="receipt-header-title">إيصال قبض من زبون</div>
+      <div class="receipt-header-sub">تسجيل مدفوعات الزبائن وتسوية الفواتير الآجلة</div>
     </div>
+    <div class="receipt-num-badge">
+      <span class="receipt-num-label">سند رقم</span>
+      <span class="receipt-num-val" id="rec-cust-num">REC-001</span>
+    </div>
+  </div>
 
-    <!-- ============================================================ -->
-    <!-- صفحة إيصال الدفع للموردين -->
-    <!-- ============================================================ -->
+  <!-- الفورم الرئيسي -->
+  <div class="receipt-card">
 
-    <!-- دفع لمورد -->
-    <div id="page-receipt-supplier" class="hidden">
-      <div class="page-header">
-        <h1 class="page-title">💸 إيصال الدفع للمورد</h1>
-        <span style="color:var(--text-muted);font-size:14px">سند رقم: <strong id="rec-sup-num">PAY-001</strong></span>
+    <!-- القسم 1: بيانات أساسية -->
+    <div class="receipt-section-title receipt-section-blue">📋 البيانات الأساسية</div>
+    <div class="receipt-grid-3">
+      <div class="receipt-field">
+        <label class="receipt-label">رقم السند</label>
+        <div class="receipt-static receipt-static-blue" id="rec-cust-num-display">جديد</div>
       </div>
-
-      <!-- المستحقات للموردين -->
-      <div class="card" style="margin-bottom:var(--space-4)">
-        <div class="card-title" style="display:flex;align-items:center;gap:8px">
-          🔴 فواتير الشراء الآجلة المستحقة
-          <span style="font-size:12px;font-weight:400;color:var(--text-muted)">اضغط على المورد لتعبئة الفورم تلقائياً</span>
-        </div>
-        <div id="rec-deferred-suppliers"></div>
+      <div class="receipt-field">
+        <label class="receipt-label">التاريخ</label>
+        <input type="date" id="rec-cust-date" class="input">
       </div>
-
-      <div class="card">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4)">
-          <div style="display:flex;flex-direction:column;gap:var(--space-3)">
-            <div style="display:flex;gap:8px;align-items:center">
-              <label class="label" style="min-width:90px">التاريخ</label>
-              <input type="date" id="rec-sup-date" class="input" style="flex:1">
-            </div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <label class="label" style="min-width:90px">اسم المورد</label>
-              <input type="text" id="rec-sup-name" class="input" style="flex:1" list="rec-sup-datalist" placeholder="اسم المورد" oninput="loadSupDeferredInvoices()">
-              <datalist id="rec-sup-datalist"></datalist>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <label class="label" style="min-width:90px">المبلغ</label>
-              <input type="number" id="rec-sup-amount" class="input" style="flex:1" min="0" step="0.01" placeholder="0.00" oninput="updateSupCurrency()">
-            </div>
-
-            <!-- panel فواتير المورد الآجلة -->
-            <div id="sup-deferred-panel" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px;">
-              <div style="font-size:12px;font-weight:700;color:#15803d;margin-bottom:8px;">⏳ فواتير الشراء الآجلة — اضغط لربط الدفعة بفاتورة</div>
-              <div id="sup-deferred-list" style="display:flex;flex-direction:column;gap:6px;"></div>
-              <div id="sup-linked-inv" style="margin-top:8px;display:none;">
-                <span style="font-size:12px;color:#15803d;font-weight:600;">✅ مربوط بالفاتورة: </span>
-                <span id="sup-linked-inv-num" style="font-family:monospace;background:#dcfce7;padding:2px 8px;border-radius:4px;font-weight:700;color:#15803d;"></span>
-                <button onclick="unlinkSupInvoice()" style="margin-right:8px;font-size:11px;background:none;border:none;color:#dc2626;cursor:pointer;">✕ إلغاء الربط</button>
-              </div>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <label class="label" style="min-width:90px">العملة</label>
-              <select id="rec-sup-currency" class="input" style="flex:1" onchange="updateSupCurrency()">
-                <option value="USD">💵 دولار أمريكي ($)</option>
-                <option value="SYP_NEW">🇸🇾 ليرة سورية جديدة</option>
-                <option value="SYP_OLD">🇸🇾 ليرة سورية قديمة</option>
-              </select>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <label class="label" style="min-width:90px">المعادل $</label>
-              <div id="rec-sup-equiv" style="padding:8px 12px;background:var(--surface-secondary);border-radius:var(--radius-md);border:1px solid var(--border);font-size:12px;color:var(--text-muted);flex:1">—</div>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <label class="label" style="min-width:90px">طريقة الدفع</label>
-              <select id="rec-sup-method" class="input" style="flex:1">
-                <option value="cash">نقداً</option>
-                <option value="cheque">شيك</option>
-                <option value="transfer">حوالة</option>
-              </select>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <label class="label" style="min-width:90px">رقم الشيك</label>
-              <input type="text" id="rec-sup-cheque" class="input" style="flex:1" placeholder="اختياري">
-            </div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:var(--space-3)">
-            <div style="display:flex;gap:8px;align-items:center">
-              <label class="label" style="min-width:90px">البيان</label>
-              <input type="text" id="rec-sup-desc" class="input" style="flex:1" placeholder="سبب الدفعة">
-            </div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <label class="label" style="min-width:90px">ملاحظة</label>
-              <input type="text" id="rec-sup-note" class="input" style="flex:1" placeholder="اختياري">
-            </div>
-            <button class="btn btn-success btn-lg" onclick="saveReceiptSupplier()" style="margin-top:var(--space-2)">💾 حفظ إيصال الدفع</button>
-          </div>
-        </div>
-      </div>
-      <div class="card" style="margin-top:var(--space-4)">
-        <div class="card-title">آخر إيصالات الدفع</div>
-        <div id="rec-sup-list"></div>
+      <div class="receipt-field">
+        <label class="receipt-label">طريقة الدفع</label>
+        <select id="rec-cust-method" class="input">
+          <option value="cash">💵 صندوق نقدي</option>
+          <option value="cheque">🏦 شيك مصرفي</option>
+          <option value="transfer">📲 حوالة بنكية</option>
+        </select>
       </div>
     </div>
 
-  </main>
+    <div class="receipt-divider"></div>
+
+    <!-- القسم 2: الزبون والمبلغ -->
+    <div class="receipt-section-title receipt-section-blue">👤 الزبون والمبلغ</div>
+    <div class="receipt-grid-2">
+      <div class="receipt-field">
+        <label class="receipt-label">اسم الزبون</label>
+        <input type="text" id="rec-cust-name" class="input" list="rec-cust-datalist"
+          placeholder="اكتب أو اختر اسم الزبون..."
+          oninput="onCustNameInput(this.value);loadCustDeferredInvoices()">
+        <datalist id="rec-cust-datalist"></datalist>
+      </div>
+      <div class="receipt-field">
+        <label class="receipt-label">رقم الشيك / الحوالة</label>
+        <input type="text" id="rec-cust-cheque" class="input" placeholder="اختياري">
+      </div>
+    </div>
+
+    <!-- panel الفواتير الآجلة -->
+    <div id="cust-deferred-panel" style="display:none;margin:12px 0;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1.5px solid #fbbf24;border-radius:12px;padding:14px;">
+      <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+        <span style="background:#fbbf24;color:white;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;">⏳</span>
+        فواتير البيع الآجلة — اضغط على فاتورة لربطها بهذا الإيصال
+      </div>
+      <div id="cust-deferred-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+      <div id="cust-linked-inv" style="margin-top:10px;display:none;background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:8px 12px;display:none;align-items:center;gap:8px;">
+        <span style="font-size:13px;">✅</span>
+        <span style="font-size:12px;color:#15803d;font-weight:600;">مربوط بالفاتورة:</span>
+        <span id="cust-linked-inv-num" style="font-family:monospace;background:white;padding:2px 10px;border-radius:6px;font-weight:700;color:#15803d;font-size:13px;border:1px solid #86efac;"></span>
+        <button onclick="unlinkCustInvoice()" style="margin-right:auto;font-size:11px;background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;color:#dc2626;cursor:pointer;padding:2px 8px;">✕ إلغاء</button>
+      </div>
+    </div>
+
+    <!-- المبلغ والعملة -->
+    <div class="receipt-grid-3">
+      <div class="receipt-field">
+        <label class="receipt-label">المبلغ</label>
+        <input type="number" id="rec-cust-amount" class="input receipt-amount-input"
+          min="0" step="0.01" placeholder="0.00"
+          oninput="updateCustBalance();updateCustCurrency()">
+      </div>
+      <div class="receipt-field">
+        <label class="receipt-label">العملة</label>
+        <select id="rec-cust-currency" class="input" onchange="updateCustCurrency()">
+          <option value="USD">💵 دولار أمريكي ($)</option>
+          <option value="SYP_NEW">🇸🇾 ليرة سورية جديدة</option>
+          <option value="SYP_OLD">🇸🇾 ليرة سورية قديمة</option>
+        </select>
+      </div>
+      <div class="receipt-field">
+        <label class="receipt-label">المعادل بالعملات</label>
+        <div id="rec-cust-equiv" class="receipt-equiv">—</div>
+      </div>
+    </div>
+
+    <div class="receipt-divider"></div>
+
+    <!-- القسم 3: تفاصيل إضافية -->
+    <div class="receipt-section-title receipt-section-blue">📝 تفاصيل إضافية</div>
+    <div class="receipt-grid-2">
+      <div class="receipt-field">
+        <label class="receipt-label">البيان</label>
+        <input type="text" id="rec-cust-desc" class="input" placeholder="سبب الدفعة...">
+      </div>
+      <div class="receipt-field">
+        <label class="receipt-label">ملاحظات</label>
+        <input type="text" id="rec-cust-note" class="input" placeholder="اختياري...">
+      </div>
+      <div class="receipt-field">
+        <label class="receipt-label">حسم مع الدفعة ($)</label>
+        <input type="number" id="rec-cust-discount" class="input" value="0" min="0" step="0.01" oninput="updateCustBalance()">
+      </div>
+      <div class="receipt-field">
+        <label class="receipt-label">الرصيد بعد الإيصال</label>
+        <div id="rec-cust-balance-preview" class="receipt-balance-preview">—</div>
+      </div>
+    </div>
+
+    <!-- أزرار الحفظ -->
+    <div class="receipt-actions">
+      <button class="btn btn-ghost" onclick="clearReceiptCustomerForm()">🗑️ مسح</button>
+      <button class="btn" onclick="printReceiptCustomer()" style="background:#64748b;color:white;">🖨️ طباعة</button>
+      <button class="btn receipt-save-btn receipt-save-blue" onclick="saveReceiptCustomer()">💾 حفظ الإيصال</button>
+    </div>
+  </div>
+
+  <!-- آخر الإيصالات -->
+  <div class="receipt-card" style="margin-top:16px;">
+    <div class="receipt-section-title receipt-section-blue" style="margin-bottom:12px;">🕐 آخر إيصالات القبض</div>
+    <div id="rec-cust-list"></div>
+  </div>
+
+</div>
+
+<div id="page-receipt-supplier" class="hidden">
+
+  <!-- هيدر الصفحة -->
+  <div class="receipt-page-header receipt-header-green">
+    <div class="receipt-header-icon">💸</div>
+    <div class="receipt-header-info">
+      <div class="receipt-header-title">إيصال دفع للمورد</div>
+      <div class="receipt-header-sub">تسجيل مدفوعات الموردين وتسوية فواتير الشراء الآجلة</div>
+    </div>
+    <div class="receipt-num-badge receipt-num-green">
+      <span class="receipt-num-label">سند رقم</span>
+      <span class="receipt-num-val" id="rec-sup-num">PAY-001</span>
+    </div>
+  </div>
+
+  <!-- الفورم الرئيسي -->
+  <div class="receipt-card">
+
+    <!-- القسم 1: بيانات أساسية -->
+    <div class="receipt-section-title receipt-section-green">📋 البيانات الأساسية</div>
+    <div class="receipt-grid-3">
+      <div class="receipt-field">
+        <label class="receipt-label">رقم السند</label>
+        <div class="receipt-static receipt-static-green" id="rec-sup-num-display">جديد</div>
+      </div>
+      <div class="receipt-field">
+        <label class="receipt-label">التاريخ</label>
+        <input type="date" id="rec-sup-date" class="input">
+      </div>
+      <div class="receipt-field">
+        <label class="receipt-label">طريقة الدفع</label>
+        <select id="rec-sup-method" class="input">
+          <option value="cash">💵 نقداً</option>
+          <option value="cheque">🏦 شيك مصرفي</option>
+          <option value="transfer">📲 حوالة بنكية</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="receipt-divider"></div>
+
+    <!-- القسم 2: المورد والمبلغ -->
+    <div class="receipt-section-title receipt-section-green">🏭 المورد والمبلغ</div>
+    <div class="receipt-grid-2">
+      <div class="receipt-field">
+        <label class="receipt-label">اسم المورد</label>
+        <input type="text" id="rec-sup-name" class="input" list="rec-sup-datalist"
+          placeholder="اكتب أو اختر اسم المورد..."
+          oninput="loadSupDeferredInvoices()">
+        <datalist id="rec-sup-datalist"></datalist>
+      </div>
+      <div class="receipt-field">
+        <label class="receipt-label">رقم الشيك / الحوالة</label>
+        <input type="text" id="rec-sup-cheque" class="input" placeholder="اختياري">
+      </div>
+    </div>
+
+    <!-- panel الفواتير الآجلة -->
+    <div id="sup-deferred-panel" style="display:none;margin:12px 0;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1.5px solid #4ade80;border-radius:12px;padding:14px;">
+      <div style="font-size:12px;font-weight:700;color:#15803d;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+        <span style="background:#22c55e;color:white;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;">⏳</span>
+        فواتير الشراء الآجلة — اضغط على فاتورة لربطها بهذا الإيصال
+      </div>
+      <div id="sup-deferred-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+      <div id="sup-linked-inv" style="margin-top:10px;display:none;background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:8px 12px;align-items:center;gap:8px;">
+        <span style="font-size:13px;">✅</span>
+        <span style="font-size:12px;color:#15803d;font-weight:600;">مربوط بالفاتورة:</span>
+        <span id="sup-linked-inv-num" style="font-family:monospace;background:white;padding:2px 10px;border-radius:6px;font-weight:700;color:#15803d;font-size:13px;border:1px solid #86efac;"></span>
+        <button onclick="unlinkSupInvoice()" style="margin-right:auto;font-size:11px;background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;color:#dc2626;cursor:pointer;padding:2px 8px;">✕ إلغاء</button>
+      </div>
+    </div>
+
+    <!-- المبلغ والعملة -->
+    <div class="receipt-grid-3">
+      <div class="receipt-field">
+        <label class="receipt-label">المبلغ</label>
+        <input type="number" id="rec-sup-amount" class="input receipt-amount-input"
+          min="0" step="0.01" placeholder="0.00"
+          oninput="updateSupCurrency()">
+      </div>
+      <div class="receipt-field">
+        <label class="receipt-label">العملة</label>
+        <select id="rec-sup-currency" class="input" onchange="updateSupCurrency()">
+          <option value="USD">💵 دولار أمريكي ($)</option>
+          <option value="SYP_NEW">🇸🇾 ليرة سورية جديدة</option>
+          <option value="SYP_OLD">🇸🇾 ليرة سورية قديمة</option>
+        </select>
+      </div>
+      <div class="receipt-field">
+        <label class="receipt-label">المعادل بالعملات</label>
+        <div id="rec-sup-equiv" class="receipt-equiv">—</div>
+      </div>
+    </div>
+
+    <div class="receipt-divider"></div>
+
+    <!-- القسم 3: تفاصيل إضافية -->
+    <div class="receipt-section-title receipt-section-green">📝 تفاصيل إضافية</div>
+    <div class="receipt-grid-2">
+      <div class="receipt-field">
+        <label class="receipt-label">البيان</label>
+        <input type="text" id="rec-sup-desc" class="input" placeholder="سبب الدفعة...">
+      </div>
+      <div class="receipt-field">
+        <label class="receipt-label">ملاحظات</label>
+        <input type="text" id="rec-sup-note" class="input" placeholder="اختياري...">
+      </div>
+      <div class="receipt-field">
+        <label class="receipt-label">حسم مع الدفعة ($)</label>
+        <input type="number" id="rec-sup-discount" class="input" value="0" min="0" step="0.01">
+      </div>
+      <div class="receipt-field">
+        <label class="receipt-label">الرصيد بعد الإيصال</label>
+        <div id="rec-sup-balance-preview" class="receipt-balance-preview receipt-balance-green">—</div>
+      </div>
+    </div>
+
+    <!-- أزرار الحفظ -->
+    <div class="receipt-actions">
+      <button class="btn btn-ghost" onclick="clearReceiptSupplierForm()">🗑️ مسح</button>
+      <button class="btn receipt-save-btn receipt-save-green" onclick="saveReceiptSupplier()">💾 حفظ الإيصال</button>
+    </div>
+  </div>
+
+  <!-- آخر الإيصالات -->
+  <div class="receipt-card" style="margin-top:16px;">
+    <div class="receipt-section-title receipt-section-green" style="margin-bottom:12px;">🕐 آخر إيصالات الدفع</div>
+    <div id="rec-sup-list"></div>
+  </div>
+
+</div>
+
+</main>
 <!-- ITEM MODAL -->
 <div class="modal-overlay hidden" id="item-modal">
   <div class="modal" style="width:560px">

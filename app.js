@@ -4050,3 +4050,105 @@ function saveReceiptSupplier() {
   if (panel) panel.style.display = 'none';
   renderReceiptSupplier();
 }
+
+// ============================================================
+// دوال مساعدة للصفحتين المعادتَين
+// ============================================================
+
+function clearReceiptCustomerForm() {
+  ['rec-cust-name','rec-cust-amount','rec-cust-cheque','rec-cust-desc','rec-cust-note'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  if (document.getElementById('rec-cust-discount')) document.getElementById('rec-cust-discount').value = '0';
+  if (document.getElementById('rec-cust-equiv'))    document.getElementById('rec-cust-equiv').textContent = '—';
+  if (document.getElementById('rec-cust-currency')) document.getElementById('rec-cust-currency').value = 'USD';
+  if (document.getElementById('rec-cust-balance-preview')) document.getElementById('rec-cust-balance-preview').textContent = '—';
+  const panel = document.getElementById('cust-deferred-panel');
+  if (panel) panel.style.display = 'none';
+  _custLinkedInvoice = null;
+  hideCustLinkedBadge();
+}
+
+function clearReceiptSupplierForm() {
+  ['rec-sup-name','rec-sup-amount','rec-sup-cheque','rec-sup-desc','rec-sup-note'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  if (document.getElementById('rec-sup-discount')) document.getElementById('rec-sup-discount').value = '0';
+  if (document.getElementById('rec-sup-equiv'))    document.getElementById('rec-sup-equiv').textContent = '—';
+  if (document.getElementById('rec-sup-currency')) document.getElementById('rec-sup-currency').value = 'USD';
+  if (document.getElementById('rec-sup-balance-preview')) document.getElementById('rec-sup-balance-preview').textContent = '—';
+  const panel = document.getElementById('sup-deferred-panel');
+  if (panel) panel.style.display = 'none';
+  _supLinkedInvoice = null;
+  hideSupLinkedBadge();
+}
+
+// تحديث renderReceiptCustomer لتعبئة رقم السند والتاريخ والقائمة
+const _origRRC = renderReceiptCustomer;
+function renderReceiptCustomer() {
+  const nextNum = 'REC-' + String((db.invoiceCounters.receipt||0)+1).padStart(3,'0');
+  ['rec-cust-num','rec-cust-num-display'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.textContent = nextNum;
+  });
+  const dateEl = document.getElementById('rec-cust-date');
+  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+  // datalist
+  const dl = document.getElementById('rec-cust-datalist');
+  if (dl) dl.innerHTML = db.customers.filter(c=>c.name).map(c=>`<option value="${c.name}">`).join('');
+  // قائمة آخر الإيصالات
+  const listEl = document.getElementById('rec-cust-list');
+  if (listEl) {
+    const payments = (db.customerPayments||[]).slice().reverse().slice(0,20);
+    if (payments.length === 0) {
+      listEl.innerHTML = '<div class="empty-state">لا توجد إيصالات بعد</div>';
+    } else {
+      listEl.innerHTML = payments.map(p => {
+        const linked = p.linkedInvoice ? `<span style="font-size:10px;background:#dcfce7;color:#15803d;padding:1px 6px;border-radius:8px;margin-right:4px">🔗 ${p.linkedInvoice}</span>` : '';
+        const cur = { USD:'$', SYP_NEW:'ل.ج', SYP_OLD:'ل.ق' }[p.currency||'USD']||'$';
+        return `<div class="invoice-row">
+          <span class="item-id">${p.receiptNum||'—'}</span>
+          <span><strong>${p.customerName}</strong></span>
+          ${linked}
+          <span style="color:var(--green-700);font-weight:700">${p.rawAmount||p.amount} ${cur}</span>
+          <span style="color:var(--text-muted);font-size:11px">≈ ${fmtUSD(p.amount)}</span>
+          <span class="inv-date">${p.date}</span>
+        </div>`;
+      }).join('');
+    }
+  }
+}
+
+// تحديث renderReceiptSupplier
+const _origRRS = renderReceiptSupplier;
+function renderReceiptSupplier() {
+  const nextNum = 'PAY-' + String((db.invoiceCounters.receipt||0)+1).padStart(3,'0');
+  ['rec-sup-num','rec-sup-num-display'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.textContent = nextNum;
+  });
+  const dateEl = document.getElementById('rec-sup-date');
+  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+  // datalist
+  const dl = document.getElementById('rec-sup-datalist');
+  if (dl) dl.innerHTML = (db.suppliers||[]).filter(s=>s.name).map(s=>`<option value="${s.name}">`).join('');
+  // قائمة آخر الإيصالات
+  const listEl = document.getElementById('rec-sup-list');
+  if (listEl) {
+    const payments = (db.supplierPayments||[]).slice().reverse().slice(0,20);
+    if (payments.length === 0) {
+      listEl.innerHTML = '<div class="empty-state">لا توجد إيصالات بعد</div>';
+    } else {
+      listEl.innerHTML = payments.map(p => {
+        const linked = p.linkedInvoice ? `<span style="font-size:10px;background:#dcfce7;color:#15803d;padding:1px 6px;border-radius:8px;margin-right:4px">🔗 ${p.linkedInvoice}</span>` : '';
+        const cur = { USD:'$', SYP_NEW:'ل.ج', SYP_OLD:'ل.ق' }[p.currency||'USD']||'$';
+        return `<div class="invoice-row">
+          <span class="item-id">${p.receiptNum||'—'}</span>
+          <span><strong>${p.supplierName}</strong></span>
+          ${linked}
+          <span style="color:var(--blue-link);font-weight:700">${p.rawAmount||p.amount} ${cur}</span>
+          <span style="color:var(--text-muted);font-size:11px">≈ ${fmtUSD(p.amount)}</span>
+          <span class="inv-date">${p.date}</span>
+        </div>`;
+      }).join('');
+    }
+  }
+}
