@@ -844,14 +844,21 @@
               كل الفواتير
               <span id="invoices-count" style="font-size:11px;background:var(--surface-secondary);color:var(--text-muted);padding:2px 8px;border-radius:999px;font-weight:500;">0 فاتورة</span>
             </div>
-            <input
-              type="text"
-              id="invoices-search"
-              class="input input-sm"
-              placeholder="🔍 بحث برقم الفاتورة أو الاسم..."
-              oninput="renderAllInvoices()"
-              style="width:260px;max-width:100%;"
-            >
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <select id="invoices-pay-filter" class="input input-sm" onchange="renderAllInvoices()" style="width:130px;">
+                <option value="all">📋 كل الفواتير</option>
+                <option value="deferred">⏳ آجلة فقط</option>
+                <option value="cash">💵 نقدية فقط</option>
+              </select>
+              <input
+                type="text"
+                id="invoices-search"
+                class="input input-sm"
+                placeholder="🔍 بحث برقم الفاتورة أو الاسم..."
+                oninput="renderAllInvoices()"
+                style="width:230px;max-width:100%;"
+              >
+            </div>
           </div>
           <!-- رأس الجدول -->
           <div style="display:flex;align-items:center;gap:12px;padding:6px 4px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border-subtle);margin-bottom:4px;">
@@ -990,10 +997,17 @@
             🧾 فواتير البيع
             <span id="sale-invoices-count" style="font-size:11px;background:var(--surface-secondary);color:var(--text-muted);padding:2px 8px;border-radius:999px;font-weight:500;">0 فاتورة</span>
           </div>
-          <input type="text" id="sale-invoices-search" class="input input-sm"
-            placeholder="🔍 بحث برقم الفاتورة أو اسم الزبون..."
-            oninput="renderSaleRecentInvoices()"
-            style="width:260px;max-width:100%;">
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <select id="sale-pay-filter" class="input input-sm" onchange="renderSaleRecentInvoices()" style="width:130px;">
+              <option value="all">📋 كل الفواتير</option>
+              <option value="deferred">⏳ آجلة فقط</option>
+              <option value="cash">💵 نقدية فقط</option>
+            </select>
+            <input type="text" id="sale-invoices-search" class="input input-sm"
+              placeholder="🔍 بحث برقم الفاتورة أو اسم الزبون..."
+              oninput="renderSaleRecentInvoices()"
+              style="width:210px;max-width:100%;">
+          </div>
         </div>
         <div style="display:flex;align-items:center;gap:12px;padding:6px 4px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border-subtle);margin-bottom:4px;">
           <span style="min-width:80px;">رقم الفاتورة</span>
@@ -1105,10 +1119,17 @@
             🛒 فواتير الشراء
             <span id="pur-invoices-count" style="font-size:11px;background:var(--surface-secondary);color:var(--text-muted);padding:2px 8px;border-radius:999px;font-weight:500;">0 فاتورة</span>
           </div>
-          <input type="text" id="pur-invoices-search" class="input input-sm"
-            placeholder="🔍 بحث برقم الفاتورة أو اسم المورد..."
-            oninput="renderPurchaseRecentInvoices()"
-            style="width:260px;max-width:100%;">
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <select id="pur-pay-filter" class="input input-sm" onchange="renderPurchaseRecentInvoices()" style="width:130px;">
+              <option value="all">📋 كل الفواتير</option>
+              <option value="deferred">⏳ آجلة فقط</option>
+              <option value="cash">💵 نقدية فقط</option>
+            </select>
+            <input type="text" id="pur-invoices-search" class="input input-sm"
+              placeholder="🔍 بحث برقم الفاتورة أو اسم المورد..."
+              oninput="renderPurchaseRecentInvoices()"
+              style="width:210px;max-width:100%;">
+          </div>
         </div>
         <div style="display:flex;align-items:center;gap:12px;padding:6px 4px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border-subtle);margin-bottom:4px;">
           <span style="min-width:80px;">رقم الفاتورة</span>

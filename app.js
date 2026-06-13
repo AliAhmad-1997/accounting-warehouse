@@ -371,13 +371,19 @@ function renderAllInvoices() {
     ...db.purchaseInvoices.map(i=>({...i, type:'شراء'}))
   ].sort((a,b) => new Date(b.date) - new Date(a.date));
 
-  const filtered = searchVal
-    ? all.filter(inv =>
-        (inv.number || '').toLowerCase().includes(searchVal) ||
-        (inv.customerName || '').toLowerCase().includes(searchVal) ||
-        (inv.supplierName || '').toLowerCase().includes(searchVal)
-      )
-    : all;
+  const payFilter = document.getElementById('invoices-pay-filter') ? document.getElementById('invoices-pay-filter').value : 'all';
+
+  const filtered = all.filter(inv => {
+    const matchSearch = !searchVal ||
+      (inv.number || '').toLowerCase().includes(searchVal) ||
+      (inv.customerName || '').toLowerCase().includes(searchVal) ||
+      (inv.supplierName || '').toLowerCase().includes(searchVal);
+    const pt = inv.paymentType || 'cash';
+    const matchPay = payFilter === 'all' ||
+      (payFilter === 'deferred' && pt === 'deferred') ||
+      (payFilter === 'cash' && pt !== 'deferred');
+    return matchSearch && matchPay;
+  });
 
   const recentEl = document.getElementById('recent-invoices');
   if (!recentEl) return;
@@ -397,10 +403,15 @@ function renderAllInvoices() {
     const num = inv.number;
     const party = inv.customerName || inv.supplierName || '—';
     const isSale = inv.type === 'بيع';
+    const pt = inv.paymentType || 'cash';
+    const payBadge = pt === 'deferred'
+      ? '<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:10px;margin-right:4px">⏳ آجل</span>'
+      : '<span style="font-size:10px;background:#f0fdf4;color:#15803d;padding:1px 6px;border-radius:10px;margin-right:4px">💵 نقدي</span>';
     return '<div class="invoice-row" onclick="openInvoiceDetail(\'' + num + '\')" style="cursor:pointer">' +
       '<span class="inv-num">' + num + '</span>' +
       '<span class="inv-customer">' + party + '</span>' +
       '<span class="inv-type ' + (isSale ? 'type-sale' : 'type-purchase') + '">' + inv.type + '</span>' +
+      payBadge +
       '<span class="inv-total">' + fmtUSD(inv.total) + '</span>' +
       '<span class="inv-date">' + inv.date + '</span>' +
       '</div>';
@@ -440,24 +451,37 @@ function renderSaleRecentInvoices() {
   if(!el) return;
   const searchVal = (document.getElementById('sale-invoices-search') ? document.getElementById('sale-invoices-search').value : '').toLowerCase().trim();
   const all = db.salesInvoices.slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
-  const filtered = searchVal
-    ? all.filter(inv => (inv.number||'').toLowerCase().includes(searchVal) || (inv.customerName||'').toLowerCase().includes(searchVal))
-    : all;
+  const salePayFilter = document.getElementById('sale-pay-filter') ? document.getElementById('sale-pay-filter').value : 'all';
+  const filtered = all.filter(inv => {
+    const matchSearch = !searchVal ||
+      (inv.number||'').toLowerCase().includes(searchVal) ||
+      (inv.customerName||'').toLowerCase().includes(searchVal);
+    const pt = inv.paymentType || 'cash';
+    const matchPay = salePayFilter === 'all' ||
+      (salePayFilter === 'deferred' && pt === 'deferred') ||
+      (salePayFilter === 'cash' && pt !== 'deferred');
+    return matchSearch && matchPay;
+  });
   const countEl = document.getElementById('sale-invoices-count');
   if(countEl) countEl.textContent = filtered.length + ' فاتورة';
   if(filtered.length === 0) {
     el.innerHTML = searchVal ? '<div class="empty-state">🔍 لا توجد نتائج لـ "' + searchVal + '"</div>' : '<div class="empty-state">لا توجد فواتير بيع بعد</div>';
     return;
   }
-  el.innerHTML = filtered.map(inv =>
-    '<div class="invoice-row" onclick="openInvoiceDetail(\'' + inv.number + '\')" style="cursor:pointer">' +
-    '<span class="inv-num">' + inv.number + '</span>' +
-    '<span class="inv-customer">' + (inv.customerName||'—') + '</span>' +
-    '<span class="inv-type type-sale">بيع</span>' +
-    '<span class="inv-total">' + fmtUSD(inv.total) + '</span>' +
-    '<span class="inv-date">' + inv.date + '</span>' +
-    '</div>'
-  ).join('');
+  el.innerHTML = filtered.map(inv => {
+    const spt = inv.paymentType || 'cash';
+    const spb = spt === 'deferred'
+      ? '<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:10px;margin-right:4px">⏳ آجل</span>'
+      : '<span style="font-size:10px;background:#f0fdf4;color:#15803d;padding:1px 6px;border-radius:10px;margin-right:4px">💵 نقدي</span>';
+    return '<div class="invoice-row" onclick="openInvoiceDetail(\'' + inv.number + '\')" style="cursor:pointer">' +
+      '<span class="inv-num">' + inv.number + '</span>' +
+      '<span class="inv-customer">' + (inv.customerName||'—') + '</span>' +
+      '<span class="inv-type type-sale">بيع</span>' +
+      spb +
+      '<span class="inv-total">' + fmtUSD(inv.total) + '</span>' +
+      '<span class="inv-date">' + inv.date + '</span>' +
+      '</div>';
+  }).join('');
 }
 
 function renderSaleLines() {
@@ -814,24 +838,37 @@ function renderPurchaseRecentInvoices() {
   if(!el) return;
   const searchVal = (document.getElementById('pur-invoices-search') ? document.getElementById('pur-invoices-search').value : '').toLowerCase().trim();
   const all = db.purchaseInvoices.slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
-  const filtered = searchVal
-    ? all.filter(inv => (inv.number||'').toLowerCase().includes(searchVal) || (inv.supplierName||'').toLowerCase().includes(searchVal))
-    : all;
+  const purPayFilter = document.getElementById('pur-pay-filter') ? document.getElementById('pur-pay-filter').value : 'all';
+  const filtered = all.filter(inv => {
+    const matchSearch = !searchVal ||
+      (inv.number||'').toLowerCase().includes(searchVal) ||
+      (inv.supplierName||'').toLowerCase().includes(searchVal);
+    const pt = inv.paymentType || 'cash';
+    const matchPay = purPayFilter === 'all' ||
+      (purPayFilter === 'deferred' && pt === 'deferred') ||
+      (purPayFilter === 'cash' && pt !== 'deferred');
+    return matchSearch && matchPay;
+  });
   const countEl = document.getElementById('pur-invoices-count');
   if(countEl) countEl.textContent = filtered.length + ' فاتورة';
   if(filtered.length === 0) {
     el.innerHTML = searchVal ? '<div class="empty-state">🔍 لا توجد نتائج لـ "' + searchVal + '"</div>' : '<div class="empty-state">لا توجد فواتير شراء بعد</div>';
     return;
   }
-  el.innerHTML = filtered.map(inv =>
-    '<div class="invoice-row" onclick="openInvoiceDetail(\'' + inv.number + '\')" style="cursor:pointer">' +
-    '<span class="inv-num">' + inv.number + '</span>' +
-    '<span class="inv-customer">' + (inv.supplierName||'—') + '</span>' +
-    '<span class="inv-type type-purchase">شراء</span>' +
-    '<span class="inv-total">' + fmtUSD(inv.total) + '</span>' +
-    '<span class="inv-date">' + inv.date + '</span>' +
-    '</div>'
-  ).join('');
+  el.innerHTML = filtered.map(inv => {
+    const ppt = inv.paymentType || 'cash';
+    const ppb = ppt === 'deferred'
+      ? '<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:10px;margin-right:4px">⏳ آجل</span>'
+      : '<span style="font-size:10px;background:#f0fdf4;color:#15803d;padding:1px 6px;border-radius:10px;margin-right:4px">💵 نقدي</span>';
+    return '<div class="invoice-row" onclick="openInvoiceDetail(\'' + inv.number + '\')" style="cursor:pointer">' +
+      '<span class="inv-num">' + inv.number + '</span>' +
+      '<span class="inv-customer">' + (inv.supplierName||'—') + '</span>' +
+      '<span class="inv-type type-purchase">شراء</span>' +
+      ppb +
+      '<span class="inv-total">' + fmtUSD(inv.total) + '</span>' +
+      '<span class="inv-date">' + inv.date + '</span>' +
+      '</div>';
+  }).join('');
 }
 
 function savePurchaseInvoice() {
