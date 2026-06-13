@@ -267,7 +267,7 @@ function fmt(n) { return fmtOld(n); }
 // ============================================================
 // ROUTER
 // ============================================================
-const pages = ['dashboard','invoice-sale','invoice-purchase','items','customers','suppliers','settings','reports','returns','receipt-customer','receipt-supplier','warehouses','damages'];
+const pages = ['dashboard','invoice-sale','invoice-purchase','items','customers','suppliers','settings','reports','returns','receipt-customer','receipt-supplier','warehouses','damages','stock','statements'];
 let currentPage = 'dashboard';
 
 function navigate(page) {
@@ -296,6 +296,8 @@ function render(page) {
     case 'receipt-supplier': renderReceiptSupplier(); break;
     case 'warehouses': renderWarehouses(); updateWarehouseSelects(); break;
     case 'damages': renderDamages(); updateWarehouseSelects(); break;
+    case 'stock': renderStock(); break;
+    case 'statements': renderStatements(); break;
   }
 }
 
@@ -3965,4 +3967,427 @@ function renderReceiptSupplier() {
       }).join('');
     }
   }
+}
+
+// ============================================================
+// 📦 صفحة المخزون
+// ============================================================
+function renderStock() {
+  const inv = calcInventory();
+  const search = (document.getElementById('stock-search')?.value || '').toLowerCase();
+
+  // إحصائيات
+  let totalItems = 0, lowItems = 0, outItems = 0, totalValue = 0;
+  db.items.forEach(item => {
+    const qty = inv[item.id] || 0;
+    totalItems++;
+    if (qty <= 0) outItems++;
+    else if (qty < item.minStock) lowItems++;
+    totalValue += qty * (item.cost || 0);
+  });
+
+  // شريط التنبيه العلوي
+  const alertBar = document.getElementById('stock-alert-bar');
+  const lowList = db.items.filter(i => {
+    const qty = inv[i.id] || 0;
+    return qty < i.minStock;
+  });
+  if (alertBar) {
+    if (lowList.length > 0) {
+      alertBar.style.display = 'flex';
+      alertBar.innerHTML = `<span style="font-size:16px;">⚠️</span>
+        <strong>${lowList.length} مادة</strong> بحاجة لإعادة تخزين:
+        ${lowList.slice(0,5).map(i => {
+          const q = inv[i.id]||0;
+          return `<span style="background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:6px;font-size:12px;">
+            ${i.name} (${q}/${i.minStock})
+          </span>`;
+        }).join('')}
+        ${lowList.length > 5 ? `<span style="font-size:12px;opacity:.8;">+${lowList.length-5} أخرى</span>` : ''}`;
+    } else {
+      alertBar.style.display = 'none';
+    }
+  }
+
+  // بطاقات الإحصائيات
+  const statsEl = document.getElementById('stock-stats');
+  if (statsEl) {
+    statsEl.innerHTML = `
+      <div class="kpi-card blue" style="margin:0">
+        <div class="kpi-icon">📦</div>
+        <div class="kpi-label">إجمالي المواد</div>
+        <div class="kpi-value">${totalItems}</div>
+      </div>
+      <div class="kpi-card orange" style="margin:0">
+        <div class="kpi-icon">⚠️</div>
+        <div class="kpi-label">مواد منخفضة</div>
+        <div class="kpi-value" style="color:#f59e0b">${lowItems}</div>
+      </div>
+      <div class="kpi-card" style="margin:0;border-top:3px solid #ef4444">
+        <div class="kpi-icon">🚫</div>
+        <div class="kpi-label">نفدت من المخزون</div>
+        <div class="kpi-value" style="color:#ef4444">${outItems}</div>
+      </div>
+      <div class="kpi-card green" style="margin:0">
+        <div class="kpi-icon">💰</div>
+        <div class="kpi-label">قيمة المخزون</div>
+        <div class="kpi-value" style="font-size:16px">${fmtUSD(totalValue)}</div>
+      </div>`;
+  }
+
+  // فلتر
+  const filterVal = document.getElementById('stock-filter')?.value || 'all';
+  const filtered = db.items.filter(item => {
+    const qty = inv[item.id] || 0;
+    const matchSearch = !search ||
+      item.name.toLowerCase().includes(search) ||
+      item.id.toLowerCase().includes(search) ||
+      item.type.toLowerCase().includes(search);
+    const matchFilter =
+      filterVal === 'all' ? true :
+      filterVal === 'low' ? (qty > 0 && qty < item.minStock) :
+      filterVal === 'out' ? (qty <= 0) :
+      filterVal === 'ok'  ? (qty >= item.minStock) : true;
+    return matchSearch && matchFilter;
+  });
+
+  const tbody = document.getElementById('stock-tbody');
+  if (!tbody) return;
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">لا توجد مواد مطابقة</td></tr>`;
+    document.getElementById('stock-count').textContent = '0 مادة';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(item => {
+    const qty = inv[item.id] || 0;
+    const isOut = qty <= 0;
+    const isLow = !isOut && qty < item.minStock;
+    const pct = item.minStock > 0 ? Math.min(100, Math.round((qty / item.minStock) * 100)) : 100;
+    const barColor = isOut ? '#ef4444' : isLow ? '#f59e0b' : '#10b981';
+    const statusBadge = isOut
+      ? `<span style="background:#fee2e2;color:#dc2626;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:700;">نفد ❌</span>`
+      : isLow
+        ? `<span style="background:#fef3c7;color:#d97706;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:700;">منخفض ⚠️</span>`
+        : `<span style="background:#d1fae5;color:#065f46;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:700;">كافٍ ✅</span>`;
+    return `<tr class="${isOut?'row-warning':''}">
+      <td><span class="item-id">${item.id}</span></td>
+      <td><strong>${item.name}</strong><br><span style="font-size:11px;color:var(--text-muted)">${item.type}</span></td>
+      <td style="text-align:center;font-size:16px;font-weight:800;color:${isOut?'#ef4444':isLow?'#f59e0b':'#10b981'}">${qty}</td>
+      <td style="text-align:center;color:var(--text-muted)">${item.minStock}</td>
+      <td style="text-align:center">${item.unit}</td>
+      <td>
+        <div style="background:#e5e7eb;border-radius:999px;height:8px;overflow:hidden;min-width:80px">
+          <div style="background:${barColor};height:8px;width:${pct}%;border-radius:999px;transition:.3s"></div>
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:2px;text-align:center">${pct}%</div>
+      </td>
+      <td>${statusBadge}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('stock-count').textContent = filtered.length + ' مادة';
+}
+
+// ============================================================
+// 📋 صفحة الكشوفات
+// ============================================================
+let statementsTab = 'account'; // 'account' | 'item'
+
+function renderStatements() {
+  renderStatementsTab();
+}
+
+function switchStatementsTab(tab) {
+  statementsTab = tab;
+  document.getElementById('stmt-tab-account').style.background = tab==='account' ? 'linear-gradient(135deg,#0ea5e9,#3b82f6)' : 'var(--surface-secondary)';
+  document.getElementById('stmt-tab-account').style.color = tab==='account' ? '#fff' : 'var(--text-primary)';
+  document.getElementById('stmt-tab-item').style.background = tab==='item' ? 'linear-gradient(135deg,#8b5cf6,#6d28d9)' : 'var(--surface-secondary)';
+  document.getElementById('stmt-tab-item').style.color = tab==='item' ? '#fff' : 'var(--text-primary)';
+  document.getElementById('stmt-account-section').style.display = tab==='account' ? 'block' : 'none';
+  document.getElementById('stmt-item-section').style.display = tab==='item' ? 'block' : 'none';
+}
+
+function renderStatementsTab() {
+  // تعبئة datalist الأشخاص
+  const allNames = [
+    ...db.customers.map(c => c.name),
+    ...db.suppliers.map(s => s.name)
+  ];
+  const dl = document.getElementById('stmt-person-datalist');
+  if (dl) dl.innerHTML = [...new Set(allNames)].map(n => `<option value="${n}">`).join('');
+
+  // تعبئة datalist المواد
+  const dlItem = document.getElementById('stmt-item-datalist');
+  if (dlItem) dlItem.innerHTML = db.items.map(i => `<option value="${i.name} — ${i.id}">`).join('');
+}
+
+function loadAccountStatement() {
+  const name = (document.getElementById('stmt-person-name')?.value || '').trim();
+  if (!name) { showToast('اكتب اسم زبون أو مورد', 'error'); return; }
+
+  const isCust = db.customers.find(c => c.name === name);
+  const isSupp = db.suppliers.find(s => s.name === name);
+  const type = isCust ? 'customer' : isSupp ? 'supplier' : null;
+
+  // فواتير البيع للزبون أو الشراء للمورد
+  let invoices = [], payments = [];
+  if (isCust || (!type)) {
+    invoices = db.salesInvoices.filter(i => i.customerName === name);
+    payments = (db.customerPayments||[]).filter(p => p.customerName === name);
+  }
+  if (isSupp) {
+    invoices = db.purchaseInvoices.filter(i => i.supplierName === name);
+    payments = (db.supplierPayments||[]).filter(p => p.supplierName === name);
+  }
+
+  const totalInv = invoices.reduce((s,i) => s+(i.total||0), 0);
+  const totalPaid = payments.reduce((s,p) => s+(parseFloat(p.amount)||0), 0);
+  const remaining = totalInv - totalPaid;
+
+  const el = document.getElementById('stmt-account-result');
+  if (!el) return;
+
+  el.innerHTML = `
+    <!-- ملخص -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+      <div style="background:#eff6ff;border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:11px;color:#3b82f6;font-weight:700;margin-bottom:6px">إجمالي الفواتير</div>
+        <div style="font-size:20px;font-weight:800;color:#1d4ed8">${fmtUSD(totalInv)}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px">${invoices.length} فاتورة</div>
+      </div>
+      <div style="background:#f0fdf4;border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:11px;color:#10b981;font-weight:700;margin-bottom:6px">إجمالي المدفوع</div>
+        <div style="font-size:20px;font-weight:800;color:#065f46">${fmtUSD(totalPaid)}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px">${payments.length} دفعة</div>
+      </div>
+      <div style="background:${remaining>0?'#fef2f2':'#f0fdf4'};border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:11px;color:${remaining>0?'#ef4444':'#10b981'};font-weight:700;margin-bottom:6px">
+          ${remaining>0?'المتبقي (دين)':'لا يوجد دين'}
+        </div>
+        <div style="font-size:20px;font-weight:800;color:${remaining>0?'#dc2626':'#065f46'}">${fmtUSD(remaining)}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px">${type==='customer'?'زبون':'مورد'}</div>
+      </div>
+    </div>
+
+    <!-- جدول الفواتير -->
+    <div style="font-size:14px;font-weight:700;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--border-subtle)">
+      🧾 الفواتير
+    </div>
+    <div style="overflow-x:auto;margin-bottom:20px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:var(--surface-secondary)">
+            <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--text-muted)">رقم الفاتورة</th>
+            <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--text-muted)">التاريخ</th>
+            <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--text-muted)">المواد</th>
+            <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--text-muted)">الإجمالي</th>
+            <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--text-muted)">الدفع</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${invoices.length === 0
+            ? `<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted)">لا توجد فواتير</td></tr>`
+            : invoices.map(inv => `
+            <tr style="border-bottom:1px solid var(--border-subtle)">
+              <td style="padding:8px 12px;font-weight:600;color:#3b82f6">${inv.number||'—'}</td>
+              <td style="padding:8px 12px;color:var(--text-muted)">${inv.date||'—'}</td>
+              <td style="padding:8px 12px">${(inv.lines||[]).length} مادة</td>
+              <td style="padding:8px 12px;font-weight:700">${fmtUSD(inv.total||0)}</td>
+              <td style="padding:8px 12px">
+                <span style="background:${inv.paymentType==='cash'?'#d1fae5':'#fef3c7'};color:${inv.paymentType==='cash'?'#065f46':'#92400e'};padding:2px 8px;border-radius:999px;font-size:11px">
+                  ${inv.paymentType==='cash'?'نقداً':'آجل'}
+                </span>
+              </td>
+            </tr>`).join('')
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- جدول الدفعات -->
+    <div style="font-size:14px;font-weight:700;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--border-subtle)">
+      💵 الدفعات المسجلة
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:var(--surface-secondary)">
+            <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--text-muted)">التاريخ</th>
+            <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--text-muted)">المبلغ</th>
+            <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--text-muted)">ملاحظة</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${payments.length === 0
+            ? `<tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-muted)">لا توجد دفعات مسجلة</td></tr>`
+            : payments.map(p => `
+            <tr style="border-bottom:1px solid var(--border-subtle)">
+              <td style="padding:8px 12px;color:var(--text-muted)">${p.date||'—'}</td>
+              <td style="padding:8px 12px;font-weight:700;color:#10b981">${fmtUSD(parseFloat(p.amount)||0)}</td>
+              <td style="padding:8px 12px;color:var(--text-muted)">${p.note||p.description||'—'}</td>
+            </tr>`).join('')
+          }
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function loadItemStatement() {
+  const val = (document.getElementById('stmt-item-name')?.value || '').trim();
+  // استخرج ID من النمط "اسم المادة — NUM-001"
+  const idMatch = val.match(/—\s*([\w-]+)\s*$/);
+  const itemId = idMatch ? idMatch[1] : null;
+  const item = itemId
+    ? db.items.find(i => i.id === itemId)
+    : db.items.find(i => i.name === val);
+
+  if (!item) { showToast('اختر مادة صحيحة', 'error'); return; }
+
+  const inv = calcInventory();
+  const currentStock = inv[item.id] || 0;
+
+  // حركة المادة
+  let movements = [];
+
+  // مشتريات
+  db.purchaseInvoices.forEach(pinv => {
+    (pinv.lines||[]).forEach(l => {
+      if (l.itemId === item.id) {
+        movements.push({
+          type: 'purchase', date: pinv.date, ref: pinv.number,
+          qty: parseFloat(l.qty)||0,
+          price: parseFloat(l.price)||0,
+          total: (parseFloat(l.qty)||0) * (parseFloat(l.price)||0),
+          party: pinv.supplierName||'—'
+        });
+      }
+    });
+  });
+
+  // مبيعات
+  db.salesInvoices.forEach(sinv => {
+    (sinv.lines||[]).forEach(l => {
+      if (l.itemId === item.id) {
+        movements.push({
+          type: 'sale', date: sinv.date, ref: sinv.number,
+          qty: parseFloat(l.qty)||0,
+          price: parseFloat(l.price)||0,
+          total: (parseFloat(l.qty)||0) * (parseFloat(l.price)||0),
+          party: sinv.customerName||'—'
+        });
+      }
+    });
+  });
+
+  // مرتجعات
+  (db.returns||[]).forEach(r => {
+    (r.lines||[]).forEach(l => {
+      if (l.itemId === item.id) {
+        movements.push({
+          type: r.type==='sale'?'return-sale':'return-purchase',
+          date: r.date, ref: r.number,
+          qty: parseFloat(l.qty)||0,
+          price: parseFloat(l.price)||0,
+          total: (parseFloat(l.qty)||0) * (parseFloat(l.price)||0),
+          party: r.customerName||r.supplierName||'—'
+        });
+      }
+    });
+  });
+
+  // ترتيب تاريخي
+  movements.sort((a,b) => (a.date||'').localeCompare(b.date||''));
+
+  // إحصائيات
+  const totalBought  = movements.filter(m=>m.type==='purchase').reduce((s,m)=>s+m.qty,0);
+  const totalSold    = movements.filter(m=>m.type==='sale').reduce((s,m)=>s+m.qty,0);
+  const totalRevenue = movements.filter(m=>m.type==='sale').reduce((s,m)=>s+m.total,0);
+  const totalCost    = movements.filter(m=>m.type==='sale').reduce((s,m)=>s+m.qty*(item.cost||0),0);
+  const profit       = totalRevenue - totalCost;
+
+  const el = document.getElementById('stmt-item-result');
+  if (!el) return;
+
+  el.innerHTML = `
+    <!-- رأس المادة -->
+    <div style="background:linear-gradient(135deg,#1e1b4b,#312e81);border-radius:12px;padding:16px 20px;margin-bottom:20px;color:white;display:flex;align-items:center;gap:14px">
+      <div style="font-size:36px">📦</div>
+      <div>
+        <div style="font-size:18px;font-weight:800">${item.name}</div>
+        <div style="font-size:12px;opacity:.7">${item.id} · ${item.type} · ${item.unit}</div>
+      </div>
+      <div style="margin-right:auto;text-align:center;background:rgba(255,255,255,.15);padding:10px 18px;border-radius:10px">
+        <div style="font-size:11px;opacity:.8">المخزون الحالي</div>
+        <div style="font-size:24px;font-weight:800">${currentStock}</div>
+        <div style="font-size:11px;opacity:.7">${item.unit}</div>
+      </div>
+    </div>
+
+    <!-- إحصائيات -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+      <div style="background:#f0fdf4;border-radius:12px;padding:14px;text-align:center">
+        <div style="font-size:11px;color:#10b981;font-weight:700;margin-bottom:4px">إجمالي المشتريات</div>
+        <div style="font-size:20px;font-weight:800;color:#065f46">${totalBought}</div>
+        <div style="font-size:11px;color:#64748b">${item.unit}</div>
+      </div>
+      <div style="background:#eff6ff;border-radius:12px;padding:14px;text-align:center">
+        <div style="font-size:11px;color:#3b82f6;font-weight:700;margin-bottom:4px">إجمالي المبيعات</div>
+        <div style="font-size:20px;font-weight:800;color:#1d4ed8">${totalSold}</div>
+        <div style="font-size:11px;color:#64748b">${item.unit}</div>
+      </div>
+      <div style="background:#faf5ff;border-radius:12px;padding:14px;text-align:center">
+        <div style="font-size:11px;color:#8b5cf6;font-weight:700;margin-bottom:4px">إيرادات البيع</div>
+        <div style="font-size:16px;font-weight:800;color:#6d28d9">${fmtUSD(totalRevenue)}</div>
+      </div>
+      <div style="background:${profit>=0?'#f0fdf4':'#fef2f2'};border-radius:12px;padding:14px;text-align:center">
+        <div style="font-size:11px;color:${profit>=0?'#10b981':'#ef4444'};font-weight:700;margin-bottom:4px">صافي الربح</div>
+        <div style="font-size:16px;font-weight:800;color:${profit>=0?'#065f46':'#dc2626'}">${fmtUSD(profit)}</div>
+      </div>
+    </div>
+
+    <!-- جدول الحركات -->
+    <div style="font-size:14px;font-weight:700;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--border-subtle)">
+      📋 سجل حركة المادة (${movements.length} حركة)
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:var(--surface-secondary)">
+            <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--text-muted)">التاريخ</th>
+            <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--text-muted)">النوع</th>
+            <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--text-muted)">المرجع</th>
+            <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--text-muted)">الطرف</th>
+            <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--text-muted)">الكمية</th>
+            <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--text-muted)">السعر</th>
+            <th style="padding:8px 12px;text-align:right;font-size:11px;color:var(--text-muted)">الإجمالي</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${movements.length === 0
+            ? `<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--text-muted)">لا توجد حركات لهذه المادة</td></tr>`
+            : movements.map(m => {
+                const typeMap = {
+                  purchase:       {label:'شراء 🛒',   bg:'#d1fae5', color:'#065f46', sign:'+'},
+                  sale:           {label:'بيع 🧾',    bg:'#dbeafe', color:'#1d4ed8', sign:'-'},
+                  'return-sale':  {label:'رد بيع 🔄', bg:'#fef3c7', color:'#92400e', sign:'+'},
+                  'return-purchase':{label:'رد شراء 🔄',bg:'#fee2e2',color:'#991b1b',sign:'-'}
+                };
+                const t = typeMap[m.type] || {label:m.type, bg:'#f1f5f9', color:'#64748b', sign:''};
+                return `<tr style="border-bottom:1px solid var(--border-subtle)">
+                  <td style="padding:8px 12px;color:var(--text-muted)">${m.date||'—'}</td>
+                  <td style="padding:8px 12px">
+                    <span style="background:${t.bg};color:${t.color};padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600">${t.label}</span>
+                  </td>
+                  <td style="padding:8px 12px;font-weight:600;color:#6366f1">${m.ref||'—'}</td>
+                  <td style="padding:8px 12px;color:var(--text-secondary)">${m.party}</td>
+                  <td style="padding:8px 12px;font-weight:700;color:${t.sign==='+'?'#10b981':'#ef4444'}">${t.sign}${m.qty} ${item.unit}</td>
+                  <td style="padding:8px 12px">${fmtUSD(m.price)}</td>
+                  <td style="padding:8px 12px;font-weight:600">${fmtUSD(m.total)}</td>
+                </tr>`;
+              }).join('')
+          }
+        </tbody>
+      </table>
+    </div>`;
 }
