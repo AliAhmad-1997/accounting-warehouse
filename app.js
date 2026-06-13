@@ -3735,3 +3735,318 @@ function saveReceiptSupplier() {
   delete document.getElementById('rec-sup-amount')?.dataset?.linkedInvoice;
   renderReceiptSupplier();
 }
+
+
+// ============================================================
+// ربط الإيصالات بالفواتير — زبون ومورد
+// ============================================================
+
+// ====== متغيرات الربط ======
+let _custLinkedInvoice = null;  // رقم فاتورة البيع المربوطة
+let _supLinkedInvoice  = null;  // رقم فاتورة الشراء المربوطة
+
+// ====== جانب الزبون ======
+
+function loadCustDeferredInvoices() {
+  const name = document.getElementById('rec-cust-name')?.value?.trim();
+  const panel = document.getElementById('cust-deferred-panel');
+  const list  = document.getElementById('cust-deferred-list');
+  if (!panel || !list) return;
+
+  // إلغاء الربط عند تغيير الزبون
+  _custLinkedInvoice = null;
+  hideCustLinkedBadge();
+
+  if (!name) { panel.style.display = 'none'; return; }
+
+  // فواتير آجلة غير مسددة بالكامل
+  const invs = getDeferredInvoicesForCustomer(name);
+  if (invs.length === 0) { panel.style.display = 'none'; return; }
+
+  panel.style.display = 'block';
+  list.innerHTML = invs.map(inv => {
+    const rem = rcGetInvoiceRemaining(inv, name);
+    return `<div class="inv-link-row" onclick="linkCustInvoice('${inv.number}', ${rem})"
+      style="display:flex;align-items:center;justify-content:space-between;background:white;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;cursor:pointer;transition:background .15s;"
+      onmouseover="this.style.background='#fef9c3'" onmouseout="this.style.background='white'">
+      <span style="font-weight:700;font-family:monospace;color:#92400e">${inv.number}</span>
+      <span style="font-size:12px;color:#64748b">${inv.date}</span>
+      <span style="font-size:12px">إجمالي: <strong>${fmtUSD(inv.total)}</strong></span>
+      <span style="color:#dc2626;font-weight:700">متبقي: ${fmtUSD(rem)}</span>
+      <span style="font-size:11px;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px">اضغط للربط</span>
+    </div>`;
+  }).join('');
+}
+
+function linkCustInvoice(invNum, remaining) {
+  _custLinkedInvoice = invNum;
+
+  // تعبئة المبلغ تلقائياً بالمتبقي
+  const amtEl = document.getElementById('rec-cust-amount');
+  if (amtEl) { amtEl.value = Math.round(remaining * 100) / 100; }
+
+  // تعبئة البيان
+  const descEl = document.getElementById('rec-cust-desc');
+  if (descEl && !descEl.value) descEl.value = 'سداد فاتورة ' + invNum;
+
+  // إظهار badge الربط
+  const badge = document.getElementById('cust-linked-inv');
+  const num   = document.getElementById('cust-linked-inv-num');
+  if (badge) badge.style.display = 'block';
+  if (num)   num.textContent = invNum;
+
+  updateCustBalance();
+  updateCustCurrency();
+  showToast('🔗 تم ربط الإيصال بالفاتورة ' + invNum, 'success');
+}
+
+function unlinkCustInvoice() {
+  _custLinkedInvoice = null;
+  hideCustLinkedBadge();
+  showToast('تم إلغاء ربط الفاتورة', 'success');
+}
+
+function hideCustLinkedBadge() {
+  const badge = document.getElementById('cust-linked-inv');
+  if (badge) badge.style.display = 'none';
+}
+
+// ====== جانب المورد ======
+
+function loadSupDeferredInvoices() {
+  const name  = document.getElementById('rec-sup-name')?.value?.trim();
+  const panel = document.getElementById('sup-deferred-panel');
+  const list  = document.getElementById('sup-deferred-list');
+  if (!panel || !list) return;
+
+  _supLinkedInvoice = null;
+  hideSupLinkedBadge();
+
+  if (!name) { panel.style.display = 'none'; return; }
+
+  // فواتير شراء آجلة غير مسددة
+  const invs = getDeferredInvoicesForSupplier(name);
+  if (invs.length === 0) { panel.style.display = 'none'; return; }
+
+  panel.style.display = 'block';
+  list.innerHTML = invs.map(inv => {
+    const rem = getSupInvoiceRemaining(inv, name);
+    return `<div onclick="linkSupInvoice('${inv.number}', ${rem})"
+      style="display:flex;align-items:center;justify-content:space-between;background:white;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;cursor:pointer;transition:background .15s;"
+      onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='white'">
+      <span style="font-weight:700;font-family:monospace;color:#15803d">${inv.number}</span>
+      <span style="font-size:12px;color:#64748b">${inv.date}</span>
+      <span style="font-size:12px">إجمالي: <strong>${fmtUSD(inv.total)}</strong></span>
+      <span style="color:#dc2626;font-weight:700">متبقي: ${fmtUSD(rem)}</span>
+      <span style="font-size:11px;background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:10px">اضغط للربط</span>
+    </div>`;
+  }).join('');
+}
+
+function getDeferredInvoicesForSupplier(supplierName) {
+  return (db.purchaseInvoices || []).filter(inv => {
+    if (inv.supplierName !== supplierName) return false;
+    if ((inv.paymentType || 'cash') !== 'deferred') return false;
+    return getSupInvoiceRemaining(inv, supplierName) > 0.005;
+  });
+}
+
+function getSupInvoiceRemaining(inv, supplierName) {
+  const paid = (db.supplierPayments || [])
+    .filter(p => p.supplierName === supplierName &&
+      (p.linkedInvoice === inv.number || (p.description || '') === ('سداد فاتورة ' + inv.number)))
+    .reduce((s, p) => s + (p.amount || 0) + (p.discountOnPayment || 0), 0);
+  const origPaid = inv.paidAmountOriginal || 0;
+  return Math.max(0, inv.total - origPaid - paid);
+}
+
+function linkSupInvoice(invNum, remaining) {
+  _supLinkedInvoice = invNum;
+
+  const amtEl = document.getElementById('rec-sup-amount');
+  if (amtEl) { amtEl.value = Math.round(remaining * 100) / 100; }
+
+  const descEl = document.getElementById('rec-sup-desc');
+  if (descEl && !descEl.value) descEl.value = 'سداد فاتورة ' + invNum;
+
+  const badge = document.getElementById('sup-linked-inv');
+  const num   = document.getElementById('sup-linked-inv-num');
+  if (badge) badge.style.display = 'block';
+  if (num)   num.textContent = invNum;
+
+  updateSupCurrency();
+  showToast('🔗 تم ربط الدفعة بالفاتورة ' + invNum, 'success');
+}
+
+function unlinkSupInvoice() {
+  _supLinkedInvoice = null;
+  hideSupLinkedBadge();
+  showToast('تم إلغاء ربط الفاتورة', 'success');
+}
+
+function hideSupLinkedBadge() {
+  const badge = document.getElementById('sup-linked-inv');
+  if (badge) badge.style.display = 'none';
+}
+
+// ====== override saveReceiptCustomer لتضمين الربط ======
+function saveReceiptCustomer() {
+  const customerName = document.getElementById('rec-cust-name')?.value?.trim();
+  const raw          = parseFloat(document.getElementById('rec-cust-amount')?.value || 0);
+  const currency     = document.getElementById('rec-cust-currency')?.value || 'USD';
+  const amountUSD    = getAmountInUSD(raw, currency);
+  const date         = document.getElementById('rec-cust-date')?.value || new Date().toISOString().split('T')[0];
+  const desc         = document.getElementById('rec-cust-desc')?.value || '';
+  const method       = document.getElementById('rec-cust-method')?.value || 'cash';
+  const cheque       = document.getElementById('rec-cust-cheque')?.value || '';
+  const note         = document.getElementById('rec-cust-note')?.value || '';
+  const discount     = parseFloat(document.getElementById('rec-cust-discount')?.value || 0);
+
+  if (!customerName) { showToast('اختر اسم الزبون', 'error'); return; }
+  if (!amountUSD || amountUSD <= 0) { showToast('أدخل المبلغ', 'error'); return; }
+
+  // تحقق من عدم تجاوز المتبقي على الفاتورة المربوطة
+  if (_custLinkedInvoice) {
+    const inv = db.salesInvoices.find(i => i.number === _custLinkedInvoice);
+    if (inv) {
+      const rem = rcGetInvoiceRemaining(inv, customerName);
+      if (amountUSD > rem + 0.005) {
+        showToast('المبلغ أكبر من المتبقي على الفاتورة ' + _custLinkedInvoice + ' (' + fmtUSD(rem) + ')', 'error');
+        return;
+      }
+    }
+  }
+
+  db.invoiceCounters.receipt = (db.invoiceCounters.receipt || 0) + 1;
+  const receiptNum = 'REC-' + String(db.invoiceCounters.receipt).padStart(3, '0');
+
+  db.customerPayments = db.customerPayments || [];
+  db.customerPayments.push({
+    receiptNum, customerName,
+    amount: amountUSD,
+    rawAmount: raw,
+    currency,
+    discountOnPayment: discount,
+    paymentMethod: method,
+    chequeNum: cheque,
+    description: desc || (_custLinkedInvoice ? 'سداد فاتورة ' + _custLinkedInvoice : ''),
+    linkedInvoice: _custLinkedInvoice || '',
+    note, date
+  });
+
+  // تحديث رصيد الزبون
+  const cust = db.customers.find(c => c.name === customerName);
+  if (cust) cust.balance = Math.max(0, (cust.balance || 0) - amountUSD - discount);
+
+  // إذا كانت مربوطة بفاتورة — تحقق هل اكتملت
+  if (_custLinkedInvoice) {
+    const inv = db.salesInvoices.find(i => i.number === _custLinkedInvoice);
+    if (inv) {
+      const rem = rcGetInvoiceRemaining(inv, customerName) - amountUSD - discount;
+      if (rem <= 0.005) {
+        inv.paymentStatus = 'paid';
+        showToast('🎉 تمت تسوية الفاتورة ' + _custLinkedInvoice + ' بالكامل!', 'success');
+      }
+    }
+  }
+
+  saveData(db);
+
+  const currencyLabel = { USD: 'دولار', SYP_NEW: 'ل.س جديدة', SYP_OLD: 'ل.س قديمة' }[currency] || '';
+  const linkMsg = _custLinkedInvoice ? ' ← ' + _custLinkedInvoice : '';
+  showToast('✅ تم حفظ الإيصال ' + receiptNum + linkMsg + ' — ' + raw + ' ' + currencyLabel, 'success');
+
+  // reset
+  _custLinkedInvoice = null;
+  hideCustLinkedBadge();
+  ['rec-cust-name','rec-cust-amount','rec-cust-cheque','rec-cust-desc','rec-cust-note'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  if (document.getElementById('rec-cust-discount')) document.getElementById('rec-cust-discount').value = '0';
+  if (document.getElementById('rec-cust-equiv'))    document.getElementById('rec-cust-equiv').textContent = '—';
+  if (document.getElementById('rec-cust-currency')) document.getElementById('rec-cust-currency').value = 'USD';
+  const panel = document.getElementById('cust-deferred-panel');
+  if (panel) panel.style.display = 'none';
+  renderReceiptCustomer();
+}
+
+// ====== override saveReceiptSupplier لتضمين الربط ======
+function saveReceiptSupplier() {
+  const supplierName = document.getElementById('rec-sup-name')?.value?.trim();
+  const raw          = parseFloat(document.getElementById('rec-sup-amount')?.value || 0);
+  const currency     = document.getElementById('rec-sup-currency')?.value || 'USD';
+  const amountUSD    = getAmountInUSD(raw, currency);
+  const date         = document.getElementById('rec-sup-date')?.value || new Date().toISOString().split('T')[0];
+  const desc         = document.getElementById('rec-sup-desc')?.value || '';
+  const method       = document.getElementById('rec-sup-method')?.value || 'cash';
+  const cheque       = document.getElementById('rec-sup-cheque')?.value || '';
+  const note         = document.getElementById('rec-sup-note')?.value || '';
+  const discount     = parseFloat(document.getElementById('rec-sup-discount')?.value || 0);
+
+  if (!supplierName) { showToast('اختر اسم المورد', 'error'); return; }
+  if (!amountUSD || amountUSD <= 0) { showToast('أدخل المبلغ', 'error'); return; }
+
+  // تحقق من عدم تجاوز المتبقي
+  if (_supLinkedInvoice) {
+    const inv = db.purchaseInvoices.find(i => i.number === _supLinkedInvoice);
+    if (inv) {
+      const rem = getSupInvoiceRemaining(inv, supplierName);
+      if (amountUSD > rem + 0.005) {
+        showToast('المبلغ أكبر من المتبقي على الفاتورة ' + _supLinkedInvoice + ' (' + fmtUSD(rem) + ')', 'error');
+        return;
+      }
+    }
+  }
+
+  db.invoiceCounters.receipt = (db.invoiceCounters.receipt || 0) + 1;
+  const receiptNum = 'REC-' + String(db.invoiceCounters.receipt).padStart(3, '0');
+
+  db.supplierPayments = db.supplierPayments || [];
+  db.supplierPayments.push({
+    receiptNum, supplierName,
+    amount: amountUSD,
+    rawAmount: raw,
+    currency,
+    discountOnPayment: discount,
+    paymentMethod: method,
+    chequeNum: cheque,
+    description: desc || (_supLinkedInvoice ? 'سداد فاتورة ' + _supLinkedInvoice : ''),
+    linkedInvoice: _supLinkedInvoice || '',
+    note, date
+  });
+
+  // تحديث رصيد المورد
+  const sup = (db.suppliers || []).find(s => s.name === supplierName);
+  if (sup) sup.balance = Math.max(0, (sup.balance || 0) - amountUSD - discount);
+
+  // تحقق اكتمال الفاتورة
+  if (_supLinkedInvoice) {
+    const inv = db.purchaseInvoices.find(i => i.number === _supLinkedInvoice);
+    if (inv) {
+      const rem = getSupInvoiceRemaining(inv, supplierName) - amountUSD - discount;
+      if (rem <= 0.005) {
+        inv.paymentStatus = 'paid';
+        showToast('🎉 تمت تسوية الفاتورة ' + _supLinkedInvoice + ' بالكامل!', 'success');
+      }
+    }
+  }
+
+  saveData(db);
+
+  const currencyLabel = { USD: 'دولار', SYP_NEW: 'ل.س جديدة', SYP_OLD: 'ل.س قديمة' }[currency] || '';
+  const linkMsg = _supLinkedInvoice ? ' ← ' + _supLinkedInvoice : '';
+  showToast('✅ تم حفظ إيصال الدفع ' + receiptNum + linkMsg + ' — ' + raw + ' ' + currencyLabel, 'success');
+
+  // reset
+  _supLinkedInvoice = null;
+  hideSupLinkedBadge();
+  ['rec-sup-name','rec-sup-amount','rec-sup-cheque','rec-sup-desc','rec-sup-note'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  if (document.getElementById('rec-sup-currency')) document.getElementById('rec-sup-currency').value = 'USD';
+  if (document.getElementById('rec-sup-equiv'))    document.getElementById('rec-sup-equiv').textContent = '—';
+  if (document.getElementById('rec-sup-discount')) document.getElementById('rec-sup-discount').value = '0';
+  const panel = document.getElementById('sup-deferred-panel');
+  if (panel) panel.style.display = 'none';
+  renderReceiptSupplier();
+}
