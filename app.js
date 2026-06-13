@@ -429,12 +429,22 @@ let saleLines = [{ itemId:'', qty:1, price:0, total:0 }];
 function renderSaleInvoice() {
   const nextNum = 'INV-' + String(db.invoiceCounters.sale+1).padStart(3,'0');
   document.getElementById('sale-inv-num').textContent = nextNum;
-  document.getElementById('sale-date').value = todayStr();
+  // ✅ لا تغير التاريخ لو كان المستخدم شغال على فاتورة
+  const dateEl = document.getElementById('sale-date');
+  if (dateEl && !dateEl.value) dateEl.value = todayStr();
+  else if (dateEl && !dateEl.value) dateEl.value = todayStr();
+  // ✅ لا تمسح السطور إذا كان في بيانات — فقط إذا كانت فاضية
+  if (saleLines.length === 0 || (saleLines.length === 1 && !saleLines[0].itemId)) {
+    saleLines = [{ itemId:'', qty:1, price:0, total:0 }];
+  }
   renderSaleLines();
   renderSaleTotal();
   // Customer input - datalist
   const datalist = document.getElementById('customers-datalist');
   if(datalist) datalist.innerHTML = db.customers.filter(c=>c.name).map(c=>`<option value="${c.name}">`).join('');
+  // باركود datalist
+  updateBarcodeDatalist('sale');
+  updateBarcodeDatalist('purchase');
   // تحديث كروات الإحصائيات
   renderSaleStats();
   // تحديث آخر الفواتير في صفحة البيع
@@ -746,9 +756,12 @@ let purchaseLines = [{itemId:'',qty:1,price:0,total:0}];
 function renderPurchaseInvoice() {
   const nextNum = 'PUR-'+String(db.invoiceCounters.purchase+1).padStart(3,'0');
   document.getElementById('pur-inv-num').textContent = nextNum;
-  document.getElementById('pur-date').value = todayStr();
-  // reset السطور عند كل فتح للصفحة
-  purchaseLines = [{itemId:'',qty:1,price:0,total:0}];
+  const purDateEl = document.getElementById('pur-date');
+  if (purDateEl && !purDateEl.value) purDateEl.value = todayStr();
+  // ✅ لا تمسح السطور إذا كان في بيانات
+  if (purchaseLines.length === 0 || (purchaseLines.length === 1 && !purchaseLines[0].itemId)) {
+    purchaseLines = [{itemId:'',qty:1,price:0,total:0}];
+  }
   renderPurchaseLines(); renderPurchaseTotal();
   const datalist = document.getElementById('suppliers-datalist');
   if(datalist) datalist.innerHTML = db.suppliers.filter(s=>s.name).map(s=>`<option value="${s.name}">`).join('');
@@ -1573,18 +1586,30 @@ function getCustomerAccount(customerName) {
   const deferredInvoices = invoices.filter(i => (i.paymentType||'cash') === 'deferred');
 
   const totalCash     = cashInvoices.reduce((s,i) => s + (i.total||0), 0);
-  const totalDeferred = deferredInvoices.reduce((s,i) => s + (i.total||0), 0);
   const totalInvoices = invoices.reduce((s,i) => s + (i.total||0), 0);
 
-  // كل الدفعات (مع الفاتورة + لاحقة) محفوظة في customerPayments
-  const payments = (db.customerPayments || []).filter(p => p.customerName === customerName);
-  const totalPaid = payments.reduce((s,p) => s + (p.amount||0) + (p.discountOnPayment||0), 0);
+  // إجمالي الآجل
+  const totalDeferred = deferredInvoices.reduce((s,i) => s + (i.total||0), 0);
 
-  // المتبقي = إجمالي الآجل - كل المدفوع
-  const remaining = Math.max(0, totalDeferred - totalPaid);
+  // الدفعات المسجلة عند إنشاء الفواتير الآجلة (paidAmount)
+  const paidOnDeferred = deferredInvoices.reduce((s,i) => s + (parseFloat(i.paidAmount)||0), 0);
+
+  // الدفعات اللاحقة المستقلة (إيصالات القبض)
+  const payments = (db.customerPayments || []).filter(p => p.customerName === customerName);
+  // ما نحسب الدفعات اللي مرتبطة بفاتورة (تُحسب من paidAmount) لتجنب التكرار
+  const standalonePayments = payments.filter(p => !p.linkedInvoice);
+  const linkedPayments     = payments.filter(p =>  p.linkedInvoice);
+  const totalStandalone    = standalonePayments.reduce((s,p) => s + (p.amount||0) + (p.discountOnPayment||0), 0);
+  const totalLinked        = linkedPayments.reduce((s,p) => s + (p.amount||0) + (p.discountOnPayment||0), 0);
+  const totalPaid          = totalStandalone + totalLinked + paidOnDeferred;
+
+  // المتبقي الصحيح = آجل - (مدفوع على الفاتورة + دفعات مستقلة + دفعات مربوطة)
+  const remaining = Math.max(0, totalDeferred - paidOnDeferred - totalStandalone - totalLinked);
 
   return { invoices, cashInvoices, deferredInvoices, payments,
-           totalInvoices, totalCash, totalDeferred, totalPaidOnInvoice: 0, totalPaid, remaining };
+           totalInvoices, totalCash, totalDeferred,
+           paidOnDeferred, totalStandalone, totalLinked,
+           totalPaid, remaining };
 }
 
 function openCustomerAccount(customerName) {
@@ -1731,18 +1756,29 @@ function getSupplierAccount(supplierName) {
   const deferredInvoices = invoices.filter(i => (i.paymentType||'cash') === 'deferred');
 
   const totalCash     = cashInvoices.reduce((s,i) => s + (i.total||0), 0);
-  const totalDeferred = deferredInvoices.reduce((s,i) => s + (i.total||0), 0);
   const totalInvoices = invoices.reduce((s,i) => s + (i.total||0), 0);
 
-  // كل الدفعات للمورد محفوظة في supplierPayments
-  const payments = (db.supplierPayments || []).filter(p => p.supplierName === supplierName);
-  const totalPaid = payments.reduce((s,p) => s + (p.amount||0), 0);
+  // إجمالي الآجل
+  const totalDeferred = deferredInvoices.reduce((s,i) => s + (i.total||0), 0);
 
-  // المتبقي = إجمالي الآجل - كل المدفوع
-  const remaining = Math.max(0, totalDeferred - totalPaid);
+  // الدفعات المسجلة عند إنشاء الفواتير الآجلة (paidAmount)
+  const paidOnDeferred = deferredInvoices.reduce((s,i) => s + (parseFloat(i.paidAmount)||0), 0);
+
+  // الدفعات اللاحقة المستقلة
+  const payments = (db.supplierPayments || []).filter(p => p.supplierName === supplierName);
+  const standalonePayments = payments.filter(p => !p.linkedInvoice);
+  const linkedPayments     = payments.filter(p =>  p.linkedInvoice);
+  const totalStandalone    = standalonePayments.reduce((s,p) => s + (p.amount||0), 0);
+  const totalLinked        = linkedPayments.reduce((s,p) => s + (p.amount||0), 0);
+  const totalPaid          = totalStandalone + totalLinked + paidOnDeferred;
+
+  // المتبقي الصحيح
+  const remaining = Math.max(0, totalDeferred - paidOnDeferred - totalStandalone - totalLinked);
 
   return { invoices, cashInvoices, deferredInvoices, payments,
-           totalInvoices, totalCash, totalDeferred, totalPaidOnInvoice: 0, totalPaid, remaining };
+           totalInvoices, totalCash, totalDeferred,
+           paidOnDeferred, totalStandalone, totalLinked,
+           totalPaid, remaining };
 }
 
 function openSupplierAccount(supplierName) {
@@ -2466,42 +2502,71 @@ function closeDetailModal() {
 function handleBarcodeScan(page, value) {
   const code = value.trim();
   if (!code) return;
-  const item = db.items.find(it => it.barcode && it.barcode === code);
+
+  // بحث بالباركود أولاً، ثم بالاسم، ثم بالكود
+  let item = db.items.find(it => it.barcode && it.barcode === code)
+          || db.items.find(it => it.barcode2 && it.barcode2 === code)
+          || db.items.find(it => it.id && it.id.toLowerCase() === code.toLowerCase())
+          || db.items.find(it => it.name && it.name.toLowerCase().includes(code.toLowerCase()));
+
+  const el = document.getElementById(page + '-barcode-input');
+
   if (!item) {
-    showToast('❌ لا توجد مادة بهذا الباركود: ' + code, 'error');
-    // مسح الحقل
-    const el = document.getElementById(page + '-barcode-input');
-    if (el) el.value = '';
+    showToast('❌ لا توجد مادة بـ: ' + code, 'error');
+    if (el) { el.style.borderColor = '#ef4444'; setTimeout(() => { el.style.borderColor = ''; el.value = ''; }, 1200); }
     return;
   }
-  if (page === 'sale') {
-    // ابحث عن سطر فارغ أو أضف سطر جديد
-    const emptyIdx = saleLines.findIndex(l => !l.itemId);
-    if (emptyIdx >= 0) {
-      saleLines[emptyIdx].itemId = item.id;
-      saleLines[emptyIdx].price = item.price;
-      saleLines[emptyIdx].total = item.price * saleLines[emptyIdx].qty;
+
+  // إضافة المادة — لو موجودة بسطر يزيد الكمية، لو لأ يضيف سطر جديد
+  function addToLines(lines, getPrice) {
+    const existIdx = lines.findIndex(l => l.itemId === item.id);
+    if (existIdx >= 0) {
+      lines[existIdx].qty += 1;
+      lines[existIdx].total = lines[existIdx].price * lines[existIdx].qty;
+      showToast('➕ ' + item.name + ' — الكمية: ' + lines[existIdx].qty, 'success');
     } else {
-      saleLines.push({ itemId: item.id, qty: 1, price: item.price, total: item.price, unitType: 'unit' });
+      const price = getPrice(item);
+      const emptyIdx = lines.findIndex(l => !l.itemId);
+      if (emptyIdx >= 0) {
+        lines[emptyIdx].itemId = item.id;
+        lines[emptyIdx].price = price;
+        lines[emptyIdx].total = price * lines[emptyIdx].qty;
+        lines[emptyIdx].unitType = 'unit';
+      } else {
+        lines.push({ itemId: item.id, qty: 1, price, total: price, unitType: 'unit' });
+      }
+      showToast('✅ ' + item.name + ' — ' + fmtUSD(price), 'success');
     }
-    renderSaleLines();
-    renderSaleTotal();
-  } else if (page === 'purchase') {
-    const emptyIdx = purchaseLines.findIndex(l => !l.itemId);
-    if (emptyIdx >= 0) {
-      purchaseLines[emptyIdx].itemId = item.id;
-      purchaseLines[emptyIdx].price = item.cost;
-      purchaseLines[emptyIdx].total = item.cost * purchaseLines[emptyIdx].qty;
-    } else {
-      purchaseLines.push({ itemId: item.id, qty: 1, price: item.cost, total: item.cost, unitType: 'unit' });
-    }
-    renderPurchaseLines();
-    renderPurchaseTotal();
   }
-  showToast('✅ تمت إضافة: ' + item.name, 'success');
-  // مسح الحقل بعد الإضافة
-  const el = document.getElementById(page + '-barcode-input');
-  if (el) el.value = '';
+
+  if (page === 'sale') {
+    const priceType = document.getElementById('sale-price-type')?.value || 'retail';
+    addToLines(saleLines, (it) => {
+      if (priceType === 'wholesale' && it.price2 > 0) return it.price2;
+      if (priceType === 'special'   && it.price3 > 0) return it.price3;
+      return it.price;
+    });
+    renderSaleLines(); renderSaleTotal();
+  } else if (page === 'purchase') {
+    addToLines(purchaseLines, (it) => it.cost);
+    renderPurchaseLines(); renderPurchaseTotal();
+  }
+
+  // تأثير بصري على الحقل عند النجاح
+  if (el) {
+    el.style.borderColor = '#10b981';
+    el.style.background = '#f0fdf4';
+    setTimeout(() => { el.style.borderColor = ''; el.style.background = ''; el.value = ''; el.focus(); }, 800);
+  }
+}
+
+// تحديث الـ datalist للباركود ليشمل الاسم والكود
+function updateBarcodeDatalist(page) {
+  const dl = document.getElementById(page + '-barcode-datalist');
+  if (!dl) return;
+  dl.innerHTML = db.items.map(it =>
+    `<option value="${it.barcode||it.id}">${it.name} — ${it.id}${it.barcode?' ('+it.barcode+')':''}</option>`
+  ).join('');
 }
 
 
@@ -4261,32 +4326,41 @@ function loadAccountStatement() {
     payments = (db.supplierPayments||[]).filter(p => p.supplierName === name);
   }
 
-  const totalInv = invoices.reduce((s,i) => s+(i.total||0), 0);
-  const totalPaid = payments.reduce((s,p) => s+(parseFloat(p.amount)||0), 0);
-  const remaining = totalInv - totalPaid;
+  // استخدم نفس منطق getCustomerAccount/getSupplierAccount للدقة
+  const acc2 = isCust ? getCustomerAccount(name) : (isSupp ? getSupplierAccount(name) : null);
+  const totalInv  = acc2 ? acc2.totalInvoices : invoices.reduce((s,i) => s+(i.total||0), 0);
+  const totalPaid = acc2 ? acc2.totalPaid     : payments.reduce((s,p) => s+(parseFloat(p.amount)||0), 0);
+  const remaining = acc2 ? acc2.remaining     : Math.max(0, totalInv - totalPaid);
+  const totalDeferred2 = acc2 ? acc2.totalDeferred : 0;
+  const totalCash2     = acc2 ? acc2.totalCash     : 0;
 
   const el = document.getElementById('stmt-account-result');
   if (!el) return;
 
   el.innerHTML = `
     <!-- ملخص -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
-      <div style="background:#eff6ff;border-radius:12px;padding:16px;text-align:center">
-        <div style="font-size:11px;color:#3b82f6;font-weight:700;margin-bottom:6px">إجمالي الفواتير</div>
-        <div style="font-size:20px;font-weight:800;color:#1d4ed8">${fmtUSD(totalInv)}</div>
-        <div style="font-size:11px;color:#64748b;margin-top:2px">${invoices.length} فاتورة</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+      <div style="background:#eff6ff;border-radius:12px;padding:14px;text-align:center">
+        <div style="font-size:10px;color:#3b82f6;font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">إجمالي الفواتير</div>
+        <div style="font-size:18px;font-weight:800;color:#1d4ed8">${fmtUSD(totalInv)}</div>
+        <div style="font-size:10px;color:#64748b;margin-top:2px">${invoices.length} فاتورة</div>
       </div>
-      <div style="background:#f0fdf4;border-radius:12px;padding:16px;text-align:center">
-        <div style="font-size:11px;color:#10b981;font-weight:700;margin-bottom:6px">إجمالي المدفوع</div>
-        <div style="font-size:20px;font-weight:800;color:#065f46">${fmtUSD(totalPaid)}</div>
-        <div style="font-size:11px;color:#64748b;margin-top:2px">${payments.length} دفعة</div>
+      <div style="background:#f0f9ff;border-radius:12px;padding:14px;text-align:center;border:1px solid #bae6fd">
+        <div style="font-size:10px;color:#0284c7;font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">💵 نقدي</div>
+        <div style="font-size:18px;font-weight:800;color:#0369a1">${fmtUSD(totalCash2)}</div>
+        <div style="font-size:10px;color:#64748b;margin-top:2px">${(acc2?acc2.cashInvoices:invoices).length} فاتورة</div>
       </div>
-      <div style="background:${remaining>0?'#fef2f2':'#f0fdf4'};border-radius:12px;padding:16px;text-align:center">
-        <div style="font-size:11px;color:${remaining>0?'#ef4444':'#10b981'};font-weight:700;margin-bottom:6px">
-          ${remaining>0?'المتبقي (دين)':'لا يوجد دين'}
+      <div style="background:#fef3c7;border-radius:12px;padding:14px;text-align:center;border:1px solid #fcd34d">
+        <div style="font-size:10px;color:#d97706;font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">⏳ آجل</div>
+        <div style="font-size:18px;font-weight:800;color:#b45309">${fmtUSD(totalDeferred2)}</div>
+        <div style="font-size:10px;color:#64748b;margin-top:2px">مدفوع: ${fmtUSD(totalPaid)}</div>
+      </div>
+      <div style="background:${remaining>0?'#fef2f2':'#f0fdf4'};border-radius:12px;padding:14px;text-align:center;border:1.5px solid ${remaining>0?'#fca5a5':'#86efac'}">
+        <div style="font-size:10px;color:${remaining>0?'#ef4444':'#10b981'};font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">
+          ${remaining>0?'🔴 الدين المتبقي':'✅ مسوّى'}
         </div>
-        <div style="font-size:20px;font-weight:800;color:${remaining>0?'#dc2626':'#065f46'}">${fmtUSD(remaining)}</div>
-        <div style="font-size:11px;color:#64748b;margin-top:2px">${type==='customer'?'زبون':'مورد'}</div>
+        <div style="font-size:20px;font-weight:900;color:${remaining>0?'#dc2626':'#065f46'}">${fmtUSD(remaining)}</div>
+        <div style="font-size:10px;color:#64748b;margin-top:2px">${type==='customer'?'على الزبون':'على الشركة'}</div>
       </div>
     </div>
 

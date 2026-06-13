@@ -1065,11 +1065,14 @@
             id="sale-barcode-input"
             type="text"
             class="input input-sm"
-            placeholder="امسح الباركود أو اكتبه واضغط Enter..."
+            placeholder="باركود، اسم، أو كود المادة... ثم Enter"
+            list="sale-barcode-datalist"
             style="width:100%;max-width:380px;font-family:monospace;letter-spacing:1px;"
             onkeydown="if(event.key==='Enter'){ handleBarcodeScan('sale', this.value); }"
+            oninput="if(this.value.length>1) updateBarcodeDatalist('sale')"
             autocomplete="off"
           >
+          <datalist id="sale-barcode-datalist"></datalist>
         </div>
         <span style="font-size:11px;color:var(--blue-link);opacity:0.7;">اضغط Enter بعد الكتابة</span>
       </div>
@@ -1199,14 +1202,15 @@
         <div style="flex:1;">
           <div style="font-size:12px;font-weight:600;color:var(--green-700);margin-bottom:4px;">مسح باركود المادة</div>
           <input
-            id="purchase-barcode-input"
+            id="purchase-barcode-input" list="purchase-barcode-datalist"
             type="text"
             class="input input-sm"
-            placeholder="امسح الباركود أو اكتبه واضغط Enter..."
+            placeholder="باركود، اسم، أو كود المادة... ثم Enter"
             style="width:100%;max-width:380px;font-family:monospace;letter-spacing:1px;"
-            onkeydown="if(event.key==='Enter'){ handleBarcodeScan('purchase', this.value); }"
+            onkeydown="if(event.key==='Enter'){ handleBarcodeScan('purchase', this.value); }" oninput="if(this.value.length>1) updateBarcodeDatalist('purchase')"
             autocomplete="off"
           >
+          <datalist id="purchase-barcode-datalist"></datalist>
         </div>
         <span style="font-size:11px;color:var(--green-700);opacity:0.7;">اضغط Enter بعد الكتابة</span>
       </div>
