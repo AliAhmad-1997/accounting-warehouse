@@ -3533,3 +3533,168 @@ function renderDamages() {
   _origRenderDamages();
   populateDamageItems();
 }
+
+
+// ============================================================
+// دوال العملة في إيصالات القبض والدفع
+// ============================================================
+
+function getAmountInUSD(amount, currency) {
+  const rate = db.exchange ? db.exchange.usdToOld : 12000;
+  if (currency === 'SYP_OLD') return amount / rate;
+  if (currency === 'SYP_NEW') return amount / (rate / 100);
+  return amount; // USD
+}
+
+function formatEquiv(amountUSD) {
+  const rate = db.exchange ? db.exchange.usdToOld : 12000;
+  return fmtUSD(amountUSD) + ' = ' + fmtOld(amountUSD * rate) + ' = ' + fmtNew(amountUSD * rate / 100);
+}
+
+// ====== إيصال الزبون ======
+function updateCustCurrency() {
+  const currency = document.getElementById('rec-cust-currency')?.value || 'USD';
+  const raw = parseFloat(document.getElementById('rec-cust-amount')?.value || 0);
+  const el = document.getElementById('rec-cust-equiv');
+  if (!el) return;
+  if (!raw || raw <= 0) { el.textContent = '—'; return; }
+  const usd = getAmountInUSD(raw, currency);
+  el.textContent = formatEquiv(usd);
+  updateCustBalance();
+}
+
+// override updateCustBalance لتحسب بالعملة الصحيحة
+const _origUpdateCustBalance = typeof updateCustBalance === 'function' ? updateCustBalance : null;
+function updateCustBalance() {
+  const name     = document.getElementById('rec-cust-name')?.value?.trim();
+  const raw      = parseFloat(document.getElementById('rec-cust-amount')?.value || 0);
+  const currency = document.getElementById('rec-cust-currency')?.value || 'USD';
+  const amount   = getAmountInUSD(raw, currency);
+  const discount = parseFloat(document.getElementById('rec-cust-discount')?.value || 0);
+  const el       = document.getElementById('rec-cust-balance-preview');
+  if (!el) return;
+  if (!name || !amount) { el.style.display = 'none'; return; }
+  const acc = getCustomerAccount(name);
+  const after = Math.max(0, acc.remaining - amount + discount);
+  el.style.display = 'block';
+  el.innerHTML = `متبقي بعد الدفع: <strong style="color:${after<0.01?'var(--green-700)':'var(--red-600)'}">${fmtUSD(after)}</strong>`;
+  // تحديث المعادل
+  const equiv = document.getElementById('rec-cust-equiv');
+  if (equiv && raw > 0) equiv.textContent = formatEquiv(amount);
+}
+
+// override saveReceiptCustomer لتحويل العملة قبل الحفظ
+const _origSaveReceiptCustomer = typeof saveReceiptCustomer === 'function' ? saveReceiptCustomer : null;
+function saveReceiptCustomer() {
+  const customerName = document.getElementById('rec-cust-name')?.value?.trim();
+  const raw          = parseFloat(document.getElementById('rec-cust-amount')?.value || 0);
+  const currency     = document.getElementById('rec-cust-currency')?.value || 'USD';
+  const amountUSD    = getAmountInUSD(raw, currency);
+  const date         = document.getElementById('rec-cust-date')?.value || new Date().toISOString().split('T')[0];
+  const desc         = document.getElementById('rec-cust-desc')?.value || '';
+  const method       = document.getElementById('rec-cust-method')?.value || 'cash';
+  const cheque       = document.getElementById('rec-cust-cheque')?.value || '';
+  const note         = document.getElementById('rec-cust-note')?.value || '';
+  const discount     = parseFloat(document.getElementById('rec-cust-discount')?.value || 0);
+
+  if (!customerName) { showToast('اختر اسم الزبون', 'error'); return; }
+  if (!amountUSD || amountUSD <= 0) { showToast('أدخل المبلغ', 'error'); return; }
+
+  db.invoiceCounters.receipt = (db.invoiceCounters.receipt || 0) + 1;
+  const receiptNum = 'REC-' + String(db.invoiceCounters.receipt).padStart(3, '0');
+
+  db.customerPayments = db.customerPayments || [];
+  db.customerPayments.push({
+    receiptNum, customerName,
+    amount: amountUSD,
+    rawAmount: raw,
+    currency,
+    discountOnPayment: discount,
+    paymentMethod: method,
+    chequeNum: cheque,
+    description: desc,
+    note, date
+  });
+
+  // تحديث رصيد الزبون
+  const cust = db.customers.find(c => c.name === customerName);
+  if (cust) cust.balance = Math.max(0, (cust.balance || 0) - amountUSD - discount);
+
+  saveData(db);
+
+  const currencyLabel = { USD: 'دولار', SYP_NEW: 'ل.س جديدة', SYP_OLD: 'ل.س قديمة' }[currency] || '';
+  showToast(`✅ تم حفظ الإيصال ${receiptNum} — ${raw} ${currencyLabel} (≈ ${fmtUSD(amountUSD)})`, 'success');
+
+  ['rec-cust-name','rec-cust-amount','rec-cust-cheque','rec-cust-desc','rec-cust-note'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  if (document.getElementById('rec-cust-discount')) document.getElementById('rec-cust-discount').value = '0';
+  if (document.getElementById('rec-cust-equiv')) document.getElementById('rec-cust-equiv').textContent = '—';
+  if (document.getElementById('rec-cust-currency')) document.getElementById('rec-cust-currency').value = 'USD';
+  renderReceiptCustomer();
+}
+
+// ====== إيصال المورد ======
+function updateSupCurrency() {
+  const currency = document.getElementById('rec-sup-currency')?.value || 'USD';
+  const raw = parseFloat(document.getElementById('rec-sup-amount')?.value || 0);
+  const el = document.getElementById('rec-sup-equiv');
+  if (!el) return;
+  if (!raw || raw <= 0) { el.textContent = '—'; return; }
+  const usd = getAmountInUSD(raw, currency);
+  el.textContent = formatEquiv(usd);
+}
+
+// override saveReceiptSupplier
+const _origSaveReceiptSupplier = typeof saveReceiptSupplier === 'function' ? saveReceiptSupplier : null;
+function saveReceiptSupplier() {
+  const supplierName = document.getElementById('rec-sup-name')?.value?.trim();
+  const raw          = parseFloat(document.getElementById('rec-sup-amount')?.value || 0);
+  const currency     = document.getElementById('rec-sup-currency')?.value || 'USD';
+  const amountUSD    = getAmountInUSD(raw, currency);
+  const date         = document.getElementById('rec-sup-date')?.value || new Date().toISOString().split('T')[0];
+  const desc         = document.getElementById('rec-sup-desc')?.value || '';
+  const method       = document.getElementById('rec-sup-method')?.value || 'cash';
+  const cheque       = document.getElementById('rec-sup-cheque')?.value || '';
+  const note         = document.getElementById('rec-sup-note')?.value || '';
+  const discount     = parseFloat(document.getElementById('rec-sup-discount')?.value || 0);
+  const linkedInvoice = document.getElementById('rec-sup-amount')?.dataset?.linkedInvoice || '';
+
+  if (!supplierName) { showToast('اختر اسم المورد', 'error'); return; }
+  if (!amountUSD || amountUSD <= 0) { showToast('أدخل المبلغ', 'error'); return; }
+
+  db.invoiceCounters.receipt = (db.invoiceCounters.receipt || 0) + 1;
+  const receiptNum = 'REC-' + String(db.invoiceCounters.receipt).padStart(3, '0');
+
+  db.supplierPayments = db.supplierPayments || [];
+  db.supplierPayments.push({
+    receiptNum, supplierName,
+    amount: amountUSD,
+    rawAmount: raw,
+    currency,
+    discountOnPayment: discount,
+    paymentMethod: method,
+    chequeNum: cheque,
+    description: desc,
+    linkedInvoice,
+    note, date
+  });
+
+  // تحديث رصيد المورد
+  const sup = (db.suppliers || []).find(s => s.name === supplierName);
+  if (sup) sup.balance = Math.max(0, (sup.balance || 0) - amountUSD - discount);
+
+  saveData(db);
+
+  const currencyLabel = { USD: 'دولار', SYP_NEW: 'ل.س جديدة', SYP_OLD: 'ل.س قديمة' }[currency] || '';
+  showToast(`✅ تم حفظ إيصال الدفع ${receiptNum} — ${raw} ${currencyLabel} (≈ ${fmtUSD(amountUSD)})`, 'success');
+
+  ['rec-sup-name','rec-sup-amount','rec-sup-cheque','rec-sup-desc','rec-sup-note'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  if (document.getElementById('rec-sup-currency')) document.getElementById('rec-sup-currency').value = 'USD';
+  if (document.getElementById('rec-sup-equiv')) document.getElementById('rec-sup-equiv').textContent = '—';
+  if (document.getElementById('rec-sup-discount')) document.getElementById('rec-sup-discount').value = '0';
+  delete document.getElementById('rec-sup-amount')?.dataset?.linkedInvoice;
+  renderReceiptSupplier();
+}
