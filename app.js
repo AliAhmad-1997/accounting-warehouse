@@ -1156,6 +1156,26 @@ function renderSettings() {
   updateRateDisplay(rate);
 }
 
+// ✅ استعادة المواد الافتراضية — تضيف المواد الناقصة فقط دون حذف الموجودة
+function restoreDefaultItems() {
+  let added = 0;
+  DEFAULT_ITEMS.forEach(def => {
+    const exists = db.items.find(i => i.id === def.id);
+    if (!exists) {
+      db.items.push(JSON.parse(JSON.stringify(def)));
+      added++;
+    }
+  });
+  if (added > 0) {
+    saveData(db);
+    showToast('✅ تم استعادة ' + added + ' مادة افتراضية', 'success');
+  } else {
+    showToast('ℹ️ المواد الافتراضية موجودة بالفعل', 'info');
+  }
+  navigate('items');
+}
+
+
 function saveCompanyName(name) {
   if (!name || name === db.company.name) return;
   db.company.name = name;
