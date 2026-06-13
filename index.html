@@ -2608,6 +2608,146 @@
 
     
 
+
+    <!-- ============================================================
+         📦 صفحة المخزون
+         ============================================================ -->
+    <div id="page-stock" class="hidden">
+
+      <!-- شريط التنبيه العلوي -->
+      <div id="stock-alert-bar" style="
+        display:none; align-items:center; gap:10px; flex-wrap:wrap;
+        background:linear-gradient(135deg,#dc2626,#b91c1c);
+        color:white; padding:14px 20px; margin-bottom:20px;
+        border-radius:14px; font-size:13px; font-weight:600;
+        box-shadow:0 4px 16px rgba(220,38,38,.3);
+      "></div>
+
+      <!-- رأس الصفحة -->
+      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px">
+        <div>
+          <div class="page-title">📦 المخزون</div>
+          <div class="page-subtitle" id="stock-count">جاري التحميل...</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <input type="text" id="stock-search" class="input" placeholder="🔍 بحث عن مادة..." oninput="renderStock()" style="width:220px">
+          <select id="stock-filter" class="input" onchange="renderStock()" style="width:160px">
+            <option value="all">📋 كل المواد</option>
+            <option value="ok">✅ كافٍ</option>
+            <option value="low">⚠️ منخفض</option>
+            <option value="out">❌ نفدت</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- بطاقات الإحصائيات -->
+      <div id="stock-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px"></div>
+
+      <!-- جدول المخزون -->
+      <div class="invoice-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>الرقم</th>
+              <th>اسم المادة</th>
+              <th style="text-align:center">الكمية الحالية</th>
+              <th style="text-align:center">الحد الأدنى</th>
+              <th style="text-align:center">الوحدة</th>
+              <th style="min-width:130px">نسبة التخزين</th>
+              <th style="text-align:center">الحالة</th>
+            </tr>
+          </thead>
+          <tbody id="stock-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         📋 صفحة الكشوفات
+         ============================================================ -->
+    <div id="page-statements" class="hidden">
+
+      <!-- رأس الصفحة -->
+      <div class="page-header" style="margin-bottom:24px">
+        <div class="page-title">📋 الكشوفات</div>
+        <div class="page-subtitle">كشف حساب زبون أو مورد · كشف حركة مادة</div>
+      </div>
+
+      <!-- تابات التنقل -->
+      <div style="display:flex;gap:8px;margin-bottom:28px;background:var(--surface-secondary);padding:6px;border-radius:14px;width:fit-content">
+        <button id="stmt-tab-account" onclick="switchStatementsTab('account')" style="
+          padding:10px 28px; border-radius:10px; border:none; cursor:pointer;
+          font-size:14px; font-weight:700; font-family:inherit;
+          background:linear-gradient(135deg,#0ea5e9,#3b82f6); color:#fff;
+          box-shadow:0 2px 10px rgba(14,165,233,.35); transition:all .2s;
+        ">👤 كشف حساب</button>
+        <button id="stmt-tab-item" onclick="switchStatementsTab('item')" style="
+          padding:10px 28px; border-radius:10px; border:none; cursor:pointer;
+          font-size:14px; font-weight:700; font-family:inherit;
+          background:transparent; color:var(--text-secondary); transition:all .2s;
+        ">📦 كشف مادة</button>
+      </div>
+
+      <!-- ===== كشف حساب ===== -->
+      <div id="stmt-account-section">
+        <!-- بطاقة البحث -->
+        <div style="background:var(--surface-primary);border-radius:16px;border:1px solid var(--border-subtle);padding:24px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,.05)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#0ea5e9,#3b82f6);display:flex;align-items:center;justify-content:center;font-size:18px">👤</div>
+            <div>
+              <div style="font-size:15px;font-weight:700;color:var(--text-primary)">اختر زبون أو مورد</div>
+              <div style="font-size:12px;color:var(--text-muted)">ستظهر كل الفواتير والدفعات والرصيد المتبقي</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <input type="text" id="stmt-person-name" class="input" placeholder="اكتب اسم الزبون أو المورد..." list="stmt-person-datalist" style="flex:1;max-width:380px">
+            <datalist id="stmt-person-datalist"></datalist>
+            <button class="btn btn-primary btn-lg" onclick="loadAccountStatement()" style="white-space:nowrap">
+              🔍 عرض الكشف
+            </button>
+          </div>
+        </div>
+        <!-- نتيجة كشف الحساب -->
+        <div id="stmt-account-result" style="background:var(--surface-primary);border-radius:16px;border:1px solid var(--border-subtle);padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.05)">
+          <div style="text-align:center;padding:32px 0;color:var(--text-muted)">
+            <div style="font-size:48px;margin-bottom:14px;opacity:.4">👤</div>
+            <div style="font-size:15px;font-weight:600">اكتب اسم زبون أو مورد واضغط "عرض الكشف"</div>
+            <div style="font-size:12px;margin-top:6px">ستظهر جميع الفواتير والدفعات والرصيد</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== كشف مادة ===== -->
+      <div id="stmt-item-section" style="display:none">
+        <!-- بطاقة البحث -->
+        <div style="background:var(--surface-primary);border-radius:16px;border:1px solid var(--border-subtle);padding:24px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,.05)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);display:flex;align-items:center;justify-content:center;font-size:18px">📦</div>
+            <div>
+              <div style="font-size:15px;font-weight:700;color:var(--text-primary)">اختر مادة</div>
+              <div style="font-size:12px;color:var(--text-muted)">ستظهر كل حركات المادة والأرباح والمخزون الحالي</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <input type="text" id="stmt-item-name" class="input" placeholder="اكتب اسم المادة أو رقمها..." list="stmt-item-datalist" style="flex:1;max-width:380px">
+            <datalist id="stmt-item-datalist"></datalist>
+            <button class="btn btn-lg" onclick="loadItemStatement()" style="white-space:nowrap;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;border:none;padding:10px 24px;border-radius:10px;font-weight:700;cursor:pointer;font-size:14px;font-family:inherit">
+              🔍 عرض الكشف
+            </button>
+          </div>
+        </div>
+        <!-- نتيجة كشف المادة -->
+        <div id="stmt-item-result" style="background:var(--surface-primary);border-radius:16px;border:1px solid var(--border-subtle);padding:32px;box-shadow:0 2px 8px rgba(0,0,0,.05)">
+          <div style="text-align:center;padding:32px 0;color:var(--text-muted)">
+            <div style="font-size:48px;margin-bottom:14px;opacity:.4">📦</div>
+            <div style="font-size:15px;font-weight:600">اكتب اسم المادة واضغط "عرض الكشف"</div>
+            <div style="font-size:12px;margin-top:6px">ستظهر جميع حركاتها: شراء، بيع، مرتجعات، ربح، مخزون</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
   </main>
 </div>
 
@@ -2632,121 +2772,3 @@
     
 
   
-<!-- ============================================================
-     📦 صفحة المخزون
-     ============================================================ -->
-<div id="page-stock" class="hidden" style="padding:0">
-  <!-- شريط التنبيه العلوي -->
-  <div id="stock-alert-bar" style="
-    display:none; align-items:center; gap:10px; flex-wrap:wrap;
-    background:linear-gradient(135deg,#dc2626,#b91c1c);
-    color:white; padding:12px 20px; margin-bottom:20px;
-    border-radius:12px; font-size:13px; font-weight:600;
-  "></div>
-
-  <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
-    <div>
-      <div class="page-title">📦 المخزون</div>
-      <div class="page-subtitle" id="stock-count">— مادة</div>
-    </div>
-  </div>
-
-  <!-- إحصائيات -->
-  <div id="stock-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px"></div>
-
-  <!-- شريط الأدوات -->
-  <div style="display:flex;gap:12px;margin-bottom:16px;align-items:center;flex-wrap:wrap">
-    <input type="text" id="stock-search" class="input" placeholder="🔍 بحث عن مادة..." oninput="renderStock()" style="max-width:280px">
-    <select id="stock-filter" class="input" onchange="renderStock()" style="width:160px">
-      <option value="all">📋 كل المواد</option>
-      <option value="ok">✅ مخزون كافٍ</option>
-      <option value="low">⚠️ مخزون منخفض</option>
-      <option value="out">❌ نفدت</option>
-    </select>
-  </div>
-
-  <!-- جدول المخزون -->
-  <div class="invoice-table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>الرقم</th>
-          <th>اسم المادة</th>
-          <th style="text-align:center">الكمية الحالية</th>
-          <th style="text-align:center">الحد الأدنى</th>
-          <th style="text-align:center">الوحدة</th>
-          <th style="min-width:120px">نسبة المخزون</th>
-          <th>الحالة</th>
-        </tr>
-      </thead>
-      <tbody id="stock-tbody"></tbody>
-    </table>
-  </div>
-</div>
-
-<!-- ============================================================
-     📋 صفحة الكشوفات
-     ============================================================ -->
-<div id="page-statements" class="hidden">
-  <div class="page-header" style="margin-bottom:20px">
-    <div class="page-title">📋 الكشوفات</div>
-    <div class="page-subtitle">كشف حساب زبون/مورد · كشف حركة مادة</div>
-  </div>
-
-  <!-- تابات -->
-  <div style="display:flex;gap:10px;margin-bottom:24px">
-    <button id="stmt-tab-account" onclick="switchStatementsTab('account')" style="
-      padding:10px 24px; border-radius:10px; border:none; cursor:pointer;
-      font-size:14px; font-weight:700; font-family:inherit;
-      background:linear-gradient(135deg,#0ea5e9,#3b82f6); color:#fff;
-      box-shadow:0 2px 10px rgba(14,165,233,.3); transition:all .2s
-    ">👤 كشف حساب</button>
-    <button id="stmt-tab-item" onclick="switchStatementsTab('item')" style="
-      padding:10px 24px; border-radius:10px; border:none; cursor:pointer;
-      font-size:14px; font-weight:700; font-family:inherit;
-      background:var(--surface-secondary); color:var(--text-primary); transition:all .2s
-    ">📦 كشف مادة</button>
-  </div>
-
-  <!-- ===== كشف حساب ===== -->
-  <div id="stmt-account-section">
-    <div style="background:var(--surface-primary);border-radius:16px;border:1px solid var(--border-subtle);padding:20px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,.05)">
-      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:12px">اختر زبون أو مورد</div>
-      <div style="display:flex;gap:10px;align-items:center">
-        <input type="text" id="stmt-person-name" class="input" placeholder="اكتب اسم الزبون أو المورد..." list="stmt-person-datalist" style="max-width:340px">
-        <datalist id="stmt-person-datalist"></datalist>
-        <button class="btn btn-primary" onclick="loadAccountStatement()" style="white-space:nowrap">
-          🔍 عرض الكشف
-        </button>
-      </div>
-    </div>
-    <div id="stmt-account-result" style="background:var(--surface-primary);border-radius:16px;border:1px solid var(--border-subtle);padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.05)">
-      <div style="text-align:center;padding:40px;color:var(--text-muted)">
-        <div style="font-size:40px;margin-bottom:12px">👤</div>
-        <div style="font-size:14px">اختر زبون أو مورد لعرض كشف حسابه</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ===== كشف مادة ===== -->
-  <div id="stmt-item-section" style="display:none">
-    <div style="background:var(--surface-primary);border-radius:16px;border:1px solid var(--border-subtle);padding:20px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,.05)">
-      <div style="font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:12px">اختر مادة</div>
-      <div style="display:flex;gap:10px;align-items:center">
-        <input type="text" id="stmt-item-name" class="input" placeholder="اكتب اسم المادة أو رقمها..." list="stmt-item-datalist" style="max-width:340px">
-        <datalist id="stmt-item-datalist"></datalist>
-        <button class="btn btn-primary" onclick="loadItemStatement()" style="white-space:nowrap;background:linear-gradient(135deg,#8b5cf6,#6d28d9)">
-          🔍 عرض الكشف
-        </button>
-      </div>
-    </div>
-    <div id="stmt-item-result" style="background:var(--surface-primary);border-radius:16px;border:1px solid var(--border-subtle);padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.05)">
-      <div style="text-align:center;padding:40px;color:var(--text-muted)">
-        <div style="font-size:40px;margin-bottom:12px">📦</div>
-        <div style="font-size:14px">اختر مادة لعرض تفاصيل حركتها</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-</body></html>
