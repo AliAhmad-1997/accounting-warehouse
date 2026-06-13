@@ -3436,10 +3436,25 @@ function printDamagesReport() {
   win.document.close();
 }
 
-// تحديث حساب المخزون الأصلي ليشمل التالف
-const _origCalcInventory = calcInventory;
+// حساب المخزون — يشمل التالف
 function calcInventory() {
-  const inv = _origCalcInventory();
+  const inv = {};
+  (db.purchaseInvoices || []).forEach(pinv => {
+    (pinv.lines || []).forEach(l => {
+      inv[l.itemId] = (inv[l.itemId] || 0) + (parseFloat(l.qty) || 0);
+    });
+  });
+  (db.salesInvoices || []).forEach(sinv => {
+    (sinv.lines || []).forEach(l => {
+      inv[l.itemId] = (inv[l.itemId] || 0) - (parseFloat(l.qty) || 0);
+    });
+  });
+  (db.returns || []).forEach(r => {
+    (r.lines || []).forEach(l => {
+      if (r.type === 'sale') inv[l.itemId] = (inv[l.itemId] || 0) + (parseFloat(l.qty) || 0);
+      else inv[l.itemId] = (inv[l.itemId] || 0) - (parseFloat(l.qty) || 0);
+    });
+  });
   // خصم التالف
   (db.damages || []).forEach(d => {
     if (!inv[d.itemId]) inv[d.itemId] = 0;
