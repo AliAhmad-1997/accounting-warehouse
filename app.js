@@ -161,8 +161,13 @@ async function initDB() {
       }
     }
     const loaded = await window.electronAPI.dbLoad();
-    if (loaded && (loaded.items || []).length > 0) {
+    if (loaded) {
       db = loaded;
+      // ✅ إذا items فاضية (حُذفت أو قاعدة جديدة) — أضف الافتراضيين
+      if (!db.items || db.items.length === 0) {
+        db.items = JSON.parse(JSON.stringify(DEFAULT_ITEMS));
+        await window.electronAPI.dbSave(db);
+      }
     } else {
       db = JSON.parse(JSON.stringify(defaultData));
       await window.electronAPI.dbSave(db);
