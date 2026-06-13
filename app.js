@@ -1,4 +1,20 @@
 
+
+// ============================================================
+// تاريخ اليوم — مساعدة مركزية
+// ============================================================
+function todayStr() {
+  return new Date().toISOString().split('T')[0];
+}
+
+// تعبئة تلقائية لكل حقول التاريخ الفارغة في الصفحة
+function fillTodayDates(...ids) {
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.value) el.value = todayStr();
+  });
+}
+
 // ============================================================
 // المواد الافتراضية لكل مجال
 // ============================================================
@@ -413,7 +429,7 @@ let saleLines = [{ itemId:'', qty:1, price:0, total:0 }];
 function renderSaleInvoice() {
   const nextNum = 'INV-' + String(db.invoiceCounters.sale+1).padStart(3,'0');
   document.getElementById('sale-inv-num').textContent = nextNum;
-  document.getElementById('sale-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('sale-date').value = todayStr();
   renderSaleLines();
   renderSaleTotal();
   // Customer input - datalist
@@ -730,7 +746,7 @@ let purchaseLines = [{itemId:'',qty:1,price:0,total:0}];
 function renderPurchaseInvoice() {
   const nextNum = 'PUR-'+String(db.invoiceCounters.purchase+1).padStart(3,'0');
   document.getElementById('pur-inv-num').textContent = nextNum;
-  document.getElementById('pur-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('pur-date').value = todayStr();
   // reset السطور عند كل فتح للصفحة
   purchaseLines = [{itemId:'',qty:1,price:0,total:0}];
   renderPurchaseLines(); renderPurchaseTotal();
@@ -1868,7 +1884,7 @@ function renderReturns() {
   if(sdl) sdl.innerHTML = (db.suppliers||[]).filter(s=>s.name).map(s=>`<option value="${s.name}">`).join('');
   // set date
   const dateEl = document.getElementById('return-date');
-  if(dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+  if(dateEl) dateEl.value = todayStr();
   // set next number
   const type = document.getElementById('return-type')?.value || 'sale';
   updateReturnNumber(type);
@@ -3111,6 +3127,7 @@ async function showBackupsList() {
 // ============================================================
 
 function renderWarehouses() {
+  fillTodayDates('tr-date');
   const inv = calcInventoryByWarehouse();
   const search = document.getElementById('wh-search')?.value?.toLowerCase() || '';
 
@@ -3589,6 +3606,7 @@ const _origRenderDamages = renderDamages;
 function renderDamages() {
   _origRenderDamages();
   populateDamageItems();
+  fillTodayDates('dmg-date');
 }
 
 
@@ -4009,7 +4027,7 @@ function renderReceiptCustomer() {
     const el = document.getElementById(id); if (el) el.textContent = nextNum;
   });
   const dateEl = document.getElementById('rec-cust-date');
-  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+  if (dateEl) dateEl.value = todayStr();
   // datalist
   const dl = document.getElementById('rec-cust-datalist');
   if (dl) dl.innerHTML = db.customers.filter(c=>c.name).map(c=>`<option value="${c.name}">`).join('');
@@ -4044,7 +4062,7 @@ function renderReceiptSupplier() {
     const el = document.getElementById(id); if (el) el.textContent = nextNum;
   });
   const dateEl = document.getElementById('rec-sup-date');
-  if (dateEl && !dateEl.value) dateEl.value = new Date().toISOString().split('T')[0];
+  if (dateEl) dateEl.value = todayStr();
   // datalist
   const dl = document.getElementById('rec-sup-datalist');
   if (dl) dl.innerHTML = (db.suppliers||[]).filter(s=>s.name).map(s=>`<option value="${s.name}">`).join('');
