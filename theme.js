@@ -1,59 +1,37 @@
-// =============================================================================
-// THEME TOGGLE
-// Supports: system preference, manual toggle, localStorage persistence
-// =============================================================================
+// ============================================================
+// theme.js — Dark / Light toggle with localStorage persistence
+// ============================================================
+(function() {
+  const THEME_KEY = 'app_theme';
+  const root = document.documentElement;
 
-;(() => {
-  const STORAGE_KEY = 'obvious-theme'
-
-  // Get stored preference or system preference
-  function getPreferredTheme() {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) return stored
-
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  // حمّل الثيم المحفوظ عند البدء
+  function applyTheme(theme) {
+    root.classList.remove('light','dark');
+    root.classList.add(theme);
+    localStorage.setItem(THEME_KEY, theme);
+    // حدّث نص الزر
+    const btn = document.querySelector('.theme-toggle span.theme-label');
+    if (btn) btn.textContent = theme === 'dark' ? '☀️ الوضع الفاتح' : '🌙 الوضع الداكن';
   }
 
-  // Apply theme to document
-  function setTheme(theme) {
-    const root = document.documentElement
-
-    if (theme === 'dark') {
-      root.classList.add('dark')
-      root.classList.remove('light')
-    } else {
-      root.classList.add('light')
-      root.classList.remove('dark')
-    }
-
-    localStorage.setItem(STORAGE_KEY, theme)
+  function initTheme() {
+    const saved = localStorage.getItem(THEME_KEY);
+    const preferred = (saved === 'dark' || saved === 'light') ? saved : 'light';
+    applyTheme(preferred);
   }
 
-  // Toggle between light and dark
-  function toggleTheme() {
-    const current = document.documentElement.classList.contains('dark') ? 'dark' : 'light'
-    const next = current === 'dark' ? 'light' : 'dark'
-    setTheme(next)
+  // تبديل الثيم
+  window.toggleTheme = function() {
+    const current = root.classList.contains('dark') ? 'dark' : 'light';
+    applyTheme(current === 'dark' ? 'light' : 'dark');
+  };
+
+  // تشغيل فوري
+  initTheme();
+
+  // إعادة التطبيق بعد تحميل DOM
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTheme);
   }
-
-  // Initialize on load
-  setTheme(getPreferredTheme())
-
-  // Listen for system preference changes
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-    // Only auto-switch if user hasn't manually set a preference
-    if (!localStorage.getItem(STORAGE_KEY)) {
-      setTheme(e.matches ? 'dark' : 'light')
-    }
-  })
-
-  // Expose toggle function globally
-  window.toggleTheme = toggleTheme
-
-  // Auto-bind to .theme-toggle buttons
-  document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.theme-toggle').forEach((btn) => {
-      btn.addEventListener('click', toggleTheme)
-    })
-  })
-})()
+})();
