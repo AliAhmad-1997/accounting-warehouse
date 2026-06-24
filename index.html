@@ -439,78 +439,132 @@
   <main class="main">
 
     <!-- DASHBOARD -->
-    <div id="page-dashboard" class="">
-      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-3)">
+        <!-- DASHBOARD -->
+    <div id="page-dashboard">
+
+      <!-- Top bar: title + exchange rate widget -->
+      <div class="dash-topbar">
         <div>
-          <div class="page-title">📊 لوحة التحكم</div>
-          <div class="page-subtitle">ملخص سريع لنشاط شركتك</div>
+          <h1 class="page-title">لوحة التحكم</h1>
+          <p class="page-subtitle">ملخص نشاط شركتك</p>
         </div>
-        <!-- ويجت سعر الصرف -->
-        <div style="background:var(--surface-primary);border-radius:var(--radius-lg);padding:var(--space-3) var(--space-4);box-shadow:var(--shadow-lifted-card);display:flex;align-items:center;gap:var(--space-4);flex-wrap:wrap">
-          <div style="font-size:12px;color:var(--text-muted);font-weight:600">💱 سعر الصرف اليوم</div>
-          <div style="display:flex;align-items:center;gap:var(--space-2)">
-            <span style="font-size:12px;color:var(--text-muted)">$1 =</span>
-            <input id="rate-quick-input" type="number" class="input input-sm" style="width:100px" placeholder="12000" onchange="saveQuickRate()" value="1000">
-            <span style="font-size:12px;color:var(--text-muted)">ل.س ق</span>
+        <div class="rate-widget">
+          <span class="rate-label">💱 سعر الصرف</span>
+          <div class="rate-inputs">
+            <span class="rate-sign">$1 =</span>
+            <input id="rate-quick-input" type="number" class="input input-sm rate-input"
+              placeholder="12000" onchange="saveQuickRate()" value="1000">
+            <span class="rate-sign">ل.س ق</span>
           </div>
-          <div style="font-size:12px;color:var(--text-secondary)">
-            = <strong id="rate-widget-new">١٠</strong> ل.س ج
-          </div>
-          <button class="btn btn-primary btn-sm" onclick="saveQuickRate()">✓ حفظ</button>
+          <span class="rate-new">= <strong id="rate-widget-new">10</strong> ج</span>
+          <button class="btn btn-primary btn-sm" onclick="saveQuickRate()">✓</button>
         </div>
       </div>
-      <!-- KPI Cards -->
-      <div class="kpi-grid" id="kpi-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:var(--space-5);">
+
+      <!-- KPI Grid: 4 cards -->
+      <div class="kpi-grid">
         <div class="kpi-card blue">
           <div class="kpi-icon">💰</div>
           <div class="kpi-label">إجمالي المبيعات</div>
-          <div class="kpi-value" id="kpi-total-sales">0 $</div>
+          <div class="kpi-value" id="kpi-total-sales">$ 0.00</div>
           <div class="kpi-sub" id="kpi-sales-count">0 فاتورة</div>
         </div>
         <div class="kpi-card orange">
+          <div class="kpi-icon">🛒</div>
+          <div class="kpi-label">إجمالي المشتريات</div>
+          <div class="kpi-value" id="kpi-total-purchases">$ 0.00</div>
+          <div class="kpi-sub" id="kpi-purchases-count">0 فاتورة</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-icon">📈</div>
+          <div class="kpi-label">صافي الربح</div>
+          <div class="kpi-value" id="kpi-net-profit">$ 0.00</div>
+          <div class="kpi-sub" id="kpi-profit-margin">هامش: 0%</div>
+        </div>
+        <div class="kpi-card purple">
           <div class="kpi-icon">👥</div>
-          <div class="kpi-label">الزبائن</div>
+          <div class="kpi-label">الزبائن / الموردين</div>
           <div class="kpi-value" id="kpi-customers-count">0</div>
           <div class="kpi-sub" id="kpi-suppliers-count">0 مورد</div>
         </div>
       </div>
 
+      <!-- Quick Actions -->
+      <div class="quick-actions-grid">
+        <button class="qa-card" onclick="navigate('invoice-sale')">
+          <span class="qa-icon">🧾</span>
+          <span class="qa-label">فاتورة بيع</span>
+        </button>
+        <button class="qa-card" onclick="navigate('invoice-purchase')">
+          <span class="qa-icon">🛒</span>
+          <span class="qa-label">فاتورة شراء</span>
+        </button>
+        <button class="qa-card" onclick="navigate('customers')">
+          <span class="qa-icon">👥</span>
+          <span class="qa-label">الزبائن</span>
+        </button>
+        <button class="qa-card" onclick="navigate('items')">
+          <span class="qa-icon">📦</span>
+          <span class="qa-label">دليل المواد</span>
+        </button>
+        <button class="qa-card" onclick="navigate('warehouses')">
+          <span class="qa-icon">🏭</span>
+          <span class="qa-label">المستودعات</span>
+        </button>
+        <button class="qa-card" onclick="navigate('reports')">
+          <span class="qa-icon">📊</span>
+          <span class="qa-label">التقارير</span>
+        </button>
+        <button class="qa-card" onclick="navigate('receipt-customer')">
+          <span class="qa-icon">💵</span>
+          <span class="qa-label">قبض من زبون</span>
+        </button>
+        <button class="qa-card" onclick="navigate('damages')">
+          <span class="qa-icon">⚠️</span>
+          <span class="qa-label">التالف</span>
+        </button>
+      </div>
 
+      <!-- Bottom row: stock alerts + recent invoices -->
+      <div class="dash-bottom-grid">
+
+        <!-- Stock Alerts -->
+        <div class="card">
+          <div class="card-title">
+            <span>⚠️ تنبيهات المخزون</span>
+          </div>
+          <div id="stock-alerts"><div class="empty-state">✅ المخزون كافٍ</div></div>
+        </div>
+
+        <!-- Recent Invoices -->
         <div class="card">
           <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:8px;">
             <div style="display:flex;align-items:center;gap:8px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              كل الفواتير
-              <span id="invoices-count" style="font-size:11px;background:var(--surface-secondary);color:var(--text-muted);padding:2px 8px;border-radius:999px;font-weight:500;">0 فاتورة</span>
+              <span>🕐 آخر الفواتير</span>
+              <span id="invoices-count" class="badge">0</span>
             </div>
-<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-              <select id="invoices-pay-filter" class="input input-sm" onchange="renderAllInvoices()" style="width:130px;">
-                <option value="all">📋 كل الفواتير</option>
-                <option value="deferred">⏳ آجلة فقط</option>
-                <option value="cash">💵 نقدية فقط</option>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <select id="invoices-pay-filter" class="input input-sm" onchange="renderAllInvoices()" style="width:120px;">
+                <option value="all">الكل</option>
+                <option value="deferred">⏳ آجلة</option>
+                <option value="cash">💵 نقدية</option>
               </select>
-              <input
-                type="text"
-                id="invoices-search"
-                class="input input-sm"
-                placeholder="🔍 بحث برقم الفاتورة أو الاسم..."
-                oninput="renderAllInvoices()"
-                style="width:230px;max-width:100%;"
-              >
+              <input type="text" id="invoices-search" class="input input-sm"
+                placeholder="🔍 بحث..." oninput="renderAllInvoices()" style="width:180px;">
             </div>
           </div>
-          <!-- رأس الجدول -->
-          <div style="display:flex;align-items:center;gap:12px;padding:6px 4px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border-subtle);margin-bottom:4px;">
-            <span style="min-width:80px;">رقم الفاتورة</span>
+          <div class="inv-table-head">
+            <span style="min-width:80px;">رقم</span>
             <span style="flex:1;">الاسم</span>
             <span style="min-width:50px;">النوع</span>
-            <span style="min-width:100px;">الإجمالي</span>
+            <span style="min-width:90px;">الإجمالي</span>
             <span style="min-width:80px;">التاريخ</span>
           </div>
-          <div id="recent-invoices" style="max-height:420px;overflow-y:auto;"><div class="empty-state">لا توجد فواتير بعد</div></div>
+          <div id="recent-invoices" class="inv-list"><div class="empty-state">لا توجد فواتير بعد</div></div>
         </div>
-    </div>
 
+      </div>
+    </div>
 
     <!-- SALE INVOICE -->
     <div id="page-invoice-sale" class="hidden">
