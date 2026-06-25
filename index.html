@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="apple-touch-icon" href="#">
   
-  <link rel="stylesheet" href="styles.css?v=1782378687">
+  <link rel="stylesheet" href="styles.css?v=1782379199">
 <style>
 @keyframes pulse-bg {
   0%,100% { transform:scale(1); opacity:1; }
@@ -279,11 +279,7 @@
   function saveUserName(name) {
     if (!name) return;
     if (typeof saveCompanyName === 'function') saveCompanyName(name);
-    // حدّث حرف الأفاتار في كل مكان
-    const letter = document.getElementById('profile-avatar-letter');
-    if (letter) letter.textContent = name.charAt(0).toUpperCase() || 'A';
-    const dashLetter = document.getElementById('dash-avatar-letter');
-    if (dashLetter) dashLetter.textContent = name.charAt(0).toUpperCase() || 'A';
+    // الأفاتار الآن صورة لوغو — لا نعدّل النص
     // حدّث اسم العرض في الشريط الجانبي
     const sidebarName = document.getElementById('sidebar-display-name');
     if (sidebarName) sidebarName.textContent = name;
@@ -295,11 +291,7 @@
     // Dash card input
     const inp = document.getElementById('company-name-header');
     if (saved && inp) inp.value = saved;
-    // Avatar letters
-    const letter = document.getElementById('profile-avatar-letter');
-    if (letter && saved) letter.textContent = saved.charAt(0).toUpperCase() || 'A';
-    const dashLetter = document.getElementById('dash-avatar-letter');
-    if (dashLetter && saved) dashLetter.textContent = saved.charAt(0).toUpperCase() || 'A';
+    // Avatar = logo image, no letter update needed
     // Sidebar name
     const sidebarName = document.getElementById('sidebar-display-name');
     if (sidebarName && saved) sidebarName.textContent = saved;
@@ -326,8 +318,8 @@
 
     <!-- PROFILE CARD -->
     <div class="sidebar-profile">
-      <div class="profile-avatar" id="profile-avatar" title="مدير النظام" onclick="navigate('settings')" style="cursor:pointer;">
-        <span id="profile-avatar-letter">A</span>
+      <div class="profile-avatar" id="profile-avatar" title="مدير النظام" onclick="navigate('settings')" style="cursor:pointer;background:transparent;border:none;box-shadow:none;width:72px;height:72px;">
+        <img src="logo.png" alt="السلطان" id="profile-avatar-letter" style="width:72px;height:72px;border-radius:50%;object-fit:cover;box-shadow:0 4px 16px rgba(37,99,235,0.2);">
       </div>
       <div class="profile-name-wrap">
         <div style="font-size:13px;font-weight:700;color:var(--text-primary);text-align:center;padding:2px 0;" id="sidebar-display-name">المستخدم</div>
@@ -448,8 +440,8 @@
 
         <!-- Profile Card -->
         <div class="dash-profile-card">
-          <div class="dash-profile-avatar" id="dash-profile-avatar" title="مدير النظام">
-            <span id="dash-avatar-letter">A</span>
+          <div class="dash-profile-avatar" id="dash-profile-avatar" title="مدير النظام" onclick="navigate('settings')" style="background:transparent;border:3px solid rgba(37,99,235,0.15);box-shadow:0 6px 24px rgba(37,99,235,0.15);">
+            <img src="logo.png" alt="السلطان" id="dash-avatar-letter" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
           </div>
           <div>
             <input
