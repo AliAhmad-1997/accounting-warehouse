@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="apple-touch-icon" href="#">
   
-  <link rel="stylesheet" href="styles.css?v=1782379199">
+  <link rel="stylesheet" href="styles.css?v=1782381346">
 <style>
 @keyframes pulse-bg {
   0%,100% { transform:scale(1); opacity:1; }
@@ -279,20 +279,14 @@
   function saveUserName(name) {
     if (!name) return;
     if (typeof saveCompanyName === 'function') saveCompanyName(name);
-    // الأفاتار الآن صورة لوغو — لا نعدّل النص
-    // حدّث اسم العرض في الشريط الجانبي
     const sidebarName = document.getElementById('sidebar-display-name');
     if (sidebarName) sidebarName.textContent = name;
     localStorage.setItem('user_display_name', name);
   }
-
   function initProfileAvatar() {
     const saved = localStorage.getItem('user_display_name');
-    // Dash card input
     const inp = document.getElementById('company-name-header');
     if (saved && inp) inp.value = saved;
-    // Avatar = logo image, no letter update needed
-    // Sidebar name
     const sidebarName = document.getElementById('sidebar-display-name');
     if (sidebarName && saved) sidebarName.textContent = saved;
   }
@@ -313,23 +307,27 @@
 
 <div class="layout">
 
-  <!-- SIDEBAR -->
+  <!-- ═══════════════════════════════════
+       SIDEBAR
+  ═══════════════════════════════════ -->
   <aside class="sidebar">
 
-    <!-- PROFILE CARD -->
+    <!-- Profile -->
     <div class="sidebar-profile">
-      <div class="profile-avatar" id="profile-avatar" title="مدير النظام" onclick="navigate('settings')" style="cursor:pointer;background:transparent;border:none;box-shadow:none;width:72px;height:72px;">
-        <img src="logo.png" alt="السلطان" id="profile-avatar-letter" style="width:72px;height:72px;border-radius:50%;object-fit:cover;box-shadow:0 4px 16px rgba(37,99,235,0.2);">
+      <div class="profile-avatar" id="profile-avatar" onclick="navigate('settings')" title="الإعدادات">
+        <img src="logo.png" alt="السلطان" id="profile-avatar-letter" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
       </div>
       <div class="profile-name-wrap">
-        <div style="font-size:13px;font-weight:700;color:var(--text-primary);text-align:center;padding:2px 0;" id="sidebar-display-name">المستخدم</div>
+        <div id="sidebar-display-name" style="font-size:13px;font-weight:700;color:var(--text-primary);text-align:center;">المستخدم</div>
         <div class="profile-role">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
           مدير النظام
         </div>
       </div>
     </div>
+
     <nav class="nav-group">
+      <!-- الرئيسية -->
       <div class="nav-label">الرئيسية</div>
       <div class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
         <span class="nav-icon-wrap">
@@ -338,6 +336,7 @@
         لوحة التحكم
       </div>
 
+      <!-- الفواتير -->
       <div class="nav-label">الفواتير</div>
       <div class="nav-item" data-page="invoice-sale" onclick="navigate('invoice-sale')">
         <span class="nav-icon-wrap">
@@ -352,6 +351,7 @@
         فاتورة الشراء
       </div>
 
+      <!-- الإدارة -->
       <div class="nav-label">الإدارة</div>
       <div class="nav-item" data-page="items" onclick="navigate('items')">
         <span class="nav-icon-wrap">
@@ -372,6 +372,7 @@
         الموردين
       </div>
 
+      <!-- العمليات -->
       <div class="nav-label">العمليات</div>
       <div class="nav-item" data-page="returns" onclick="navigate('returns')">
         <span class="nav-icon-wrap">
@@ -380,30 +381,43 @@
         المرتجعات
       </div>
       <div class="nav-item" data-page="receipt-customer" onclick="navigate('receipt-customer')">
-        <span class="nav-icon-wrap">🧾</span>
+        <span class="nav-icon-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </span>
         قبض من زبون
       </div>
       <div class="nav-item" data-page="receipt-supplier" onclick="navigate('receipt-supplier')">
-        <span class="nav-icon-wrap">💸</span>
+        <span class="nav-icon-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </span>
         دفع لمورد
       </div>
       <div class="nav-item" data-page="warehouses" onclick="navigate('warehouses')">
-        <span class="nav-icon-wrap">🏭</span>
+        <span class="nav-icon-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </span>
         المستودعات
       </div>
       <div class="nav-item" data-page="damages" onclick="navigate('damages')">
-        <span class="nav-icon-wrap">⚠️</span>
+        <span class="nav-icon-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </span>
         التالف
       </div>
       <div class="nav-item" data-page="stock" onclick="navigate('stock')">
-        <span class="nav-icon-wrap">📦</span>
+        <span class="nav-icon-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </span>
         المخزون
       </div>
       <div class="nav-item" data-page="statements" onclick="navigate('statements')">
-        <span class="nav-icon-wrap">📋</span>
+        <span class="nav-icon-wrap">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </span>
         الكشوفات
       </div>
 
+      <!-- تقارير ونظام -->
       <div class="nav-label">التقارير والنظام</div>
       <div class="nav-item" data-page="reports" onclick="navigate('reports')">
         <span class="nav-icon-wrap">
@@ -428,160 +442,136 @@
     </div>
   </aside>
 
-  <!-- MAIN -->
+  <!-- ═══════════════════════════════════
+       MAIN CONTENT
+  ═══════════════════════════════════ -->
   <main class="main">
-
+    <!-- ═══════════════ DASHBOARD ═══════════════ -->
     <!-- DASHBOARD -->
         <!-- DASHBOARD -->
     <div id="page-dashboard">
 
-      <!-- ══ ROW 1: Profile + Performance Chart + Sales Chart ══ -->
+      <!-- ROW 1: Profile + Performance + Sales Summary -->
       <div class="dash-row1">
 
         <!-- Profile Card -->
         <div class="dash-profile-card">
-          <div class="dash-profile-avatar" id="dash-profile-avatar" title="مدير النظام" onclick="navigate('settings')" style="background:transparent;border:3px solid rgba(37,99,235,0.15);box-shadow:0 6px 24px rgba(37,99,235,0.15);">
+          <div class="dash-profile-avatar" id="dash-profile-avatar" onclick="navigate('settings')">
             <img src="logo.png" alt="السلطان" id="dash-avatar-letter" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
           </div>
           <div>
-            <input
-              id="company-name-header"
-              type="text"
-              placeholder="أدخل اسمك"
+            <input id="company-name-header" type="text" placeholder="أدخل اسمك"
               class="profile-name-input"
-              style="font-size:17px;font-weight:800;color:var(--text-primary);border-bottom:1px dashed var(--border);text-align:center;width:100%;background:transparent;outline:none;padding:4px 8px;"
+              style="font-size:16px;font-weight:800;color:var(--text-primary);border-bottom:1.5px dashed var(--border);text-align:center;width:100%;background:transparent;outline:none;padding:4px 8px;"
               onblur="saveUserName(this.value.trim())"
-              onkeydown="if(event.key==='Enter') this.blur();"
-            >
+              onkeydown="if(event.key==='Enter') this.blur();">
           </div>
           <div class="dash-profile-role">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
             مدير النظام
           </div>
-          <button class="dash-profile-settings" onclick="navigate('settings')" title="الإعدادات">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <button class="dash-profile-settings" onclick="navigate('settings')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
         </div>
 
-        <!-- Performance Chart Card -->
+        <!-- Performance Chart -->
         <div class="dash-chart-card">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap;">
             <div>
               <div class="dash-chart-title">لوحة تحكم الأداء</div>
-              <div class="mini-chart-legend">
-                <span><span class="legend-dot" style="background:#2563eb"></span> الجملة</span>
-                <span><span class="legend-dot" style="background:#f59e0b"></span> التجزئة</span>
+              <div class="mini-chart-legend" style="margin-top:6px;">
+                <span><span class="legend-dot" style="background:#2563eb"></span>الجملة</span>
+                <span><span class="legend-dot" style="background:#f59e0b"></span>التجزئة</span>
               </div>
             </div>
-            <!-- Donut chart -->
             <div class="donut-wrap">
-              <svg width="72" height="72" viewBox="0 0 42 42">
-                <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#e2e8f0" stroke-width="6"/>
-                <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#2563eb" stroke-width="6"
-                  stroke-dasharray="65 35" stroke-dashoffset="25" transform="rotate(-90 21 21)"/>
-                <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#f59e0b" stroke-width="6"
-                  stroke-dasharray="35 65" stroke-dashoffset="-40" transform="rotate(-90 21 21)"/>
-                <text x="21" y="25" text-anchor="middle" font-size="6" fill="var(--text-muted)" font-family="inherit">إدارة</text>
-                <text x="21" y="19" text-anchor="middle" font-size="5.5" fill="var(--text-muted)" font-family="inherit">الشبكة</text>
+              <svg width="68" height="68" viewBox="0 0 42 42">
+                <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="var(--border)" stroke-width="5.5"/>
+                <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#2563eb" stroke-width="5.5" stroke-dasharray="62 38" stroke-dashoffset="25" transform="rotate(-90 21 21)"/>
+                <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#f59e0b" stroke-width="5.5" stroke-dasharray="38 62" stroke-dashoffset="-37" transform="rotate(-90 21 21)"/>
+                <text x="21" y="23" text-anchor="middle" font-size="5.5" fill="var(--text-muted)" font-family="inherit">إجمالي</text>
               </svg>
-              <div class="donut-label-center"></div>
             </div>
           </div>
-          <!-- Mini line chart SVG -->
-          <svg width="100%" height="90" viewBox="0 0 300 90" preserveAspectRatio="none" style="margin-top:4px;">
-            <polyline fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"
-              points="0,70 40,55 80,60 120,35 160,40 200,20 240,30 280,15 300,10"/>
-            <polyline fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"
-              points="0,80 40,70 80,72 120,55 160,58 200,45 240,50 280,38 300,35"/>
-            <polyline fill="none" stroke="#1e293b" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.3"
-              points="0,85 40,78 80,80 120,68 160,70 200,62 240,65 280,58 300,55"/>
-            <!-- X axis labels -->
-            <text x="0"   y="88" font-size="7" fill="var(--text-muted)" font-family="inherit">10</text>
-            <text x="37"  y="88" font-size="7" fill="var(--text-muted)" font-family="inherit">20</text>
-            <text x="77"  y="88" font-size="7" fill="var(--text-muted)" font-family="inherit">30</text>
-            <text x="117" y="88" font-size="7" fill="var(--text-muted)" font-family="inherit">40</text>
-            <text x="157" y="88" font-size="7" fill="var(--text-muted)" font-family="inherit">50</text>
-            <text x="277" y="88" font-size="7" fill="var(--text-muted)" font-family="inherit">80</text>
+          <svg width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none" style="margin-top:4px;">
+            <polyline fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="0,65 40,50 80,55 120,32 160,36 200,18 240,26 280,12 300,8"/>
+            <polyline fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="0,72 40,64 80,66 120,50 160,52 200,42 240,46 280,34 300,30"/>
+            <text x="0" y="78" font-size="7" fill="var(--text-muted)" font-family="inherit">10</text>
+            <text x="57" y="78" font-size="7" fill="var(--text-muted)" font-family="inherit">20</text>
+            <text x="117" y="78" font-size="7" fill="var(--text-muted)" font-family="inherit">40</text>
+            <text x="197" y="78" font-size="7" fill="var(--text-muted)" font-family="inherit">60</text>
+            <text x="277" y="78" font-size="7" fill="var(--text-muted)" font-family="inherit">80</text>
           </svg>
-          <!-- Stats row -->
-          <div class="dash-kpi-row" style="justify-content:center;gap:28px;margin-top:8px;">
+          <div class="dash-kpi-row">
             <div class="dash-kpi-mini">
               <div class="dash-kpi-mini-val" id="kpi-customers-count" style="color:#2563eb;">0</div>
               <div class="dash-kpi-mini-lbl">المستخدمين</div>
             </div>
             <div class="dash-kpi-mini">
-              <div class="dash-kpi-mini-val" id="kpi-total-sales" style="color:#f59e0b;">0</div>
-              <div class="dash-kpi-mini-lbl">انفعالون</div>
+              <div class="dash-kpi-mini-val" id="kpi-suppliers-count" style="color:#f59e0b;">0</div>
+              <div class="dash-kpi-mini-lbl">الموردون</div>
             </div>
           </div>
         </div>
 
-        <!-- Sales & Purchases Summary Chart -->
+        <!-- Sales Summary Bar Chart -->
         <div class="dash-chart-card">
           <div class="dash-chart-title">ملخص المبيعات والمشتريات</div>
-          <div class="mini-chart-legend">
-            <span><span class="legend-dot" style="background:#2563eb"></span> المبيعات</span>
-            <span><span class="legend-dot" style="background:#f59e0b"></span> المشتريات</span>
+          <div class="mini-chart-legend" style="margin-top:6px;margin-bottom:var(--s3);">
+            <span><span class="legend-dot" style="background:#2563eb"></span>المبيعات</span>
+            <span><span class="legend-dot" style="background:#f59e0b"></span>المشتريات</span>
           </div>
-          <!-- Bar chart SVG -->
-          <svg width="100%" height="110" viewBox="0 0 280 110" style="margin-top:8px;">
-            <!-- Y axis lines -->
-            <line x1="30" y1="0" x2="280" y2="0" stroke="var(--border-subtle)" stroke-width="1"/>
-            <line x1="30" y1="27" x2="280" y2="27" stroke="var(--border-subtle)" stroke-width="1"/>
-            <line x1="30" y1="54" x2="280" y2="54" stroke="var(--border-subtle)" stroke-width="1"/>
-            <line x1="30" y1="81" x2="280" y2="81" stroke="var(--border-subtle)" stroke-width="1"/>
-            <!-- Y labels -->
-            <text x="0" y="5"  font-size="8" fill="var(--text-muted)" font-family="inherit">500</text>
-            <text x="0" y="32" font-size="8" fill="var(--text-muted)" font-family="inherit">400</text>
-            <text x="0" y="59" font-size="8" fill="var(--text-muted)" font-family="inherit">300</text>
-            <text x="0" y="86" font-size="8" fill="var(--text-muted)" font-family="inherit">100</text>
-            <!-- Group 1: المبيعات -->
-            <rect x="45"  y="25" width="22" height="76" rx="4" fill="#2563eb" opacity="0.9" id="bar-sales"/>
-            <rect x="70"  y="50" width="22" height="51" rx="4" fill="#f59e0b" opacity="0.9" id="bar-pur"/>
-            <!-- Group 2 -->
-            <rect x="110" y="10" width="22" height="91" rx="4" fill="#2563eb" opacity="0.9"/>
-            <rect x="135" y="35" width="22" height="66" rx="4" fill="#f59e0b" opacity="0.9"/>
-            <!-- Group 3 -->
-            <rect x="175" y="30" width="22" height="71" rx="4" fill="#2563eb" opacity="0.9"/>
-            <rect x="200" y="55" width="22" height="46" rx="4" fill="#f59e0b" opacity="0.9"/>
-            <!-- X labels -->
-            <text x="50"  y="108" font-size="8" fill="var(--text-muted)" font-family="inherit" text-anchor="middle">المبيعات</text>
-            <text x="123" y="108" font-size="8" fill="var(--text-muted)" font-family="inherit" text-anchor="middle">المشتريات</text>
-            <text x="187" y="108" font-size="8" fill="var(--text-muted)" font-family="inherit" text-anchor="middle">الأرباح</text>
+          <svg width="100%" height="100" viewBox="0 0 280 100" style="margin-bottom:4px;">
+            <line x1="28" y1="0" x2="280" y2="0" stroke="var(--border)" stroke-width="1"/>
+            <line x1="28" y1="25" x2="280" y2="25" stroke="var(--border)" stroke-width="1"/>
+            <line x1="28" y1="50" x2="280" y2="50" stroke="var(--border)" stroke-width="1"/>
+            <line x1="28" y1="75" x2="280" y2="75" stroke="var(--border)" stroke-width="1"/>
+            <text x="0" y="4"  font-size="7" fill="var(--text-muted)" font-family="inherit">500</text>
+            <text x="0" y="29" font-size="7" fill="var(--text-muted)" font-family="inherit">400</text>
+            <text x="0" y="54" font-size="7" fill="var(--text-muted)" font-family="inherit">300</text>
+            <text x="0" y="79" font-size="7" fill="var(--text-muted)" font-family="inherit">100</text>
+            <rect x="40"  y="22" width="20" height="73" rx="4" fill="#2563eb" opacity=".85" id="bar-sales"/>
+            <rect x="63"  y="46" width="20" height="49" rx="4" fill="#f59e0b" opacity=".85"/>
+            <rect x="105" y="8"  width="20" height="87" rx="4" fill="#2563eb" opacity=".85"/>
+            <rect x="128" y="32" width="20" height="63" rx="4" fill="#f59e0b" opacity=".85"/>
+            <rect x="170" y="28" width="20" height="67" rx="4" fill="#2563eb" opacity=".85"/>
+            <rect x="193" y="52" width="20" height="43" rx="4" fill="#f59e0b" opacity=".85"/>
+            <text x="52"  y="98" font-size="7" fill="var(--text-muted)" font-family="inherit" text-anchor="middle">المبيعات</text>
+            <text x="118" y="98" font-size="7" fill="var(--text-muted)" font-family="inherit" text-anchor="middle">المشتريات</text>
+            <text x="182" y="98" font-size="7" fill="var(--text-muted)" font-family="inherit" text-anchor="middle">الأرباح</text>
           </svg>
-          <!-- Live KPI numbers -->
-          <div class="dash-kpi-row" style="justify-content:center;gap:32px;margin-top:6px;">
+          <div class="dash-kpi-row">
             <div class="dash-kpi-mini">
-              <div class="dash-kpi-mini-val" id="kpi-total-purchases" style="color:#2563eb;">$0</div>
+              <div class="dash-kpi-mini-val" id="kpi-total-sales" style="color:#2563eb;">$0</div>
               <div class="dash-kpi-mini-lbl">المبيعات</div>
             </div>
             <div class="dash-kpi-mini">
-              <div class="dash-kpi-mini-val" id="kpi-net-profit" style="color:#f59e0b;">$0</div>
+              <div class="dash-kpi-mini-val" id="kpi-total-purchases" style="color:#f59e0b;">$0</div>
               <div class="dash-kpi-mini-lbl">المشتريات</div>
+            </div>
+            <div class="dash-kpi-mini">
+              <div class="dash-kpi-mini-val" id="kpi-net-profit" style="color:#16a34a;">$0</div>
+              <div class="dash-kpi-mini-lbl">الربح</div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ══ ROW 2: 4 Big Action Cards ══ -->
+      <!-- ROW 2: 4 Big Action Cards -->
       <div class="dash-row2">
 
         <!-- زبائن -->
         <div class="dash-action-card" onclick="navigate('customers')">
           <div class="dash-card-svg-area">
-            <svg width="120" height="90" viewBox="0 0 120 90" fill="none">
-              <!-- 3 people illustration -->
-              <!-- Center person -->
-              <circle cx="60" cy="28" r="16" fill="#93c5fd" opacity="0.9"/>
-              <path d="M38 80 Q38 56 60 56 Q82 56 82 80" fill="#3b82f6" opacity="0.85"/>
-              <!-- Left person -->
-              <circle cx="28" cy="34" r="12" fill="#bfdbfe" opacity="0.8"/>
-              <path d="M10 80 Q10 60 28 60 Q46 60 46 80" fill="#93c5fd" opacity="0.6"/>
-              <!-- Right person -->
-              <circle cx="92" cy="34" r="12" fill="#bfdbfe" opacity="0.8"/>
-              <path d="M74 80 Q74 60 92 60 Q110 60 110 80" fill="#93c5fd" opacity="0.6"/>
-              <!-- Shine on center -->
-              <ellipse cx="55" cy="22" rx="5" ry="3" fill="white" opacity="0.3"/>
+            <svg width="115" height="88" viewBox="0 0 115 88" fill="none">
+              <circle cx="57" cy="26" r="15" fill="#93c5fd" opacity=".9"/>
+              <path d="M37 78 Q37 54 57 54 Q77 54 77 78" fill="#3b82f6" opacity=".8"/>
+              <circle cx="26" cy="32" r="11" fill="#bfdbfe" opacity=".75"/>
+              <path d="M10 78 Q10 58 26 58 Q42 58 42 78" fill="#93c5fd" opacity=".5"/>
+              <circle cx="88" cy="32" r="11" fill="#bfdbfe" opacity=".75"/>
+              <path d="M72 78 Q72 58 88 58 Q104 58 104 78" fill="#93c5fd" opacity=".5"/>
+              <ellipse cx="52" cy="20" rx="5" ry="3" fill="white" opacity=".25"/>
             </svg>
           </div>
           <div class="dash-card-label">إدارة الزبائن</div>
@@ -590,175 +580,184 @@
         <!-- فواتير البيع -->
         <div class="dash-action-card" onclick="navigate('invoice-sale')">
           <div class="dash-card-svg-area">
-            <svg width="110" height="90" viewBox="0 0 110 90" fill="none">
-              <!-- Invoice paper -->
-              <rect x="20" y="5" width="65" height="80" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
-              <rect x="20" y="5" width="65" height="18" rx="8" fill="#dbeafe"/>
-              <rect x="20" y="5" width="65" height="18" rx="0" fill="#dbeafe" style="clip-path:inset(8px 0 0 0)"/>
-              <!-- Lines -->
-              <line x1="32" y1="34" x2="73" y2="34" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/>
-              <line x1="32" y1="44" x2="73" y2="44" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/>
-              <line x1="32" y1="54" x2="60" y2="54" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/>
-              <!-- Total line -->
-              <line x1="32" y1="67" x2="73" y2="67" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round"/>
-              <!-- Pen -->
-              <g transform="rotate(-35 88 68)">
-                <rect x="80" y="55" width="8" height="24" rx="3" fill="#f59e0b"/>
-                <polygon points="80,79 88,79 84,88" fill="#1e293b"/>
-                <rect x="80" y="55" width="8" height="6" rx="2" fill="#fbbf24"/>
+            <svg width="108" height="88" viewBox="0 0 108 88" fill="none">
+              <rect x="18" y="4" width="62" height="76" rx="7" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
+              <rect x="18" y="4" width="62" height="17" rx="7" fill="#dbeafe"/>
+              <line x1="30" y1="32" x2="68" y2="32" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/>
+              <line x1="30" y1="41" x2="68" y2="41" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/>
+              <line x1="30" y1="50" x2="55" y2="50" stroke="#93c5fd" stroke-width="2" stroke-linecap="round"/>
+              <line x1="30" y1="64" x2="68" y2="64" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round"/>
+              <g transform="rotate(-35 86 66)">
+                <rect x="78" y="52" width="8" height="22" rx="3" fill="#f59e0b"/>
+                <polygon points="78,74 86,74 82,83" fill="#1e293b"/>
+                <rect x="78" y="52" width="8" height="6" rx="2" fill="#fbbf24"/>
               </g>
             </svg>
           </div>
           <div class="dash-card-label">فواتير البيع الجديدة</div>
         </div>
 
-        <!-- المستودعات — featured with realistic feel -->
+        <!-- المستودعات — featured -->
         <div class="dash-action-card featured" onclick="navigate('warehouses')">
-          <div class="dash-card-svg-area" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8);min-height:130px;position:relative;overflow:hidden;">
-            <!-- Warehouse background elements -->
-            <svg width="100%" height="130" viewBox="0 0 200 130" preserveAspectRatio="xMidYMid meet" style="position:absolute;inset:0;">
-              <!-- Shelves -->
-              <rect x="10" y="20" width="85" height="100" rx="4" fill="rgba(255,255,255,0.06)"/>
-              <rect x="10" y="40" width="85" height="4" fill="rgba(255,255,255,0.15)"/>
-              <rect x="10" y="68" width="85" height="4" fill="rgba(255,255,255,0.15)"/>
-              <rect x="10" y="96" width="85" height="4" fill="rgba(255,255,255,0.15)"/>
-              <!-- Boxes on shelves -->
-              <rect x="15" y="44" width="18" height="20" rx="3" fill="#f59e0b" opacity="0.8"/>
-              <rect x="36" y="44" width="18" height="20" rx="3" fill="#fb923c" opacity="0.8"/>
-              <rect x="57" y="46" width="14" height="18" rx="3" fill="#fbbf24" opacity="0.8"/>
-              <rect x="15" y="72" width="18" height="20" rx="3" fill="#60a5fa" opacity="0.8"/>
-              <rect x="36" y="72" width="22" height="20" rx="3" fill="#93c5fd" opacity="0.8"/>
-              <rect x="15" y="100" width="18" height="16" rx="3" fill="#f59e0b" opacity="0.7"/>
-              <!-- Forklift body -->
-              <rect x="115" y="80" width="60" height="36" rx="6" fill="rgba(255,165,0,0.85)"/>
-              <circle cx="125" cy="118" r="10" fill="#1e293b" opacity="0.8"/>
-              <circle cx="125" cy="118" r="5" fill="#64748b"/>
-              <circle cx="160" cy="118" r="10" fill="#1e293b" opacity="0.8"/>
-              <circle cx="160" cy="118" r="5" fill="#64748b"/>
-              <!-- Fork -->
-              <rect x="175" y="85" width="5" height="35" rx="2" fill="rgba(255,255,255,0.7)"/>
-              <rect x="175" y="118" width="22" height="4" rx="2" fill="rgba(255,255,255,0.7)"/>
-              <rect x="175" y="124" width="22" height="4" rx="2" fill="rgba(255,255,255,0.7)"/>
-              <!-- Load on fork -->
-              <rect x="177" y="96" width="20" height="20" rx="3" fill="#fbbf24" opacity="0.85"/>
-              <!-- Driver window -->
-              <rect x="140" y="82" width="25" height="18" rx="4" fill="rgba(147,197,253,0.5)"/>
-              <!-- Mast -->
-              <rect x="173" y="55" width="4" height="63" rx="2" fill="rgba(255,255,255,0.4)"/>
+          <div class="dash-card-svg-area" style="min-height:120px;position:relative;overflow:hidden;">
+            <svg width="100%" height="120" viewBox="0 0 200 120" preserveAspectRatio="xMidYMid meet" style="position:absolute;inset:0;">
+              <rect x="8" y="18" width="80" height="95" rx="3" fill="rgba(255,255,255,.06)"/>
+              <rect x="8" y="36" width="80" height="3" fill="rgba(255,255,255,.15)"/>
+              <rect x="8" y="62" width="80" height="3" fill="rgba(255,255,255,.15)"/>
+              <rect x="8" y="88" width="80" height="3" fill="rgba(255,255,255,.15)"/>
+              <rect x="13" y="39" width="16" height="19" rx="2" fill="#f59e0b" opacity=".8"/>
+              <rect x="32" y="39" width="16" height="19" rx="2" fill="#fb923c" opacity=".8"/>
+              <rect x="51" y="41" width="13" height="17" rx="2" fill="#fbbf24" opacity=".8"/>
+              <rect x="13" y="65" width="16" height="19" rx="2" fill="#60a5fa" opacity=".8"/>
+              <rect x="32" y="65" width="20" height="19" rx="2" fill="#93c5fd" opacity=".8"/>
+              <rect x="13" y="91" width="16" height="15" rx="2" fill="#f59e0b" opacity=".7"/>
+              <rect x="112" y="74" width="58" height="34" rx="5" fill="rgba(255,165,0,.85)"/>
+              <circle cx="122" cy="110" r="9" fill="#1e293b" opacity=".8"/>
+              <circle cx="122" cy="110" r="4" fill="#64748b"/>
+              <circle cx="155" cy="110" r="9" fill="#1e293b" opacity=".8"/>
+              <circle cx="155" cy="110" r="4" fill="#64748b"/>
+              <rect x="168" y="80" width="5" height="32" rx="2" fill="rgba(255,255,255,.65)"/>
+              <rect x="168" y="110" width="21" height="3.5" rx="2" fill="rgba(255,255,255,.65)"/>
+              <rect x="168" y="115" width="21" height="3.5" rx="2" fill="rgba(255,255,255,.65)"/>
+              <rect x="170" y="90" width="18" height="18" rx="2" fill="#fbbf24" opacity=".85"/>
+              <rect x="136" y="76" width="24" height="16" rx="3" fill="rgba(147,197,253,.45)"/>
+              <rect x="170" y="50" width="4" height="62" rx="2" fill="rgba(255,255,255,.38)"/>
             </svg>
           </div>
           <div class="dash-card-label">المستودعات والمخزون</div>
         </div>
 
-        <!-- التقارير المالية -->
+        <!-- التقارير -->
         <div class="dash-action-card" onclick="navigate('reports')">
           <div class="dash-card-svg-area">
-            <svg width="110" height="90" viewBox="0 0 110 90" fill="none">
-              <!-- Report paper -->
-              <rect x="15" y="5" width="55" height="75" rx="7" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5"/>
-              <!-- Bar chart inside -->
-              <rect x="25" y="50" width="10" height="22" rx="3" fill="#2563eb" opacity="0.8"/>
-              <rect x="38" y="40" width="10" height="32" rx="3" fill="#10b981" opacity="0.8"/>
-              <rect x="51" y="30" width="10" height="42" rx="3" fill="#f59e0b" opacity="0.8"/>
-              <!-- Pie icon -->
-              <circle cx="83" cy="28" r="18" fill="none" stroke="#e2e8f0" stroke-width="1"/>
-              <path d="M83 28 L83 10 A18 18 0 0 1 98 37 Z" fill="#2563eb" opacity="0.8"/>
-              <path d="M83 28 L98 37 A18 18 0 0 1 68 37 Z" fill="#10b981" opacity="0.75"/>
-              <path d="M83 28 L68 37 A18 18 0 0 1 83 10 Z" fill="#f59e0b" opacity="0.7"/>
-              <!-- Arrow up trend -->
-              <polyline points="65,72 72,60 80,65 90,50 95,55" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <polygon points="92,46 100,52 96,56" fill="#10b981"/>
+            <svg width="108" height="88" viewBox="0 0 108 88" fill="none">
+              <rect x="12" y="4" width="52" height="72" rx="6" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5"/>
+              <rect x="22" y="46" width="10" height="22" rx="2" fill="#2563eb" opacity=".8"/>
+              <rect x="35" y="38" width="10" height="30" rx="2" fill="#22c55e" opacity=".8"/>
+              <rect x="48" y="28" width="10" height="40" rx="2" fill="#f59e0b" opacity=".8"/>
+              <circle cx="82" cy="26" r="17" fill="none" stroke="var(--border)" stroke-width="1"/>
+              <path d="M82 26 L82 9 A17 17 0 0 1 96 34 Z" fill="#2563eb" opacity=".8"/>
+              <path d="M82 26 L96 34 A17 17 0 0 1 67 34 Z" fill="#22c55e" opacity=".75"/>
+              <path d="M82 26 L67 34 A17 17 0 0 1 82 9 Z" fill="#f59e0b" opacity=".7"/>
+              <polyline points="62,70 69,58 77,63 87,48 92,53" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <polygon points="89,44 97,50 93,54" fill="#22c55e"/>
             </svg>
           </div>
           <div class="dash-card-label">التقارير المالية المتقدمة</div>
         </div>
       </div>
 
-      <!-- ══ ROW 3: 3 Cards — Payments, Exchange Rate, Damages ══ -->
+      <!-- ROW 3: 3 Cards -->
       <div class="dash-row3">
 
-        <!-- مدفوعات ومستحقات -->
+        <!-- مدفوعات -->
         <div class="dash-action-card" onclick="navigate('receipt-customer')">
-          <div class="dash-card-svg-area" style="gap:12px;flex-direction:row;align-items:center;justify-content:center;">
-            <!-- Money hand -->
-            <svg width="85" height="80" viewBox="0 0 85 80" fill="none">
-              <!-- Hand -->
-              <path d="M10 55 Q8 50 12 46 L38 46 Q44 46 44 52 L44 60 Q44 66 38 66 L16 66 Q10 66 10 60 Z" fill="#fde68a" stroke="#f59e0b" stroke-width="1"/>
-              <path d="M20 46 L20 30 Q20 26 24 26 Q28 26 28 30 L28 46" fill="#fde68a" stroke="#f59e0b" stroke-width="1"/>
-              <path d="M28 46 L28 28 Q28 24 32 24 Q36 24 36 28 L36 46" fill="#fde68a" stroke="#f59e0b" stroke-width="1"/>
-              <path d="M36 46 L36 32 Q36 28 40 28 Q44 28 44 32 L44 46" fill="#fde68a" stroke="#f59e0b" stroke-width="1"/>
-              <!-- Bills -->
-              <rect x="30" y="10" width="45" height="28" rx="4" fill="#bbf7d0" stroke="#4ade80" stroke-width="1.5"/>
-              <line x1="38" y1="20" x2="67" y2="20" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="38" y1="28" x2="60" y2="28" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round"/>
-              <circle cx="52" cy="24" r="7" fill="none" stroke="#16a34a" stroke-width="1.5"/>
-              <text x="49" y="28" font-size="9" fill="#16a34a" font-family="inherit">$</text>
+          <div class="dash-card-svg-area" style="gap:10px;flex-direction:row;">
+            <svg width="82" height="76" viewBox="0 0 82 76" fill="none">
+              <path d="M9 52 Q7 47 11 43 L36 43 Q42 43 42 49 L42 57 Q42 62 36 62 L14 62 Q9 62 9 57 Z" fill="#fde68a" stroke="#f59e0b" stroke-width="1"/>
+              <path d="M19 43 L19 28 Q19 24 23 24 Q27 24 27 28 L27 43" fill="#fde68a" stroke="#f59e0b" stroke-width="1"/>
+              <path d="M27 43 L27 26 Q27 22 31 22 Q35 22 35 26 L35 43" fill="#fde68a" stroke="#f59e0b" stroke-width="1"/>
+              <path d="M35 43 L35 30 Q35 26 39 26 Q43 26 43 30 L43 43" fill="#fde68a" stroke="#f59e0b" stroke-width="1"/>
+              <rect x="28" y="8" width="44" height="26" rx="4" fill="#bbf7d0" stroke="#4ade80" stroke-width="1.5"/>
+              <circle cx="50" cy="21" r="8" fill="none" stroke="#16a34a" stroke-width="1.5"/>
+              <text x="47" y="25" font-size="9" fill="#16a34a" font-family="inherit" font-weight="700">$</text>
             </svg>
-            <!-- Wallet -->
-            <svg width="55" height="55" viewBox="0 0 55 55" fill="none">
-              <rect x="5" y="15" width="45" height="32" rx="8" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
-              <rect x="5" y="20" width="45" height="12" rx="0" fill="#fde68a" opacity="0.7"/>
-              <rect x="5" y="20" width="45" height="12" rx="4" fill="none" stroke="#f59e0b" stroke-width="1"/>
-              <circle cx="38" cy="36" r="6" fill="#f59e0b" opacity="0.8"/>
-              <circle cx="38" cy="36" r="3" fill="#fbbf24"/>
-              <rect x="2" y="12" width="51" height="8" rx="4" fill="#fbbf24" stroke="#f59e0b" stroke-width="1"/>
+            <svg width="52" height="52" viewBox="0 0 52 52" fill="none">
+              <rect x="4" y="14" width="44" height="30" rx="7" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+              <rect x="4" y="19" width="44" height="11" rx="0" fill="#fde68a" opacity=".6"/>
+              <circle cx="36" cy="34" r="5" fill="#f59e0b" opacity=".8"/>
+              <circle cx="36" cy="34" r="2.5" fill="#fbbf24"/>
+              <rect x="2" y="11" width="48" height="7" rx="3" fill="#fbbf24" stroke="#f59e0b" stroke-width="1"/>
             </svg>
           </div>
           <div class="dash-card-label">مدفوعات ومستحقات</div>
         </div>
 
-        <!-- تحديث أسعار الصرف -->
+        <!-- سعر الصرف -->
         <div class="dash-action-card" onclick="navigate('settings')">
-          <div class="dash-card-svg-area" style="gap:8px;flex-direction:row;align-items:center;justify-content:center;">
-            <!-- Dollar bills -->
-            <svg width="80" height="75" viewBox="0 0 80 75" fill="none">
-              <rect x="5" y="20" width="50" height="30" rx="5" fill="#bbf7d0" stroke="#4ade80" stroke-width="1.5"/>
-              <circle cx="30" cy="35" r="9" fill="none" stroke="#16a34a" stroke-width="2"/>
-              <text x="26" y="39" font-size="11" fill="#16a34a" font-family="inherit" font-weight="700">$</text>
-              <line x1="10" y1="28" x2="20" y2="28" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="42" y1="28" x2="52" y2="28" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round"/>
+          <div class="dash-card-svg-area" style="gap:6px;flex-direction:row;">
+            <svg width="78" height="72" viewBox="0 0 78 72" fill="none">
+              <rect x="4" y="18" width="48" height="28" rx="5" fill="#bbf7d0" stroke="#4ade80" stroke-width="1.5"/>
+              <circle cx="28" cy="32" r="8.5" fill="none" stroke="#16a34a" stroke-width="2"/>
+              <text x="24" y="36" font-size="10" fill="#16a34a" font-family="inherit" font-weight="700">$</text>
+              <line x1="9" y1="26" x2="18" y2="26" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="40" y1="26" x2="49" y2="26" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round"/>
             </svg>
-            <!-- Circular arrows -->
-            <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
-              <circle cx="30" cy="30" r="24" fill="none" stroke="#bfdbfe" stroke-width="2"/>
-              <!-- Arrow 1 (clockwise top) -->
-              <path d="M30 8 A22 22 0 0 1 52 30" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
-              <polygon points="54,26 56,34 48,32" fill="#2563eb"/>
-              <!-- Arrow 2 (counter-clockwise bottom) -->
-              <path d="M30 52 A22 22 0 0 1 8 30" fill="none" stroke="#60a5fa" stroke-width="3" stroke-linecap="round"/>
-              <polygon points="6,34 4,26 12,28" fill="#60a5fa"/>
-              <!-- Center dollar -->
-              <circle cx="30" cy="30" r="10" fill="#dbeafe"/>
-              <text x="26" y="35" font-size="12" fill="#2563eb" font-family="inherit" font-weight="800">$</text>
+            <svg width="58" height="58" viewBox="0 0 58 58" fill="none">
+              <circle cx="29" cy="29" r="23" fill="none" stroke="#bfdbfe" stroke-width="2"/>
+              <path d="M29 7 A22 22 0 0 1 51 29" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
+              <polygon points="53,25 55,33 47,31" fill="#2563eb"/>
+              <path d="M29 51 A22 22 0 0 1 7 29" fill="none" stroke="#60a5fa" stroke-width="3" stroke-linecap="round"/>
+              <polygon points="5,33 3,25 11,27" fill="#60a5fa"/>
+              <circle cx="29" cy="29" r="9" fill="#dbeafe"/>
+              <text x="25" y="34" font-size="11" fill="#2563eb" font-family="inherit" font-weight="800">$</text>
             </svg>
           </div>
           <div class="dash-card-label">تحديث أسعار الصرف</div>
         </div>
 
-        <!-- إدارة التالف -->
+        <!-- التالف -->
         <div class="dash-action-card" onclick="navigate('damages')">
-          <div class="dash-card-svg-area" style="gap:14px;flex-direction:row;align-items:center;justify-content:center;">
-            <!-- Warning triangle -->
-            <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
-              <polygon points="36,6 68,64 4,64" fill="#fef3c7" stroke="#f59e0b" stroke-width="2.5" stroke-linejoin="round"/>
-              <polygon points="36,8 66,63 6,63" fill="#fef9c3" opacity="0.5"/>
-              <line x1="36" y1="26" x2="36" y2="46" stroke="#f59e0b" stroke-width="4" stroke-linecap="round"/>
-              <circle cx="36" cy="54" r="3.5" fill="#f59e0b"/>
+          <div class="dash-card-svg-area" style="gap:12px;flex-direction:row;">
+            <svg width="70" height="70" viewBox="0 0 70 70" fill="none">
+              <polygon points="35,5 67,62 3,62" fill="#fef3c7" stroke="#f59e0b" stroke-width="2.5" stroke-linejoin="round"/>
+              <line x1="35" y1="24" x2="35" y2="44" stroke="#f59e0b" stroke-width="3.5" stroke-linecap="round"/>
+              <circle cx="35" cy="52" r="3" fill="#f59e0b"/>
             </svg>
-            <!-- Document with X -->
-            <svg width="56" height="70" viewBox="0 0 56 70" fill="none">
-              <rect x="4" y="4" width="48" height="62" rx="7" fill="#fff" stroke="#e2e8f0" stroke-width="1.5"/>
-              <rect x="4" y="4" width="48" height="16" rx="7" fill="#fee2e2"/>
-              <rect x="4" y="4" width="48" height="16" rx="0" fill="#fee2e2" style="clip-path:inset(8px 0 0 0)"/>
-              <line x1="12" y1="30" x2="44" y2="30" stroke="#fca5a5" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="12" y1="38" x2="44" y2="38" stroke="#fca5a5" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="12" y1="46" x2="35" y2="46" stroke="#fca5a5" stroke-width="1.5" stroke-linecap="round"/>
-              <!-- Horizontal lines for content -->
-              <text x="16" y="15" font-size="8" fill="#dc2626" font-family="inherit" font-weight="700">التالف</text>
+            <svg width="54" height="68" viewBox="0 0 54 68" fill="none">
+              <rect x="3" y="3" width="48" height="62" rx="6" fill="var(--bg-card)" stroke="var(--border)" stroke-width="1.5"/>
+              <rect x="3" y="3" width="48" height="15" rx="6" fill="#fee2e2"/>
+              <line x1="11" y1="28" x2="43" y2="28" stroke="#fca5a5" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="11" y1="36" x2="43" y2="36" stroke="#fca5a5" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="11" y1="44" x2="33" y2="44" stroke="#fca5a5" stroke-width="1.5" stroke-linecap="round"/>
+              <text x="15" y="14" font-size="7.5" fill="#dc2626" font-family="inherit" font-weight="700">التالف</text>
             </svg>
           </div>
           <div class="dash-card-label">إدارة التالف</div>
         </div>
+      </div>
+
+      <!-- Bottom: Stock Alerts + Recent Invoices -->
+      <div class="dash-bottom-grid" style="margin-top:0;">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">⚠️ تنبيهات المخزون</div>
+          </div>
+          <div id="stock-alerts"><div class="empty-state">✅ المخزون كافٍ</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              🕐 آخر الفواتير
+              <span id="invoices-count" class="badge badge-gray" style="margin-right:4px;">0</span>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <select id="invoices-pay-filter" class="input input-sm" onchange="renderAllInvoices()" style="width:110px;">
+                <option value="all">الكل</option>
+                <option value="deferred">⏳ آجلة</option>
+                <option value="cash">💵 نقدية</option>
+              </select>
+              <input type="text" id="invoices-search" class="input input-sm" placeholder="🔍 بحث..." oninput="renderAllInvoices()" style="width:160px;">
+            </div>
+          </div>
+          <div class="inv-table-head">
+            <span style="min-width:82px;">رقم</span>
+            <span style="flex:1;">الاسم</span>
+            <span style="min-width:50px;">النوع</span>
+            <span style="min-width:90px;">الإجمالي</span>
+            <span style="min-width:78px;">التاريخ</span>
+          </div>
+          <div id="recent-invoices" class="inv-list"><div class="empty-state">لا توجد فواتير بعد</div></div>
+        </div>
+      </div>
+
+      <!-- Hidden rate widget (used by app.js) -->
+      <div style="display:none;">
+        <input id="rate-quick-input" type="number" value="1000">
+        <span id="rate-widget-new">10</span>
+        <span id="kpi-sales-count">0</span>
+        <span id="kpi-purchases-count">0</span>
+        <span id="kpi-profit-margin">0</span>
       </div>
 
     </div>
@@ -2253,8 +2252,8 @@
 <!-- ===== صفحة المستودعات ===== -->
 <div id="page-warehouses" class="hidden">
 
-  <!-- رأس الصفحة بتصميم gradient احترافي -->
-  <div style="background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 60%,#0ea5e9 100%);border-radius:20px;padding:28px 32px;margin-bottom:28px;color:white;position:relative;overflow:hidden;box-shadow:0 8px 32px rgba(37,99,235,.35)">
+  <!-- رأس الصفحة -->
+  <div class="section-hero hero-blue">
     <div style="position:absolute;top:-30px;right:-30px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.06)"></div>
     <div style="position:absolute;bottom:-50px;left:60px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.04)"></div>
     <div style="position:relative;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
@@ -2392,7 +2391,7 @@
 <div id="page-damages" class="hidden">
 
   <!-- رأس الصفحة -->
-  <div style="background:linear-gradient(135deg,#7f1d1d 0%,#dc2626 60%,#f87171 100%);border-radius:20px;padding:28px 32px;margin-bottom:28px;color:white;position:relative;overflow:hidden;box-shadow:0 8px 32px rgba(220,38,38,.35)">
+  <div class="section-hero hero-red">
     <div style="position:absolute;top:-30px;right:-30px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.06)"></div>
     <div style="position:absolute;bottom:-50px;left:60px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,.04)"></div>
     <div style="position:relative;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
