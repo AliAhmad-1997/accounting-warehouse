@@ -291,6 +291,10 @@
     if (sidebarName && saved) sidebarName.textContent = saved;
   }
   document.addEventListener('DOMContentLoaded', initProfileAvatar);
+  document.addEventListener('DOMContentLoaded', function() {
+    // init global search after app.js loaded
+    setTimeout(initGlobalSearch, 400);
+  });
 
   function togglePass() {
     const inp = document.getElementById('login-password');
@@ -446,6 +450,16 @@
        MAIN CONTENT
   ═══════════════════════════════════ -->
   <main class="main">
+    <!-- ═══════════════════════════════════
+         GLOBAL SEARCH BAR (sticky top)
+    ═══════════════════════════════════ -->
+    <div id="global-search-bar" style="position:sticky;top:0;z-index:100;background:var(--bg);padding:10px 0 14px;margin-bottom:4px;border-bottom:1px solid var(--border);margin-top:-6px;">
+      <div class="global-search-wrap" style="max-width:480px;">
+        <svg class="global-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="global-search" type="text" class="global-search-input" placeholder="ابحث في الفواتير، المواد، العملاء...">
+        <div id="global-search-results" class="global-search-results"></div>
+      </div>
+    </div>
     <!-- ═══════════════ DASHBOARD ═══════════════ -->
     <!-- DASHBOARD -->
         <!-- DASHBOARD -->

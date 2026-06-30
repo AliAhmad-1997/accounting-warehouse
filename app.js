@@ -659,18 +659,28 @@ function printInvoice(invNumber) {
   const inv = db.salesInvoices.find(i=>i.number===invNumber) ||
               db.purchaseInvoices.find(i=>i.number===invNumber);
   if(!inv) return;
-  const type = db.salesInvoices.find(i=>i.number===invNumber) ? 'بيع' : 'شراء';
+  const isSale = !!db.salesInvoices.find(i=>i.number===invNumber);
+  const type = isSale ? 'فاتورة بيع' : 'فاتورة شراء';
   const party = inv.customerName || inv.supplierName || '—';
+  const partyLabel = isSale ? 'الزبون' : 'المورد';
+  const co = db.company || {};
+  const pt = inv.paymentType || 'cash';
+  const isPaid = pt !== 'deferred';
+  const discount = inv.discount || 0;
+  const subtotal = inv.subtotal || inv.total;
+  const note = inv.note || '';
+  const rate = getRate();
 
   const linesHTML = inv.lines.map((l,i) => {
     const item = db.items.find(it=>it.id===l.itemId);
+    const unitLabel = l.unitType === 'unit2' && item?.unit2 ? item.unit2 : (item?.unit || '');
     return `<tr>
-      <td style="padding:8px;border:1px solid #ddd;text-align:center">${i+1}</td>
-      <td style="padding:8px;border:1px solid #ddd">${item?.name||l.itemId}</td>
-      <td style="padding:8px;border:1px solid #ddd;text-align:center">${item?.unit||''}</td>
-      <td style="padding:8px;border:1px solid #ddd;text-align:center">${l.qty}</td>
-      <td style="padding:8px;border:1px solid #ddd;text-align:center">$${l.price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
-      <td style="padding:8px;border:1px solid #ddd;text-align:center;font-weight:bold">$${l.total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+      <td class="col-num">${i+1}</td>
+      <td style="font-weight:600">${item?.name||l.itemId}</td>
+      <td class="col-qty">${unitLabel}</td>
+      <td class="col-qty">${l.qty}</td>
+      <td class="col-price">$${l.price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+      <td class="col-total">$${l.total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
     </tr>`;
   }).join('');
 
@@ -678,69 +688,134 @@ function printInvoice(invNumber) {
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>فاتورة ${inv.number}</title>
+<title>${type} — ${inv.number}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-  body { font-family: 'Segoe UI','Tahoma','Arial',sans-serif; margin:0; padding:20px; color:#1a1a1a; }
-  .header { background:#1F3864; color:white; padding:20px; border-radius:8px; margin-bottom:20px; text-align:center; }
-  .header h1 { margin:0; font-size:24px; }
-  .header p { margin:4px 0; font-size:13px; opacity:0.85; }
-  .inv-title { background:#EBF3FB; padding:10px 16px; border-radius:6px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; }
-  .inv-title h2 { margin:0; font-size:16px; color:#1F3864; }
-  .inv-num { background:#1F3864; color:white; padding:4px 12px; border-radius:4px; font-weight:bold; }
-  .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px; }
-  .info-box { background:#f8f9fa; padding:12px; border-radius:6px; border-right:3px solid #2E75B6; }
-  .info-box label { font-size:11px; color:#666; display:block; margin-bottom:4px; }
-  .info-box span { font-size:14px; font-weight:600; color:#1a1a1a; }
-  table { width:100%; border-collapse:collapse; margin-bottom:16px; }
-  thead th { background:#1F3864; color:white; padding:10px 8px; text-align:center; font-size:13px; }
-  tbody tr:nth-child(even) { background:#f8f9fa; }
-  .totals { display:flex; justify-content:flex-end; }
-  .totals-box { background:#1F3864; color:white; padding:16px 24px; border-radius:8px; text-align:center; min-width:200px; }
-  .totals-box .label { font-size:12px; opacity:0.8; margin-bottom:4px; }
-  .totals-box .amount { font-size:22px; font-weight:bold; }
-  .footer { text-align:center; margin-top:30px; padding-top:16px; border-top:1px solid #eee; color:#888; font-size:12px; }
-  .sign-row { display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-top:40px; }
-  .sign-box { text-align:center; border-top:1px solid #ccc; padding-top:8px; font-size:12px; color:#666; }
-  @media print { body { padding:10px; } }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Tajawal','Tahoma','Arial',sans-serif; background:#fff; color:#111; padding:24px; font-size:13px; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .print-header { display:flex; align-items:center; justify-content:space-between; border-bottom:3px solid #4f46e5; padding-bottom:16px; margin-bottom:20px; }
+  .print-company-name { font-size:22px; font-weight:900; color:#312e81; margin-bottom:4px; }
+  .print-company-details { font-size:11px; color:#6b7280; line-height:1.7; }
+  .print-invoice-title { text-align:center; margin:0 20px; }
+  .print-invoice-type { display:inline-block; background:#4f46e5; color:#fff; font-size:15px; font-weight:900; padding:6px 20px; border-radius:8px; margin-bottom:6px; }
+  .print-invoice-num { font-size:13px; font-weight:800; color:#312e81; font-family:monospace; }
+  .print-info-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:20px; }
+  .print-info-box { background:#f8fafc; border:1px solid #e5e7eb; border-radius:10px; padding:12px 14px; }
+  .print-info-box-title { font-size:10px; font-weight:800; color:#6b7280; text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px; }
+  .print-info-row { display:flex; align-items:center; gap:6px; font-size:12px; margin-bottom:3px; }
+  .print-info-label { color:#9ca3af; font-weight:600; min-width:60px; }
+  .print-info-value { font-weight:700; color:#111; }
+  .print-table { width:100%; border-collapse:collapse; margin-bottom:20px; font-size:12px; }
+  .print-table thead th { background:#4f46e5; color:#fff; padding:9px 10px; font-weight:800; text-align:right; font-size:11px; letter-spacing:.3px; }
+  .print-table thead th:first-child { border-radius:0 8px 0 0; }
+  .print-table thead th:last-child  { border-radius:8px 0 0 0; }
+  .print-table tbody td { padding:8px 10px; border-bottom:1px solid #f1f5f9; color:#374151; }
+  .print-table tbody tr:nth-child(even) td { background:#fafbff; }
+  .print-table tbody tr:last-child td { border-bottom:none; }
+  .col-num   { width:32px; text-align:center; color:#9ca3af; font-family:monospace; }
+  .col-qty   { width:70px; text-align:center; font-weight:700; }
+  .col-price { width:90px; text-align:center; font-family:monospace; }
+  .col-total { width:100px; text-align:center; font-weight:800; color:#312e81; font-family:monospace; }
+  .print-totals { display:flex; justify-content:flex-end; margin-bottom:16px; }
+  .print-totals-box { background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px; padding:14px 20px; min-width:260px; }
+  .print-total-row { display:flex; justify-content:space-between; align-items:center; padding:5px 0; font-size:12px; border-bottom:1px solid #f1f5f9; }
+  .print-total-row:last-child { border-bottom:none; }
+  .print-total-label { color:#6b7280; font-weight:600; }
+  .print-total-value { font-weight:800; color:#374151; font-family:monospace; }
+  .print-grand-total { border-top:2px solid #4f46e5 !important; margin-top:4px; padding-top:8px !important; }
+  .print-grand-total .print-total-label { font-size:14px; font-weight:900; color:#312e81; }
+  .print-grand-total .print-total-value { font-size:16px; font-weight:900; color:#4f46e5; }
+  .print-payment-status { display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:8px; font-weight:800; font-size:13px; margin-bottom:16px; }
+  .print-paid     { background:#dcfce7; color:#166534; border:1.5px solid #bbf7d0; }
+  .print-deferred { background:#fef3c7; color:#92400e; border:1.5px solid #fde68a; }
+  .print-note { background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:10px 14px; margin-bottom:16px; font-size:12px; color:#92400e; }
+  .print-sign-row { display:grid; grid-template-columns:1fr 1fr; gap:60px; margin-top:32px; }
+  .print-sign-box { text-align:center; padding-top:8px; border-top:1.5px dashed #d1d5db; font-size:12px; color:#9ca3af; }
+  .print-footer { text-align:center; padding-top:16px; border-top:2px dashed #e5e7eb; margin-top:20px; }
+  .print-footer-msg { font-size:14px; font-weight:800; color:#4f46e5; margin-bottom:6px; }
+  .print-footer-contact { font-size:11px; color:#9ca3af; }
+  .print-watermark { font-size:9px; color:#d1d5db; margin-top:8px; }
+  @media print { body { padding:10px; } @page { margin:12mm 10mm; size:A4; } }
 </style>
 </head>
 <body>
-<div class="header">
-  <h1>${db.company.name}</h1>
-  <p>${db.company.address}${db.company.phone?' | ☎ '+db.company.phone:''}</p>
-</div>
-<div class="inv-title">
-  <h2>🧾 فاتورة ${type}</h2>
-  <span class="inv-num">${inv.number}</span>
-</div>
-<div class="info-grid">
-  <div class="info-box"><label>${type==='بيع'?'اسم الزبون':'المورد'}</label><span>${party}</span></div>
-  <div class="info-box"><label>التاريخ</label><span>${inv.date}</span></div>
-</div>
-<table>
-  <thead><tr>
-    <th style="width:40px">#</th>
-    <th>اسم المادة</th>
-    <th style="width:80px">الوحدة</th>
-    <th style="width:80px">الكمية</th>
-    <th style="width:120px">السعر</th>
-    <th style="width:130px">الإجمالي</th>
-  </tr></thead>
-  <tbody>${linesHTML}</tbody>
-</table>
-<div class="totals">
-  <div class="totals-box">
-    <div class="label">💰 الإجمالي النهائي</div>
-    <div class="amount">$${inv.total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-    ${inv.discount>0?`<div style="font-size:12px;opacity:0.8;margin-top:4px">خصم ${inv.discount}%</div>`:''}
+  <div class="print-header">
+    <div class="print-company-info">
+      <div class="print-company-name">${co.name || 'شركتي'}</div>
+      <div class="print-company-details">
+        ${co.address ? co.address + '<br>' : ''}
+        ${co.phone ? '☎ ' + co.phone : ''}
+        ${co.email ? ' &nbsp;|&nbsp; ✉ ' + co.email : ''}
+      </div>
+    </div>
+    <div class="print-invoice-title">
+      <div class="print-invoice-type">${type}</div><br>
+      <div class="print-invoice-num"># ${inv.number}</div>
+    </div>
   </div>
-</div>
-<div class="sign-row">
-  <div class="sign-box">توقيع المستلم</div>
-  <div class="sign-box">ختم الشركة</div>
-</div>
-<div class="footer">${db.company.slogan}</div>
-<script>window.onload=()=>window.print();<\/script>
+
+  <div class="print-info-grid">
+    <div class="print-info-box">
+      <div class="print-info-box-title">${partyLabel}</div>
+      <div class="print-info-row"><span class="print-info-label">الاسم:</span><span class="print-info-value">${party}</span></div>
+    </div>
+    <div class="print-info-box">
+      <div class="print-info-box-title">بيانات الفاتورة</div>
+      <div class="print-info-row"><span class="print-info-label">التاريخ:</span><span class="print-info-value">${inv.date}</span></div>
+      <div class="print-info-row"><span class="print-info-label">الوقت:</span><span class="print-info-value">${inv.time || '—'}</span></div>
+      <div class="print-info-row"><span class="print-info-label">العملة:</span><span class="print-info-value">${inv.currency || 'USD'}</span></div>
+    </div>
+  </div>
+
+  <div class="${isPaid ? 'print-payment-status print-paid' : 'print-payment-status print-deferred'}">
+    ${isPaid ? '✅ تم الدفع نقداً' : '⏳ آجل — بانتظار الدفع'}
+    ${inv.paidAmount > 0 && !isPaid ? ' — المدفوع: $' + inv.paidAmount.toLocaleString('en-US',{minimumFractionDigits:2}) : ''}
+  </div>
+
+  <table class="print-table">
+    <thead>
+      <tr>
+        <th class="col-num">#</th>
+        <th>اسم المادة</th>
+        <th class="col-qty">الوحدة</th>
+        <th class="col-qty">الكمية</th>
+        <th class="col-price">السعر</th>
+        <th class="col-total">الإجمالي</th>
+      </tr>
+    </thead>
+    <tbody>${linesHTML}</tbody>
+  </table>
+
+  <div class="print-totals">
+    <div class="print-totals-box">
+      ${subtotal !== inv.total ? `<div class="print-total-row"><span class="print-total-label">المجموع</span><span class="print-total-value">$${subtotal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>` : ''}
+      ${discount > 0 ? `<div class="print-total-row"><span class="print-total-label">خصم (${discount}%)</span><span class="print-total-value" style="color:#dc2626">-$${(subtotal*discount/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</span></div>` : ''}
+      <div class="print-total-row print-grand-total">
+        <span class="print-total-label">الإجمالي النهائي</span>
+        <span class="print-total-value">$${inv.total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+      </div>
+      <div class="print-total-row" style="opacity:.7;font-size:11px">
+        <span>بالليرة السورية الجديدة</span>
+        <span>${Math.round(inv.total * rate / 100).toLocaleString('ar-SY')} ل.س ج</span>
+      </div>
+    </div>
+  </div>
+
+  ${note ? `<div class="print-note">📝 ملاحظة: ${note}</div>` : ''}
+
+  <div class="print-sign-row">
+    <div class="print-sign-box">توقيع المستلم</div>
+    <div class="print-sign-box">ختم الشركة وتوقيع المسؤول</div>
+  </div>
+
+  <div class="print-footer">
+    <div class="print-footer-msg">${co.slogan || 'شكراً لتعاملكم معنا'} 🌟</div>
+    <div class="print-footer-contact">${co.phone ? '☎ ' + co.phone : ''} ${co.email ? '  |  ✉ ' + co.email : ''}</div>
+    <div class="print-watermark">تم إنشاء هذه الفاتورة بواسطة برنامج السلطان للمحاسبة</div>
+  </div>
+
+<script>window.onload=()=>{document.fonts.ready.then(()=>window.print());};<\/script>
 </body></html>`;
 
   const win = window.open('','_blank');
@@ -4584,4 +4659,166 @@ function loadItemStatement() {
         </tbody>
       </table>
     </div>`;
+}
+
+// ============================================================
+// GLOBAL SEARCH — بحث سريع عالمي
+// ============================================================
+let gsTimer = null;
+
+function initGlobalSearch() {
+  const inp = document.getElementById('global-search');
+  const results = document.getElementById('global-search-results');
+  if (!inp || !results) return;
+
+  inp.addEventListener('input', function() {
+    clearTimeout(gsTimer);
+    gsTimer = setTimeout(() => renderGlobalSearch(this.value.trim()), 220);
+  });
+
+  inp.addEventListener('focus', function() {
+    if (this.value.trim().length >= 1) {
+      results.classList.add('open');
+    }
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!inp.contains(e.target) && !results.contains(e.target)) {
+      results.classList.remove('open');
+    }
+  });
+
+  inp.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') { results.classList.remove('open'); inp.blur(); }
+  });
+}
+
+function renderGlobalSearch(q) {
+  const results = document.getElementById('global-search-results');
+  if (!results) return;
+
+  if (!q || q.length < 1) {
+    results.classList.remove('open');
+    return;
+  }
+  results.classList.add('open');
+
+  const lq = q.toLowerCase();
+  let html = '';
+  let total = 0;
+
+  // ── فواتير البيع
+  const sales = db.salesInvoices.filter(i =>
+    (i.number||'').toLowerCase().includes(lq) ||
+    (i.customerName||'').toLowerCase().includes(lq)
+  ).slice(0, 4);
+
+  if (sales.length) {
+    html += `<div class="gs-section-title">🧾 فواتير البيع</div>`;
+    sales.forEach(i => {
+      html += `<div class="gs-result-item" onclick="openInvoiceDetail('${i.number}');document.getElementById('global-search-results').classList.remove('open')">
+        <div class="gs-result-icon" style="background:#eef2ff;color:#4f46e5">📄</div>
+        <div class="gs-result-main">
+          <div class="gs-result-title">${i.number} — ${i.customerName||'—'}</div>
+          <div class="gs-result-sub">${i.date}</div>
+        </div>
+        <span class="gs-result-badge" style="color:#4f46e5;font-weight:800">$${(i.total||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+      </div>`;
+      total++;
+    });
+  }
+
+  // ── فواتير الشراء
+  const purs = db.purchaseInvoices.filter(i =>
+    (i.number||'').toLowerCase().includes(lq) ||
+    (i.supplierName||'').toLowerCase().includes(lq)
+  ).slice(0, 4);
+
+  if (purs.length) {
+    html += `<div class="gs-section-title">🏭 فواتير الشراء</div>`;
+    purs.forEach(i => {
+      html += `<div class="gs-result-item" onclick="openInvoiceDetail('${i.number}');document.getElementById('global-search-results').classList.remove('open')">
+        <div class="gs-result-icon" style="background:#f0fdf4;color:#16a34a">📦</div>
+        <div class="gs-result-main">
+          <div class="gs-result-title">${i.number} — ${i.supplierName||'—'}</div>
+          <div class="gs-result-sub">${i.date}</div>
+        </div>
+        <span class="gs-result-badge" style="color:#16a34a;font-weight:800">$${(i.total||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+      </div>`;
+      total++;
+    });
+  }
+
+  // ── العملاء
+  const custs = db.customers.filter(c =>
+    (c.name||'').toLowerCase().includes(lq) ||
+    (c.phone||'').includes(lq)
+  ).slice(0, 3);
+
+  if (custs.length) {
+    html += `<div class="gs-section-title">👤 العملاء</div>`;
+    custs.forEach(c => {
+      const bal = c.balance || 0;
+      html += `<div class="gs-result-item" onclick="navigate('customers');document.getElementById('global-search-results').classList.remove('open')">
+        <div class="gs-result-icon" style="background:#fdf4ff;color:#9333ea">👤</div>
+        <div class="gs-result-main">
+          <div class="gs-result-title">${c.name}</div>
+          <div class="gs-result-sub">${c.phone||''}</div>
+        </div>
+        <span class="gs-result-badge" style="color:${bal>0?'#dc2626':bal<0?'#16a34a':'#6b7280'}">${bal !== 0 ? '$'+Math.abs(bal).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : ''}</span>
+      </div>`;
+      total++;
+    });
+  }
+
+  // ── الموردون
+  const sups = (db.suppliers||[]).filter(s =>
+    (s.name||'').toLowerCase().includes(lq) ||
+    (s.phone||'').includes(lq)
+  ).slice(0, 3);
+
+  if (sups.length) {
+    html += `<div class="gs-section-title">🏭 الموردون</div>`;
+    sups.forEach(s => {
+      html += `<div class="gs-result-item" onclick="navigate('suppliers');document.getElementById('global-search-results').classList.remove('open')">
+        <div class="gs-result-icon" style="background:#fff7ed;color:#ea580c">🏭</div>
+        <div class="gs-result-main">
+          <div class="gs-result-title">${s.name}</div>
+          <div class="gs-result-sub">${s.phone||''}</div>
+        </div>
+      </div>`;
+      total++;
+    });
+  }
+
+  // ── المواد
+  const items = db.items.filter(it =>
+    (it.name||'').toLowerCase().includes(lq) ||
+    (it.id||'').toLowerCase().includes(lq) ||
+    (it.barcode||'').includes(lq)
+  ).slice(0, 4);
+
+  if (items.length) {
+    html += `<div class="gs-section-title">📦 المواد والبضائع</div>`;
+    const inv = calcInventory();
+    items.forEach(it => {
+      const stock = inv[it.id] || 0;
+      const stockColor = stock === 0 ? '#dc2626' : stock < it.minStock ? '#d97706' : '#16a34a';
+      html += `<div class="gs-result-item" onclick="navigate('items');document.getElementById('global-search-results').classList.remove('open')">
+        <div class="gs-result-icon" style="background:#f0fdf4;color:#16a34a">🔖</div>
+        <div class="gs-result-main">
+          <div class="gs-result-title">${it.name}</div>
+          <div class="gs-result-sub">${it.id} — ${it.type||''}</div>
+        </div>
+        <span class="gs-result-badge" style="color:${stockColor};font-weight:800">${stock} ${it.unit}</span>
+      </div>`;
+      total++;
+    });
+  }
+
+  if (total === 0) {
+    html = `<div class="gs-empty">🔍 لا نتائج لـ "<strong>${q}</strong>"</div>`;
+  }
+
+  results.innerHTML = html;
 }
