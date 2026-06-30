@@ -324,43 +324,154 @@ function renderDashboard() {
   const stats = getStats();
   const inv = calcInventory();
 
-  // KPI Cards
-  const salesEl = document.getElementById('kpi-total-sales');
-  if (salesEl) {
-    salesEl.textContent = fmtUSD(stats.totalSales);
-    document.getElementById('kpi-sales-count').textContent = stats.salesCount + ' فاتورة';
-    document.getElementById('kpi-total-purchases') && (document.getElementById('kpi-total-purchases').textContent = fmtUSD(stats.totalPurchases));
-    document.getElementById('kpi-purchases-count') && (document.getElementById('kpi-purchases-count').textContent = stats.purchasesCount + ' فاتورة');
-    const profit = stats.profit;
-    const profitEl = document.getElementById('kpi-net-profit');
-    if(profitEl) { profitEl.textContent = fmtUSD(profit); profitEl.style.color = profit >= 0 ? 'var(--green-700)' : 'var(--red-600)'; }
-    const margin = stats.totalSales > 0 ? ((profit / stats.totalSales) * 100).toFixed(1) : 0;
-    document.getElementById('kpi-profit-margin') && (document.getElementById('kpi-profit-margin').textContent = 'هامش: ' + margin + '%');
-    document.getElementById('kpi-customers-count').textContent = db.customers.length;
-    const suppCount = db.suppliers ? db.suppliers.length : 0;
-    document.getElementById('kpi-suppliers-count').textContent = suppCount + ' مورد';
+  // ── Date label
+  const dateEl = document.getElementById('dash-date-label');
+  if (dateEl) {
+    const now = new Date();
+    const opts = { weekday:'long', year:'numeric', month:'long', day:'numeric' };
+    dateEl.textContent = now.toLocaleDateString('ar-SY', opts);
   }
 
-  // تنبيهات المخزون
+  // ── KPI Cards
+  const setEl = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  setEl('kpi-total-sales', fmtUSD(stats.totalSales));
+  setEl('kpi-total-purchases', fmtUSD(stats.totalPurchases));
+  setEl('kpi-sales-count', stats.salesCount + ' فاتورة');
+  setEl('kpi-purchases-count', stats.purchasesCount + ' فاتورة');
+  const profit = stats.profit;
+  const profitEl = document.getElementById('kpi-net-profit');
+  if(profitEl) {
+    profitEl.textContent = fmtUSD(profit);
+    profitEl.style.color = profit >= 0 ? 'var(--success-600)' : 'var(--danger-600)';
+  }
+  const margin = stats.totalSales > 0 ? ((profit / stats.totalSales) * 100).toFixed(1) : 0;
+  setEl('kpi-profit-margin', 'هامش: ' + margin + '%');
+  setEl('kpi-customers-count', db.customers.length);
+  setEl('kpi-suppliers-count', (db.suppliers||[]).length + ' مورد');
+
+  // ── Quick stats
+  setEl('dash-items-count', db.items.length);
+  setEl('dash-low-stock-count', stats.lowStock.length);
+  setEl('dash-inv-value', '$' + Math.round(stats.invValue).toLocaleString('en-US'));
+  setEl('dash-returns-count', stats.returnsCount);
+
+  // ── Stock Alerts
   const alertsEl = document.getElementById('stock-alerts');
+  const alertCountEl = document.getElementById('stock-alert-count');
   if (alertsEl) {
     if (stats.lowStock.length === 0) {
-      alertsEl.innerHTML = '<div class="empty-state">✅ كل المواد بمخزون كافٍ</div>';
+      alertsEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">✅</div>كل المواد بمخزون كافٍ</div>';
+      if(alertCountEl) alertCountEl.style.display = 'none';
     } else {
-      alertsEl.innerHTML = stats.lowStock.slice(0, 6).map(item => {
+      if(alertCountEl) { alertCountEl.style.display=''; alertCountEl.textContent = stats.lowStock.length; }
+      alertsEl.innerHTML = stats.lowStock.slice(0, 8).map(item => {
         const stock = inv[item.id] || 0;
         const isZero = stock === 0;
-        return '<div class="alert-row">' +
-          '<span class="item-id">' + item.id + '</span>' +
-          '<span class="item-name">' + item.name + '</span>' +
-          '<span class="stock-badge ' + (isZero ? 'badge-error' : 'badge-warning') + '">' +
-          (isZero ? 'نفد' : stock + ' ' + item.unit) + '</span></div>';
+        const pct = item.minStock > 0 ? Math.min(100, Math.round((stock / item.minStock) * 100)) : 0;
+        return `<div class="alert-row">
+          <span class="item-id">${item.id}</span>
+          <span class="item-name">${item.name}</span>
+          <div style="flex:1;max-width:80px;height:4px;background:var(--border);border-radius:2px;overflow:hidden;">
+            <div style="height:100%;width:${pct}%;background:${isZero?'var(--danger-500)':'var(--warning-500)'};border-radius:2px;"></div>
+          </div>
+          <span class="stock-badge ${isZero ? 'badge-error' : 'badge-warning'}">
+            ${isZero ? '⚠️ نفد' : stock + ' ' + item.unit}
+          </span>
+        </div>`;
       }).join('');
     }
   }
 
-  // عرض كل الفواتير مع البحث
+  // ── Bar Chart: Last 6 months
+  renderDashboardBarChart();
+
+  // ── Rate widget sync
+  const rateInp = document.getElementById('rate-quick-input');
+  if(rateInp && db.exchange) rateInp.value = db.exchange.usdToOld || 12000;
+  const rateNew = document.getElementById('rate-widget-new');
+  if(rateNew && db.exchange) rateNew.textContent = Math.round((db.exchange.usdToOld||12000)/100) + ' ل.س ج';
+
+  // ── All invoices list
   renderAllInvoices();
+}
+
+function renderDashboardBarChart() {
+  const svg = document.getElementById('bar-chart-svg');
+  if (!svg) return;
+
+  // Build monthly buckets for last 6 months
+  const now = new Date();
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({
+      key: d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'),
+      label: d.toLocaleDateString('ar-SY', {month:'short'}),
+      sales: 0,
+      purchases: 0
+    });
+  }
+
+  db.salesInvoices.forEach(inv => {
+    if (!inv.date) return;
+    const mk = inv.date.substring(0,7);
+    const m = months.find(m => m.key === mk);
+    if (m) m.sales += (inv.total || 0);
+  });
+  db.purchaseInvoices.forEach(inv => {
+    if (!inv.date) return;
+    const mk = inv.date.substring(0,7);
+    const m = months.find(m => m.key === mk);
+    if (m) m.purchases += (inv.total || 0);
+  });
+
+  const maxVal = Math.max(...months.map(m => Math.max(m.sales, m.purchases)), 1);
+  const W = 360, H = 120, padL = 32, padB = 24, padT = 10, barW = 22, gap = 6;
+  const chartW = W - padL - 10;
+  const groupW = (chartW) / 6;
+  const chartH = H - padB - padT;
+
+  let svgContent = '';
+
+  // Grid lines
+  for (let i = 0; i <= 4; i++) {
+    const y = padT + (chartH / 4) * i;
+    const val = Math.round(maxVal * (1 - i/4));
+    svgContent += `<line x1="${padL}" y1="${y}" x2="${W-8}" y2="${y}" stroke="var(--border)" stroke-width="1" stroke-dasharray="3,3"/>`;
+    svgContent += `<text x="${padL-2}" y="${y+3}" text-anchor="end" font-size="7" fill="var(--text-muted)" font-family="inherit">$${val >= 1000 ? (val/1000).toFixed(1)+'k' : val}</text>`;
+  }
+
+  // Bars
+  months.forEach((m, i) => {
+    const gx = padL + i * groupW + groupW/2;
+    const salesH = maxVal > 0 ? (m.sales / maxVal) * chartH : 0;
+    const purH   = maxVal > 0 ? (m.purchases / maxVal) * chartH : 0;
+    const salesX = gx - barW - gap/2;
+    const purX   = gx + gap/2;
+
+    // Sales bar
+    if (salesH > 0) {
+      svgContent += `<rect x="${salesX}" y="${padT + chartH - salesH}" width="${barW}" height="${salesH}" rx="3" fill="#4f46e5" opacity=".85">
+        <title>${m.label}: $${m.sales.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</title>
+      </rect>`;
+    } else {
+      svgContent += `<rect x="${salesX}" y="${padT + chartH - 2}" width="${barW}" height="2" rx="1" fill="#4f46e5" opacity=".3"/>`;
+    }
+
+    // Purchase bar
+    if (purH > 0) {
+      svgContent += `<rect x="${purX}" y="${padT + chartH - purH}" width="${barW}" height="${purH}" rx="3" fill="#f59e0b" opacity=".85">
+        <title>${m.label}: $${m.purchases.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}</title>
+      </rect>`;
+    } else {
+      svgContent += `<rect x="${purX}" y="${padT + chartH - 2}" width="${barW}" height="2" rx="1" fill="#f59e0b" opacity=".3"/>`;
+    }
+
+    // Month label
+    svgContent += `<text x="${gx}" y="${H - 6}" text-anchor="middle" font-size="8.5" fill="var(--text-muted)" font-family="inherit" font-weight="600">${m.label}</text>`;
+  });
+
+  svg.innerHTML = svgContent;
 }
 
 // ============================================================
