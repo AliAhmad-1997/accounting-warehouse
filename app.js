@@ -610,36 +610,55 @@ function renderSaleRecentInvoices() {
 
 function renderSaleLines() {
   const tbody = document.getElementById('sale-lines');
+  if (!tbody) return;
   tbody.innerHTML = saleLines.map((line,i) => {
     const item = db.items.find(it=>it.id===line.itemId);
-    // بناء dropdown الوحدة
+    const inv = calcInventory();
+    const stockNum = item ? (inv[item.id]||0) : 0;
+    const stockColor = !item ? '' : stockNum === 0 ? 'var(--danger-500)' : stockNum < item.minStock ? 'var(--warning-500)' : 'var(--success-600)';
+
+    // Unit selector
     let unitSelect = '';
     if(item) {
       const hasUnit2 = item.unit2 && item.unit2.trim();
       if(hasUnit2) {
-        unitSelect = `<select onchange="onSaleUnitChange(${i},this.value)" class="input input-sm" style="width:90px">
+        unitSelect = `<select onchange="onSaleUnitChange(${i},this.value)" class="input input-sm">
           <option value="unit" ${(line.unitType||'unit')==='unit'?'selected':''}>${item.unit}</option>
           <option value="unit2" ${line.unitType==='unit2'?'selected':''}>${item.unit2}</option>
         </select>`;
       } else {
-        unitSelect = `<span class="text-muted">${item.unit||''}</span>`;
+        unitSelect = `<span style="font-size:12px;font-weight:700;color:var(--text-muted);padding:0 4px;">${item.unit||'—'}</span>`;
       }
     } else {
-      unitSelect = '<span class="text-muted">—</span>';
+      unitSelect = '<span style="color:var(--text-subtle);">—</span>';
     }
-    return `<tr>
-      <td>${i+1}</td>
+
+    // Stock badge
+    const stockBadge = item ? `<span style="font-size:10px;color:${stockColor};font-weight:700;display:block;margin-top:2px;">مخزون: ${stockNum} ${item.unit}</span>` : '';
+
+    return `<tr style="${line.total > 0 ? '' : ''}">
+      <td style="text-align:center;color:var(--text-muted);font-size:12px;font-weight:700;">${i+1}</td>
       <td>
-        <select onchange="onSaleItemChange(${i},this.value)" class="input input-sm">
-          <option value="">-- اختر --</option>
-          ${db.items.map(it=>`<option value="${it.id}" ${it.id===line.itemId?'selected':''}>${it.id} - ${it.name}</option>`).join('')}
+        <select onchange="onSaleItemChange(${i},this.value)" class="input input-sm" style="min-width:180px;">
+          <option value="">— اختر مادة —</option>
+          ${db.items.map(it=>`<option value="${it.id}" ${it.id===line.itemId?'selected':''}>${it.name}</option>`).join('')}
         </select>
+        ${stockBadge}
       </td>
       <td>${unitSelect}</td>
-      <td><input type="number" class="input input-sm" value="${line.qty}" min="0.01" step="0.01" onchange="onSaleQtyChange(${i},this.value)" style="width:80px"></td>
-      <td><span class="price-display">${line.price?fmtUSD(line.price):'—'}</span></td>
-      <td><strong>${line.total?fmtUSD(line.total):'—'}</strong></td>
-      <td><button class="btn btn-ghost btn-sm" onclick="removeSaleLine(${i})">✕</button></td>
+      <td style="text-align:center;">
+        <input type="number" class="input input-sm" value="${line.qty}" min="0.01" step="0.01"
+          onchange="onSaleQtyChange(${i},this.value)" style="width:76px;text-align:center;">
+      </td>
+      <td style="text-align:center;">
+        <span style="font-size:13px;font-weight:700;color:var(--brand-600);">${line.price ? fmtUSD(line.price) : '<span style=\"color:var(--text-subtle)\">—</span>'}</span>
+      </td>
+      <td style="text-align:center;">
+        <span style="font-size:14px;font-weight:900;color:${line.total > 0 ? 'var(--text-primary)' : 'var(--text-subtle)'};">${line.total ? fmtUSD(line.total) : '—'}</span>
+      </td>
+      <td style="text-align:center;">
+        <button onclick="removeSaleLine(${i})" style="background:none;border:none;cursor:pointer;color:var(--text-subtle);font-size:16px;padding:4px 8px;border-radius:6px;transition:all .15s;" onmouseover="this.style.color='var(--danger-500)';this.style.background='var(--danger-50)';" onmouseout="this.style.color='var(--text-subtle)';this.style.background='none';">✕</button>
+      </td>
     </tr>`;
   }).join('');
 }
@@ -685,17 +704,37 @@ function removeSaleLine(i) {
 }
 function addSaleLine() { saleLines.push({itemId:'',qty:1,price:0,total:0}); renderSaleLines(); }
 function renderSaleTotal() {
-  const subtotal = saleLines.reduce((s,l)=>s+l.total,0);
-  const discount = parseFloat(document.getElementById('sale-discount')?.value||0);
-  const total = subtotal*(1-discount/100);
-  document.getElementById('sale-subtotal').textContent = fmtUSD(subtotal);
-  document.getElementById('sale-total').textContent = fmtUSD(total);
-  // عرض المكافئ بالليرتين
+  const subtotal  = saleLines.reduce((s,l)=>s+l.total,0);
+  const discount  = parseFloat(document.getElementById('sale-discount')?.value||0);
+  const taxRate   = parseFloat(document.getElementById('sale-tax-rate')?.value||0);
+  const afterDisc = subtotal * (1 - discount/100);
+  const taxAmt    = afterDisc * (taxRate/100);
+  const total     = afterDisc + taxAmt;
+
+  const subEl = document.getElementById('sale-subtotal');
+  if(subEl) subEl.textContent = fmtUSD(subtotal);
+
+  const totalEl = document.getElementById('sale-total');
+  if(totalEl) {
+    totalEl.textContent = fmtUSD(total);
+    // animate color if big change
+    totalEl.style.color = total > 0 ? 'var(--brand-600)' : 'var(--text-muted)';
+  }
+
+  // Paid amount placeholder
+  const paidEl = document.getElementById('sale-paid-amount');
+  if(paidEl && !paidEl.value) paidEl.placeholder = fmtUSD(total) + ' (الكامل)';
+
+  // Equivalent in SYP
   const eqEl = document.getElementById('sale-total-equiv');
-  if(eqEl) eqEl.innerHTML =
-    '<span style="color:var(--text-muted);font-size:13px">' +
-    fmtOld(usdToOld(total)) + ' &nbsp;|&nbsp; ' + fmtNew(usdToNew(total)) +
-    '</span>';
+  if(eqEl && total > 0) {
+    eqEl.innerHTML =
+      '<span style="font-size:11.5px;color:var(--text-muted);">' +
+      fmtOld(usdToOld(total)) + ' &nbsp;|&nbsp; ' + fmtNew(usdToNew(total)) +
+      '</span>';
+  } else if(eqEl) {
+    eqEl.innerHTML = '';
+  }
 }
 
 function saveSaleInvoice() {

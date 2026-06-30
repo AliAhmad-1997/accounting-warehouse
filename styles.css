@@ -1281,3 +1281,67 @@ html.dark ::-webkit-scrollbar-thumb { background: rgba(148,163,184,.2); }
 /* Smooth page transitions */
 [id^="page-"] { animation: fadeIn .18s ease; }
 
+
+/* ══════════════════════════════════════════
+   25. SALE / PURCHASE INVOICE PAGE
+══════════════════════════════════════════ */
+
+/* Two-column invoice layout */
+.invoice-page-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 960px) {
+  .invoice-page-grid { grid-template-columns: 1fr; }
+}
+
+/* Sticky sidebar on wide screens */
+.invoice-sidebar { position: sticky; top: 80px; }
+
+/* Table: item row highlight on hover */
+#sale-lines tr:hover td,
+#pur-lines tr:hover td {
+  background: var(--bg-hover);
+}
+
+/* Total value big display */
+.invoice-grand-total {
+  font-size: 30px; font-weight: 900;
+  color: var(--brand-600);
+  line-height: 1;
+}
+html.dark .invoice-grand-total { color: var(--brand-300); }
+
+/* Payment badge */
+.pay-badge-cash {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--success-50); color: var(--success-700);
+  border: 1.5px solid var(--success-200);
+  padding: 4px 12px; border-radius: var(--r-full);
+  font-size: 12px; font-weight: 800;
+}
+.pay-badge-deferred {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--warning-50); color: var(--warning-700);
+  border: 1.5px solid var(--warning-200);
+  padding: 4px 12px; border-radius: var(--r-full);
+  font-size: 12px; font-weight: 800;
+}
+html.dark .pay-badge-cash     { background: rgba(34,197,94,.08);  border-color: rgba(34,197,94,.2);  color: var(--success-400); }
+html.dark .pay-badge-deferred { background: rgba(245,158,11,.08); border-color: rgba(245,158,11,.2); color: var(--warning-400); }
+
+/* Save button pulse on hover */
+.btn-save-invoice {
+  position: relative; overflow: hidden;
+  background: linear-gradient(135deg, var(--success-600), var(--success-500));
+  color: #fff; box-shadow: 0 4px 18px rgba(22,163,74,.3);
+  border: none; border-radius: var(--r-lg);
+  width: 100%; padding: 13px; font-size: 15px; font-weight: 900;
+  cursor: pointer; font-family: inherit;
+  transition: all var(--t-base);
+}
+.btn-save-invoice:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(22,163,74,.4); }
+.btn-save-invoice:active { transform: translateY(0); }
+
