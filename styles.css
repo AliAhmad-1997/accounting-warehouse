@@ -1345,3 +1345,329 @@ html.dark .pay-badge-deferred { background: rgba(245,158,11,.08); border-color: 
 .btn-save-invoice:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(22,163,74,.4); }
 .btn-save-invoice:active { transform: translateY(0); }
 
+
+/* ============================================================
+   LOGIN SCREEN SKIN — matches mockup #7
+   (shell skin lives in the "design (v7)" block below)
+   ============================================================ */
+html.wf .wf-login {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 26px; padding: 24px;
+  font-family: 'Tajawal','Segoe UI','Tahoma',sans-serif;
+  overflow: auto;
+}
+html.wf .wf-login-bg {
+  position: absolute; inset: 0; z-index: -1;
+  background:
+    linear-gradient(rgba(210,208,200,.55), rgba(210,208,200,.6)),
+    url('assets/office-bg.jpg') center/cover no-repeat;
+}
+html.wf .wf-login-header {
+  background: linear-gradient(180deg, #26318a, #1a2570);
+  border: 1px solid #121a54; border-radius: 4px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.35);
+  padding: 12px 60px; min-width: 480px; text-align: center;
+}
+html.wf .wf-login-header h2 {
+  margin: 0; color: #fff; font-size: 24px; font-weight: 900;
+  text-shadow: 0 2px 4px rgba(0,0,0,.4);
+}
+html.wf .wf-login-panel {
+  display: flex; flex-direction: row-reverse; align-items: center; gap: 40px;
+  background: #e7e4dc;
+  border: 1px solid #b0a99d; border-radius: 5px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.6);
+  padding: 40px 48px; width: min(900px, 94vw);
+}
+html.wf .wf-login-brand {
+  flex: 0 0 300px; height: 240px;
+  background: #edece6; border: 1px solid #cfccc2; border-radius: 4px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.12);
+}
+html.wf .wf-login-logo { width: 64px; height: 64px; border-radius: 14px; object-fit: cover; opacity: .9; }
+html.wf .wf-login-word {
+  font-family: 'Courier New', monospace;
+  font-size: 68px; font-weight: 900; letter-spacing: 2px;
+  color: #1c1c1c; line-height: 1;
+  -webkit-text-stroke: 2px #1c1c1c;
+  font-variant-ligatures: none;
+}
+html.wf .wf-login-form { flex: 1; min-width: 320px; }
+html.wf .wf-field-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+html.wf .wf-field-label {
+  order: 2; flex: 0 0 120px; text-align: right;
+  color: #1a2570; font-weight: 800; font-size: 16px;
+}
+html.wf .wf-badge {
+  order: 1; flex: 0 0 46px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  background: #c6c4ee; border: 1px solid #9d9ad6; border-radius: 4px;
+  color: #1a2570;
+}
+html.wf .wf-input { order: 3; flex: 1; }
+html.wf .wf-login-form .wf-input,
+html.wf .wf-login-form input {
+  height: 40px; background: #fff !important; border: 1px solid #8aa0b8 !important;
+  border-radius: 2px !important; padding: 0 10px; font-size: 15px; color: #1c2333 !important;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.1) !important;
+}
+html.wf .wf-input-pass { display: flex; align-items: center; padding: 0; }
+html.wf .wf-input-pass input { flex: 1; border: none !important; box-shadow: none !important; height: 38px; background: transparent !important; }
+html.wf .wf-eye { background: none; border: none; padding: 0 8px; color: #6a7180; display: flex; align-items: center; }
+html.wf .wf-login-error {
+  display: none; margin: 0 0 16px; color: #b91c1c; font-size: 13px; font-weight: 700;
+  background: #fdeaea; border: 1px solid #f0b4b4; border-radius: 4px; padding: 8px 12px; text-align: center;
+}
+html.wf .wf-login-actions { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 8px; }
+html.wf .wf-btn-login {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  min-width: 240px; padding: 11px 20px;
+  background: linear-gradient(180deg, #d5d3f4, #b9b7e8);
+  color: #1c1c3a; font-size: 17px; font-weight: 800;
+  border: 1px solid #9d9ad6; border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.6);
+}
+html.wf .wf-btn-login:hover { background: linear-gradient(180deg, #dedcf8, #c6c4ee); }
+html.wf .wf-btn-login svg { stroke: #1c1c3a; }
+html.wf .wf-btn-changepass {
+  min-width: 200px; padding: 8px 18px;
+  background: linear-gradient(180deg, #f7f55e, #eeeb3f);
+  color: #3a3600; font-size: 14px; font-weight: 800;
+  border: 1px solid #cfcc2e; border-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.5);
+}
+html.wf .wf-btn-changepass:hover { background: linear-gradient(180deg, #faf87a, #f5f24f); }
+html.wf .wf-login-copy { margin: 18px 0 0; text-align: center; font-size: 12px; color: #4a5163; width: 100%; }
+
+@media (max-width: 720px) {
+  html.wf .wf-login-panel { flex-direction: column; }
+  html.wf .wf-login-header { min-width: 0; width: 100%; padding: 12px 20px; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   MOCKUP SKIN — WinForms "Sales & Warehouse" design (v7)
+   Applies the provided Arabic desktop mockups uniformly across the app:
+   deep-navy sidebar + header banner, steel-blue action buttons,
+   warm-gray content panels, flat white inputs, blurred office-desk bg.
+   This block is intentionally last in the cascade so it re-skins the
+   existing v6 theme regardless of light/dark mode.
+══════════════════════════════════════════════════════════════════ */
+
+/* ── Mockup palette (override brand tokens for both themes) ── */
+html.light, html.dark, html:not(.dark) {
+  --brand-500: #2a37a0;
+  --brand-600: #1a2570;   /* navy — headers, active nav */
+  --brand-700: #141c5a;
+  --navy:      #1a2570;
+  --navy-2:    #141c5a;
+  --navy-line: #0d1444;
+  --steel:     #5b8fc7;   /* action buttons */
+  --steel-hi:  #7ba9d8;
+  --steel-line:#3f6fa0;
+  --panel:     #d9d6ce;   /* winforms content panel */
+  --panel-line:#b0ac9c;
+  --field-line:#7f9db9;
+}
+
+/* ── Desktop backdrop: blurred office desk behind everything ── */
+body {
+  background: #2b2f3a url('assets/office-bg.jpg') center center / cover fixed no-repeat !important;
+}
+body::before {
+  content: "";
+  position: fixed; inset: 0; z-index: -1;
+  background: linear-gradient(180deg, rgba(24,28,48,.28), rgba(24,28,48,.42));
+  pointer-events: none;
+}
+.layout { background: transparent !important; }
+.main   { background: transparent !important; }
+
+/* ── Shared header banner (injected once at top of main) ── */
+.app-banner {
+  margin: 4px 0 16px;
+  padding: 13px 24px;
+  background: linear-gradient(180deg, var(--navy) 0%, var(--navy-2) 100%);
+  border: 1px solid var(--navy-line);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 2px rgba(120,140,220,.35), 0 6px 18px rgba(0,0,0,.35);
+  text-align: center;
+}
+.app-banner h1 {
+  margin: 0;
+  color: #fff;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: .3px;
+  text-shadow: 0 2px 4px rgba(0,0,0,.5);
+}
+
+/* ── SIDEBAR → deep navy menu column ── */
+.sidebar {
+  background: linear-gradient(180deg, var(--navy) 0%, var(--navy-2) 100%) !important;
+  border-left: 2px solid var(--navy-line) !important;
+  box-shadow: -3px 0 22px rgba(0,0,0,.4) !important;
+}
+.sidebar-profile { display: none !important; }      /* replaced by menu title */
+.nav-label       { display: none !important; }      /* mockup is one flat list */
+
+.menu-title {
+  margin: 18px 14px 14px;
+  padding-bottom: 12px;
+  text-align: center;
+  color: #ffd873;
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: .3px;
+  text-shadow: 0 2px 3px rgba(0,0,0,.5);
+  border-bottom: 1px solid rgba(255,255,255,.14);
+}
+
+.nav-group { padding: 4px 0 !important; }
+
+.nav-item {
+  position: relative !important;
+  justify-content: center !important;
+  margin: 7px 14px !important;
+  padding: 11px 14px !important;
+  min-height: 42px;
+  background: linear-gradient(180deg, #283284 0%, #1b2472 100%) !important;
+  border: 1px solid #3a46a8 !important;
+  border-radius: 6px !important;
+  color: #fff !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 2px 5px rgba(0,0,0,.3) !important;
+  transition: all .15s ease !important;
+}
+.nav-item::before { display: none !important; }      /* kill v6 active bar */
+.nav-item:hover {
+  background: linear-gradient(180deg, #35409c 0%, #232c86 100%) !important;
+  border-color: #5563c8 !important;
+  transform: none !important;
+}
+.nav-item.active {
+  background: linear-gradient(180deg, #3a46ad 0%, #2a3492 100%) !important;
+  border-color: #7c88de !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.25), 0 2px 6px rgba(0,0,0,.35) !important;
+}
+.nav-item, .nav-item.active { color: #fff !important; }
+
+/* icon badge pinned to the leading (left) edge like the mockups */
+.nav-icon-wrap {
+  position: absolute !important;
+  left: 9px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,.08);
+  border-radius: 5px;
+  color: #fff !important;
+}
+.nav-item .nav-icon-wrap svg,
+.nav-item.active .nav-icon-wrap svg,
+.nav-item:hover .nav-icon-wrap svg { stroke: #fff !important; }
+
+/* ── Sidebar footer: Exit button (خروج) like the mockup ── */
+.sidebar-footer { border-top: 1px solid rgba(255,255,255,.14) !important; gap: 8px; }
+.btn-exit {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 10px;
+  background: linear-gradient(180deg, #283284, #1b2472);
+  color: #fff; font-family: inherit; font-size: 15px; font-weight: 800;
+  border: 2px solid #ffd873; border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.3);
+}
+.btn-exit:hover { background: linear-gradient(180deg, #35409c, #232c86); }
+.sidebar-footer .theme-toggle {
+  font-size: 11px !important; opacity: .8;
+  background: rgba(255,255,255,.08) !important;
+  color: #dfe3ff !important; border: 1px solid rgba(255,255,255,.16) !important;
+}
+
+/* ── Content pages become warm-gray winforms panels on the desk bg ── */
+.main > div[id^="page-"] {
+  background: var(--panel) !important;
+  border: 1px solid var(--panel-line);
+  border-top: 2px solid #ffffff;
+  border-radius: 4px;
+  padding: 22px 24px 26px;
+  box-shadow: 0 8px 26px rgba(0,0,0,.35);
+}
+#global-search-bar {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 0 12px !important;
+}
+
+/* ── Page titles → navy panel headings ── */
+.page-title { color: var(--navy) !important; font-weight: 900 !important; }
+.page-subtitle { color: #4b5563 !important; }
+
+/* ── ACTION BUTTONS → steel-blue winforms style ── */
+.btn, .btn-primary, .btn-secondary, .btn-ghost, .btn-outline {
+  background: linear-gradient(180deg, var(--steel-hi) 0%, var(--steel) 100%) !important;
+  color: #fff !important;
+  border: 1px solid var(--steel-line) !important;
+  border-radius: 6px !important;
+  font-weight: 700 !important;
+  text-shadow: 0 1px 1px rgba(0,0,0,.28) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 2px 5px rgba(0,0,0,.2) !important;
+  transition: filter .15s ease, transform .1s ease !important;
+}
+.btn:hover:not(:disabled), .btn-primary:hover:not(:disabled),
+.btn-secondary:hover:not(:disabled), .btn-ghost:hover:not(:disabled),
+.btn-outline:hover:not(:disabled) {
+  filter: brightness(1.06) !important;
+  transform: translateY(-1px) !important;
+}
+.btn:active:not(:disabled) { transform: translateY(0) !important; filter: brightness(.96) !important; }
+.btn::after { display: none !important; }
+
+/* keep semantic colours but in the same flat, bevelled winforms shape */
+.btn-success { background: linear-gradient(180deg, #46b06b, #2f9153) !important; border-color: #257a43 !important; }
+.btn-danger  { background: linear-gradient(180deg, #e0685f, #cc4a41) !important; border-color: #a83a33 !important; }
+.btn-warning { background: linear-gradient(180deg, #efc94b, #d9ab24) !important; border-color: #b78d14 !important; color:#3a2e00 !important; text-shadow:none !important; }
+.btn-save-invoice { background: linear-gradient(180deg, #46b06b, #2f9153) !important; }
+
+/* ── FIELDS → flat white winforms inputs ── */
+.input, input[type="text"], input[type="number"], input[type="date"],
+input[type="password"], input[type="tel"], input[type="email"],
+input[type="search"], select, textarea, .global-search-input {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border: 1px solid var(--field-line) !important;
+  border-radius: 3px !important;
+  box-shadow: inset 1px 1px 2px rgba(0,0,0,.10) !important;
+}
+.input:focus, input:focus, select:focus, textarea:focus {
+  border-color: var(--navy) !important;
+  box-shadow: inset 1px 1px 2px rgba(0,0,0,.10), 0 0 0 2px rgba(26,37,112,.18) !important;
+  outline: none !important;
+}
+.form-label { color: #1f2937 !important; font-weight: 700 !important; }
+
+/* ── Cards / modals → winforms surfaces so they match the panels ── */
+.card { background: #f3f2ee !important; border: 1px solid var(--panel-line) !important; border-radius: 4px !important; box-shadow: 0 2px 8px rgba(0,0,0,.12) !important; }
+.card-title, .card-header { color: var(--navy) !important; }
+.modal, .modal-content, .modal-card, .modal-box {
+  background: var(--panel) !important;
+  border: 1px solid var(--panel-line) !important;
+  border-top: 2px solid #fff !important;
+  border-radius: 5px !important;
+}
+
+/* Tables: navy header row to tie into the palette */
+thead th, .table thead th, .table-head, [class*="table"] thead th {
+  background: var(--navy) !important;
+  color: #fff !important;
+}
+
+/* Responsive: banner text scales down on narrow widths */
+@media (max-width: 700px) {
+  .app-banner h1 { font-size: 18px; }
+  .menu-title { font-size: 16px; }
+}
+
