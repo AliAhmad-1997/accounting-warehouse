@@ -288,6 +288,7 @@ let currentPage = 'dashboard';
 
 function navigate(page) {
   currentPage = page;
+  document.body.setAttribute('data-page', page);
   pages.forEach(p => {
     document.getElementById('page-'+p)?.classList.add('hidden');
     document.querySelector(`[data-page="${p}"]`)?.classList.remove('active');
